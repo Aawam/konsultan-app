@@ -16,15 +16,22 @@ Internal management tool for a construction consulting firm. Handles project tra
 
 ## Getting Started
 
+Use Node.js `>=20.19.0` (`.nvmrc` uses Node 22).
+
 ```bash
+nvm use
 npm install
-cp .env.local.example .env.local   # fill in Supabase credentials
+cp .env.example .env.local
 npm run dev
 ```
 
 Environment variables required:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+Local document templates are required for DOCX generation and are intentionally not committed:
+- `public/templates/template_penawaran.docx`
+- `public/templates/data_perusahaan.pdf`
 
 ## Project Structure
 
@@ -145,6 +152,4 @@ konsultan-app/
 
 - `dilakukan_oleh` in `override_log` is hardcoded as `'admin'` — needs auth integration
 - `ProyekRow` in `proyek-slideover.tsx` uses `Record<string, unknown>` — needs a proper typed DB row type once Supabase types are generated
-- No authentication — internal use only
-- `status_proyek` (`Work`/`Borrowed`/`Get Borrowed`) in dashboard filter is not wired to a real DB column
 - Province `'Kalimantan Timur'` is hardcoded in the penawaran generate API — should be a company setting

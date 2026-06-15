@@ -11,11 +11,14 @@ Dokumen ini mengikuti struktur aktual aplikasi. Next.js 16 memakai App Router be
 ```text
 konsultan-app/
 ├── app/                    # Routes, layouts, API handlers, global CSS
+├── .github/workflows/      # GitHub Actions CI
 ├── components/             # React components by domain and shared UI
 ├── docs/                   # Project docs, SQL notes, audit scripts
 ├── lib/                    # Data access, Supabase clients, types, validation
 ├── public/                 # Static assets served by Next.js
+├── .env.example            # Safe env template
 ├── AGENTS.md               # Agent instructions
+├── .nvmrc                  # Node version for local/CI
 ├── components.json         # shadcn/ui config
 ├── eslint.config.mjs       # ESLint config
 ├── next.config.ts          # Next config
@@ -28,6 +31,22 @@ konsultan-app/
 ```
 
 Generated and machine-local folders such as `.next/`, `node_modules/`, `.claude/`, `.vscode/`, `supabase/.temp/`, and `.DS_Store` files are not part of the project structure.
+
+---
+
+## .github/
+
+```text
+.github/
+└── workflows/
+    └── ci.yml
+```
+
+CI runs on pushes and pull requests to `main`:
+
+- `npm ci`
+- `npm run lint`
+- `npm test`
 
 ---
 
@@ -281,6 +300,7 @@ Safe to delete when present:
 
 Do not delete without checking references:
 
+- `.env.example`
 - `public/templates/`
 - `lib/database.types.ts`
 - `proxy.ts`

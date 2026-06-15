@@ -21,6 +21,7 @@
 | Dokumen | docxtemplater + PizZip |
 | Charts | Recharts |
 | Test | Vitest, Testing Library, jsdom |
+| Runtime | Node.js >=20.19.0 (`.nvmrc` uses 22) |
 
 ---
 
@@ -153,6 +154,8 @@ npm test
 ## Catatan Teknis
 
 - `public/templates/` sengaja di-ignore karena berisi template dokumen lokal.
+- `.env.example` disimpan sebagai template konfigurasi aman; `.env.local` tetap lokal dan di-ignore.
+- GitHub Actions menjalankan `npm ci`, lint, dan test di `.github/workflows/ci.yml`.
 - `.next/`, `tsconfig.tsbuildinfo`, `.DS_Store`, `.claude/`, `.vscode/`, dan `supabase/.temp/` adalah artefak lokal dan tidak perlu disimpan.
 - `CLAUDE.md` dihapus karena hanya berisi pointer ke `AGENTS.md`; `AGENTS.md` tetap dipakai sebagai instruksi agent lintas tooling.
 - Folder staging lama `public/external/fixes*` sudah tidak menjadi bagian struktur aplikasi. File di area itu adalah salinan patch/eksperimen, bukan source aktif.
