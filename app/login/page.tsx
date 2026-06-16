@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { getSupabaseAuthErrorMessage } from '@/lib/supabase-config'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -18,13 +19,20 @@ export default function LoginPage() {
     event.preventDefault()
     setLoading(true)
 
-    const supabase = createSupabaseBrowserClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    let errorMessage: string | null = null
+
+    try {
+      const supabase = createSupabaseBrowserClient()
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      errorMessage = error ? getSupabaseAuthErrorMessage(error.message) : null
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat menyiapkan Supabase.'
+    }
 
     setLoading(false)
 
-    if (error) {
-      toast.error(error.message)
+    if (errorMessage) {
+      toast.error(errorMessage)
       return
     }
 

@@ -27,7 +27,7 @@ npm run dev
 
 Environment variables required:
 - `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - use the browser-safe publishable/anon key, not a secret key
 
 Local document templates are required for DOCX generation and are intentionally not committed:
 - `public/templates/template_penawaran.docx`
