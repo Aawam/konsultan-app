@@ -78,6 +78,13 @@ export type DataPenawaran = {
 
 export function generatePenawaran(data: DataPenawaran): Buffer {
   const templatePath = path.join(process.cwd(), 'public', 'templates', 'template_penawaran.docx')
+
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(
+      `Template DOCX tidak ditemukan di ${templatePath}. Salin template lokal ke public/templates/template_penawaran.docx sebelum generate penawaran.`
+    )
+  }
+
   const content = fs.readFileSync(templatePath, 'binary')
 
   const zip = new PizZip(content)
