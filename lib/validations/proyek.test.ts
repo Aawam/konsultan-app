@@ -38,6 +38,16 @@ describe('proyekSchema', () => {
     expect(parsed.success).toBe(false)
   })
 
+  it('accepts blank nama_ppk and durasi_hari for optional input', () => {
+    const parsed = proyekSchema.safeParse({
+      ...validProject,
+      nama_ppk: '',
+      durasi_hari: '',
+    })
+
+    expect(parsed.success).toBe(true)
+  })
+
   it('rejects an invalid status bendera value', () => {
     const parsed = proyekSchema.safeParse({
       ...validProject,

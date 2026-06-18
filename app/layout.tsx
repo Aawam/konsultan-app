@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "Konsultan Konstruksi",
-  description: "Manajemen proyek, dokumen penawaran, dan BAP",
+  description: "Monitoring proyek dan database perusahaan",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

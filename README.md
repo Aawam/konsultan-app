@@ -1,6 +1,6 @@
 # Konsulindo Project Suite
 
-Internal management tool for a construction consulting firm. Handles project tracking, bidding document generation, and company database.
+Internal management tool for a construction consulting firm. Focused on project monitoring and company database management.
 
 ## Stack
 
@@ -12,7 +12,6 @@ Internal management tool for a construction consulting firm. Handles project tra
 | Language | TypeScript 5 |
 | Notifications | Sonner (toast) |
 | Export | xlsx |
-| Document gen | docxtemplater + PizZip (DOCX) |
 
 ## Getting Started
 
@@ -29,9 +28,7 @@ Environment variables required:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - use the browser-safe publishable/anon key, not a secret key
 
-Local document templates are required for DOCX generation and are intentionally not committed:
-- `public/templates/template_penawaran.docx`
-- `public/templates/data_perusahaan.pdf`
+Optional local reference assets may live in `public/templates/` and are intentionally not committed.
 
 ## Project Structure
 
@@ -49,19 +46,12 @@ konsultan-app/
 │   │   └── [id]/
 │   │       ├── page.tsx          # Project detail (server)
 │   │       └── edit/page.tsx     # Edit project form (server)
-│   ├── penawaran/                # Bidding document module
-│   │   ├── layout.tsx
-│   │   └── baru/page.tsx
-│   ├── bap/                      # Payment report (BAP) module
-│   │   ├── layout.tsx
-│   │   └── baru/page.tsx
 │   ├── database/                 # Company database module
 │   │   ├── layout.tsx
 │   │   └── page.tsx
 │   └── api/
 │       ├── proyek/[id]/route.ts        # GET project + override logs
-│       ├── pengalaman/route.ts         # GET company experience (filtered)
-│       └── penawaran/generate/route.ts # GET: fetch data + render DOCX
+│       └── proyek/export/route.ts      # GET project export data
 │
 ├── components/
 │   ├── layout/
@@ -76,11 +66,7 @@ konsultan-app/
 │   │   ├── badges.tsx            # BadgeJenis, BadgeTahap, BadgeOverride
 │   │   ├── progress-cell.tsx     # Progress bar + label for tables
 │   │   ├── form-field.tsx        # Label + required marker for forms
-│   │   └── section.tsx           # Section card wrapper (used in BAP form)
-│   ├── penawaran/
-│   │   └── form-penawaran.tsx    # Bidding document generator form (client)
-│   ├── bap/
-│   │   └── form-bap.tsx          # BAP generator form (client)
+│   │   └── section.tsx           # Section card wrapper for project forms
 │   ├── database/
 │   │   └── database-client.tsx   # Company database viewer (client)
 │   └── ui/                       # Generic UI primitives
@@ -95,7 +81,6 @@ konsultan-app/
 ├── lib/
 │   ├── supabase.ts               # Supabase client singleton
 │   ├── utils.ts                  # cn(), formatRupiah(), formatTanggal()
-│   ├── generate-penawaran.ts     # DOCX generation via docxtemplater
 │   ├── constants/
 │   │   └── proyek.ts             # FASE_*, TAHAP_BAR_COLOR, getPersentaseFromFase()
 │   ├── types/
@@ -103,8 +88,6 @@ konsultan-app/
 │   │   └── perusahaan.ts         # PerusahaanDetail
 │   └── actions/
 │       ├── proyek.ts             # Project CRUD (getDaftarProyek, simpanProyek, hapusProyek…)
-│       ├── penawaran.ts          # simpanPenawaran, generateNomorPenawaran
-│       ├── personil.ts           # getPersonilList, getPengalamanPerusahaan
 │       └── perusahaan.ts         # getPerusahaanDetailList, getProyekByPerusahaan
 │
 ├── docs/
@@ -113,9 +96,7 @@ konsultan-app/
 │   └── ui_conventions.md         # Design system conventions
 │
 └── public/
-    └── templates/
-        ├── template_penawaran.docx   # DOCX template for bidding docs
-        └── data_perusahaan.pdf       # Company data reference
+    └── templates/                # Optional local reference assets
 ```
 
 ## Modules
@@ -126,15 +107,6 @@ konsultan-app/
 - Budget validation with override log (HPS ≤ Pagu, Penawaran ≤ HPS)
 - Progress tracking by phase (Perencanaan / Pengawasan)
 - Quick-view side panel + full detail page
-
-### Penawaran (Bidding Documents)
-- Multi-step form: project identity → budget → client → team → experience
-- Auto-generates document number (`{n}/PEN/{company}/{project}/{month}/{year}`)
-- Saves project to DB and generates downloadable DOCX
-
-### BAP (Payment Report)
-- 3-step form linking to an existing contracted project
-- Generates BAP DOCX for a billing period
 
 ### Database (Company Reference)
 - View all company records with linked project history
@@ -150,6 +122,5 @@ konsultan-app/
 
 ## Known Technical Debt
 
-- `dilakukan_oleh` in `override_log` is hardcoded as `'admin'` — needs auth integration
 - `ProyekRow` in `proyek-slideover.tsx` uses `Record<string, unknown>` — needs a proper typed DB row type once Supabase types are generated
-- Province `'Kalimantan Timur'` is hardcoded in the penawaran generate API — should be a company setting
+- `lib/database.types.ts` still reflects legacy document-related tables until Supabase types are regenerated from the simplified schema

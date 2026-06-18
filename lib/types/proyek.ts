@@ -7,6 +7,11 @@ export type Perusahaan = {
   adalah_perusahaan_sendiri: boolean
 }
 
+export type DinasOption = {
+  id?: string
+  dinas: string
+}
+
 export type ProyekDisplay = {
   id: string
   nama_proyek: string
@@ -30,6 +35,7 @@ export type ProyekDetail = {
   id: string
   nama_proyek: string
   paket_pekerjaan_induk: string | null
+  nomor_kontrak: string | null
   jenis_pekerjaan: string
   kategori_pekerjaan: string
   tahun_anggaran: number
@@ -66,6 +72,7 @@ export type ProyekFormData = {
   id?: string
   nama_proyek?: string
   paket_pekerjaan_induk?: string
+  nomor_kontrak?: string
   jenis_pekerjaan?: 'Perencanaan' | 'Pengawasan' | ''
   kategori_pekerjaan?: KategoriPekerjaan | string
   tahun_anggaran?: number
@@ -88,6 +95,7 @@ export type ProyekFormData = {
 export type ProyekPayload = {
   nama_proyek: string
   paket_pekerjaan_induk: string
+  nomor_kontrak: string | null
   jenis_pekerjaan: string
   kategori_pekerjaan: string
   tahun_anggaran: number
@@ -101,7 +109,7 @@ export type ProyekPayload = {
   perusahaan_id: string
   tanggal_mulai: string | null
   tanggal_selesai: string | null
-  durasi_hari: number
+  durasi_hari: number | null
   tahap_progress: string | null
   persentase_progress: number
   catatan: string | null

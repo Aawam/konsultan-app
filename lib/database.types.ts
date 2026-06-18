@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      dinas_skpd: {
+        Row: {
+          created_at: string
+          id: string
+          nama_dinas: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nama_dinas: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nama_dinas?: string
+        }
+        Relationships: []
+      }
       checklist_proyek: {
         Row: {
           catatan: string | null

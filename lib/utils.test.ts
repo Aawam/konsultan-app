@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatRupiah, formatTanggal } from '@/lib/utils'
+import { formatNumberInput, formatRupiah, formatTanggal, parseNumberInput } from '@/lib/utils'
 
 describe('formatRupiah', () => {
   it('formats Indonesian rupiah without fraction digits', () => {
@@ -18,5 +18,15 @@ describe('formatTanggal', () => {
 
   it('uses a dash for empty values', () => {
     expect(formatTanggal(null)).toBe('-')
+  })
+})
+
+describe('number input helpers', () => {
+  it('parses formatted strings into numbers', () => {
+    expect(parseNumberInput('1.250.000')).toBe(1250000)
+  })
+
+  it('formats numeric strings with thousand separators', () => {
+    expect(formatNumberInput('1250000')).toBe('1.250.000')
   })
 })

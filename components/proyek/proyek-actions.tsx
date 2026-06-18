@@ -7,7 +7,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import Link from 'next/link'
 import { toast } from 'sonner'
 
-export function TombolAksi({ id }: { id: string }) {
+export function TombolAksi({ id, editLabel = 'Edit' }: { id: string; editLabel?: string }) {
   const router = useRouter()
   const [deleting, setDeleting] = useState(false)
   const [open, setOpen] = useState(false)
@@ -33,18 +33,18 @@ export function TombolAksi({ id }: { id: string }) {
     <div className="flex items-center gap-2 shrink-0">
       <Button
         variant="outline"
-        size="sm"
+        size="lg"
         asChild
-        className=""
+        className="h-10 rounded-lg border-amber bg-amber/10 px-6 text-sm font-semibold text-amber hover:bg-amber/15"
       >
-        <Link href={`/proyek/${id}/edit`}>Edit</Link>
+        <Link href={`/proyek/${id}/edit`}>{editLabel}</Link>
       </Button>
 
       <Button
-        size="sm"
+        size="lg"
         disabled={deleting}
         onClick={() => setOpen(true)}
-        className="bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25 hover:text-red-300"
+        className="h-10 rounded-lg border border-rose bg-rose/10 px-6 text-sm font-semibold text-rose hover:bg-rose/15"
       >
         Hapus
       </Button>
@@ -55,7 +55,7 @@ export function TombolAksi({ id }: { id: string }) {
         title="Hapus proyek ini?"
         description="Data proyek akan disembunyikan dari daftar proyek dan export."
         confirmLabel="Ya, Hapus"
-        confirmClassName="bg-red-500/20 text-red-300 border border-red-500/20 hover:bg-red-500/30"
+        confirmClassName="bg-rose/15 text-rose border border-rose/20 hover:bg-rose/25"
         onConfirm={handleHapus}
       />
     </div>

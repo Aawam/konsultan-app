@@ -4,13 +4,14 @@ import { KATEGORI_PEKERJAAN } from '@/lib/constants/proyek'
 export const proyekSchema = z.object({
   nama_proyek:          z.string().min(3, 'Nama proyek minimal 3 karakter'),
   paket_pekerjaan_induk: z.string().min(3, 'Paket pekerjaan induk wajib diisi'),
+  nomor_kontrak:        z.string().trim().nullable().optional(),
   jenis_pekerjaan:      z.enum(['Perencanaan', 'Pengawasan']),
   kategori_pekerjaan:   z.enum(KATEGORI_PEKERJAAN),
   tahun_anggaran:       z.number().int().min(2000).max(2100),
   sumber_dana:          z.enum(['APBD', 'APBD-Perubahan']),
   dinas:                z.string().min(2, 'Dinas wajib diisi'),
   lokasi_kecamatan:     z.string().min(2, 'Lokasi kecamatan wajib diisi'),
-  nama_ppk:             z.string().min(3, 'Nama PPK wajib diisi'),
+  nama_ppk:             z.string().trim().optional(),
   pagu_dana:            z.number().positive('Pagu dana harus lebih dari 0'),
   hps:                  z.number().positive().nullable().optional(),
   nilai_penawaran:      z.number().positive().nullable().optional(),
@@ -20,7 +21,10 @@ export const proyekSchema = z.object({
   tahap_progress:       z.string().nullable().optional(),
   status_proyek:        z.enum(['Work', 'Borrowed', 'Get Borrowed']).nullable().optional(),
   catatan:              z.string().nullable().optional(),
-  durasi_hari:          z.coerce.number().min(1, "Durasi hari harus diisi"),
+  durasi_hari:          z.preprocess(
+    (value) => (value === '' || value === null || value === undefined ? null : Number(value)),
+    z.number().int().positive().nullable().optional()
+  ),
 })
 
 export type ProyekSchemaInput = z.infer<typeof proyekSchema>

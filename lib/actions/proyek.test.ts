@@ -5,6 +5,7 @@ import type { ProyekFormData } from '@/lib/types/proyek'
 const form: ProyekFormData = {
   nama_proyek: 'Perencanaan Gedung Kantor',
   paket_pekerjaan_induk: 'Pembangunan Gedung Kantor',
+  nomor_kontrak: '640/CTR/2026',
   jenis_pekerjaan: 'Perencanaan',
   kategori_pekerjaan: 'Bangunan Gedung',
   tahun_anggaran: 2026,
@@ -31,6 +32,7 @@ describe('buildProyekPayload', () => {
     expect(payload.pagu_dana).toBe(50000000)
     expect(payload.hps).toBe(45000000)
     expect(payload.nilai_penawaran).toBe(40000000)
+    expect(payload.nomor_kontrak).toBe('640/CTR/2026')
     expect(payload.durasi_hari).toBe(30)
     expect(payload.persentase_progress).toBe(40)
     expect(payload.jalur_masuk).toBe('manual')
@@ -40,13 +42,19 @@ describe('buildProyekPayload', () => {
   it('keeps optional numeric fields as null when blank', () => {
     const payload = buildProyekPayload({
       ...form,
+      nomor_kontrak: '',
+      nama_ppk: '',
       hps: '',
       nilai_penawaran: '',
+      durasi_hari: '',
       tahap_progress: '',
     })
 
+    expect(payload.nomor_kontrak).toBeNull()
+    expect(payload.nama_ppk).toBe('')
     expect(payload.hps).toBeNull()
     expect(payload.nilai_penawaran).toBeNull()
+    expect(payload.durasi_hari).toBeNull()
     expect(payload.tahap_progress).toBeNull()
     expect(payload.persentase_progress).toBe(0)
   })

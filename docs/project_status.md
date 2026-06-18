@@ -18,7 +18,6 @@
 | Validasi | Zod |
 | Toast | Sonner |
 | Export | xlsx |
-| Dokumen | docxtemplater + PizZip |
 | Charts | Recharts |
 | Test | Vitest, Testing Library, jsdom |
 | Runtime | Node.js >=20.19.0 (`.nvmrc` uses 22) |
@@ -50,19 +49,12 @@
 | Agregasi Dinas/SKPD | Selesai | `/database` |
 | Detail perusahaan expandable | Selesai | `components/database/database-client.tsx` |
 
-### Penawaran
+### Dokumen
 
-| Fitur | Status | Lokasi |
+| Fitur | Status | Catatan |
 |---|---|---|
-| Form generator penawaran | Kode tersedia, nav disabled | `/penawaran/baru` |
-| Simpan penawaran via server action/API | Aktif di kode | `lib/actions/penawaran.ts`, `/api/penawaran` |
-| Generate DOCX | Aktif di kode, membutuhkan template lokal | `/api/penawaran/generate` |
-
-### BAP
-
-| Fitur | Status | Lokasi |
-|---|---|---|
-| Form generator BAP | Kode tersedia, nav disabled | `/bap/baru` |
+| Penawaran | Dihapus dari scope aplikasi | Route, form, API, dan action sudah tidak menjadi bagian produk aktif. |
+| BAP | Dihapus dari scope aplikasi | Modul dokumen pembayaran tidak lagi dipertahankan. |
 
 ### Auth
 
@@ -84,19 +76,18 @@
 | `/api/proyek/[id]` | DELETE | Hapus proyek. |
 | `/api/proyek/[id]/override` | POST | Simpan override log. |
 | `/api/proyek/export` | GET | Data proyek untuk export. |
-| `/api/penawaran` | POST | Simpan proyek penawaran dan personil terkait. |
-| `/api/penawaran/generate` | GET | Render DOCX penawaran. |
-| `/api/pengalaman` | GET | Filter pengalaman perusahaan. |
-
 ---
 
 ## Database Utama
 
-Kode saat ini bergantung pada tabel berikut:
+Kode aktif saat ini bergantung pada tabel berikut:
 
 - `proyek`
 - `perusahaan`
 - `override_log`
+
+Tabel legacy yang sebelumnya dipakai modul dokumen dan sekarang bisa ditinjau untuk dihapus setelah audit database:
+
 - `personil`
 - `personil_proyek`
 - `pengalaman_perusahaan`
@@ -153,10 +144,11 @@ npm test
 
 ## Catatan Teknis
 
-- `public/templates/` sengaja di-ignore karena berisi template dokumen lokal.
+- `public/templates/` masih boleh dipakai untuk aset referensi lokal, tetapi tidak lagi dibutuhkan untuk fitur inti aplikasi.
 - `.env.example` disimpan sebagai template konfigurasi aman; `.env.local` tetap lokal dan di-ignore.
 - GitHub Actions menjalankan `npm ci`, lint, dan test di `.github/workflows/ci.yml`.
 - `.next/`, `tsconfig.tsbuildinfo`, `.DS_Store`, `.claude/`, `.vscode/`, dan `supabase/.temp/` adalah artefak lokal dan tidak perlu disimpan.
 - `CLAUDE.md` dihapus karena hanya berisi pointer ke `AGENTS.md`; `AGENTS.md` tetap dipakai sebagai instruksi agent lintas tooling.
 - Folder staging lama `public/external/fixes*` sudah tidak menjadi bagian struktur aplikasi. File di area itu adalah salinan patch/eksperimen, bukan source aktif.
 - Docs sekarang memakai lowercase snake_case: `project_status.md`, `project_structure.md`, `ui_conventions.md`.
+- Cleanup Supabase untuk scope monitoring-only disiapkan di `docs/DB_Simplification_Audit.sql` dan `docs/DB_Simplification_Cleanup.sql`.

@@ -1,5 +1,5 @@
-import { getProyekById, getPerusahaanList } from '@/lib/actions/proyek'
-import { FormProyek } from '@/components/proyek/form-proyek'
+import { getDinasList, getProyekById, getPerusahaanList } from '@/lib/actions/proyek'
+import { FormEditProyek } from '@/components/proyek/form-edit-proyek'
 import { BackButton } from '@/components/ui/back-button'
 import { notFound } from 'next/navigation'
 import type { ProyekFormData } from '@/lib/types/proyek'
@@ -11,9 +11,10 @@ export default async function EditProyekPage({
 }) {
   const { id } = await params
 
-  const [{ data: proyek }, { data: perusahaanList }] = await Promise.all([
+  const [{ data: proyek }, { data: perusahaanList }, { data: dinasList }] = await Promise.all([
     getProyekById(id),
     getPerusahaanList(),
+    getDinasList(),
   ])
 
   if (!proyek) notFound()
@@ -29,6 +30,7 @@ export default async function EditProyekPage({
     id: proyek.id,
     nama_proyek: proyek.nama_proyek,
     paket_pekerjaan_induk: proyek.paket_pekerjaan_induk ?? '',
+    nomor_kontrak: proyek.nomor_kontrak ?? '',
     jenis_pekerjaan: proyek.jenis_pekerjaan as 'Perencanaan' | 'Pengawasan',
     kategori_pekerjaan: proyek.kategori_pekerjaan,
     tahun_anggaran: proyek.tahun_anggaran,
@@ -54,12 +56,12 @@ export default async function EditProyekPage({
       <BackButton href={`/proyek/${id}`} label="Kembali ke Detail Proyek" />
       <div className="mb-6">
         <h1 className="text-xl font-bold text-foreground">Edit Proyek</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Field bertanda * wajib diisi.</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Field bertanda * wajib diisi. Field lainnya opsional.</p>
       </div>
-      <FormProyek
+      <FormEditProyek
         perusahaanList={ordered}
+        dinasList={dinasList ?? []}
         initialData={initialData}
-        mode="edit"
       />
     </div>
   )

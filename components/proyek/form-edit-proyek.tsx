@@ -4,10 +4,9 @@ import type { DinasOption, Perusahaan, ProyekFormData } from '@/lib/types/proyek
 type Props = {
   perusahaanList: Perusahaan[]
   dinasList: DinasOption[]
-  initialData?: ProyekFormData
-  mode?: 'create' | 'edit'
+  initialData: ProyekFormData
 }
 
-export function FormProyek({ mode = 'create', ...props }: Props) {
-  return <ProyekFormShell {...props} mode={mode} />
+export function FormEditProyek(props: Props) {
+  return <ProyekFormShell {...props} mode="edit" />
 }

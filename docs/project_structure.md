@@ -71,12 +71,6 @@ app/
 ├── database/
 │   ├── layout.tsx
 │   └── page.tsx
-├── penawaran/
-│   ├── layout.tsx
-│   └── baru/page.tsx
-├── bap/
-│   ├── layout.tsx
-│   └── baru/page.tsx
 └── api/
     ├── proyek/
     │   ├── route.ts
@@ -84,10 +78,6 @@ app/
     │   └── [id]/
     │       ├── route.ts
     │       └── override/route.ts
-    ├── penawaran/
-    │   ├── route.ts
-    │   └── generate/route.ts
-    └── pengalaman/route.ts
 ```
 
 Key responsibilities:
@@ -100,9 +90,7 @@ Key responsibilities:
 | `app/login/page.tsx` | Supabase login screen. |
 | `app/proyek/*` | Main project management routes. |
 | `app/database/*` | Company/database dashboard. |
-| `app/penawaran/*` | Penawaran generator route; nav disabled but code remains. |
-| `app/bap/*` | BAP generator route; nav disabled but code remains. |
-| `app/api/**/route.ts` | Route Handlers for CRUD/export/document workflows. |
+| `app/api/**/route.ts` | Route Handlers for CRUD, export, and override workflows. |
 
 ---
 
@@ -113,8 +101,6 @@ components/
 ├── layout/
 ├── proyek/
 ├── database/
-├── penawaran/
-├── bap/
 └── ui/
 ```
 
@@ -145,13 +131,6 @@ components/
 |---|---|
 | `database-client.tsx` | Tabs for perusahaan, all projects, and Dinas/SKPD aggregation. |
 
-### penawaran/ and bap/
-
-| File | Purpose |
-|---|---|
-| `penawaran/form-penawaran.tsx` | Penawaran form and document generation flow. |
-| `bap/form-bap.tsx` | BAP form flow. |
-
 ### ui/
 
 Generic primitives and shared helpers live here. Domain-specific code should not be added to `components/ui/`.
@@ -174,7 +153,6 @@ lib/
 ├── types/
 ├── validations/
 ├── database.types.ts
-├── generate-penawaran.ts
 ├── supabase.ts
 ├── supabase-browser.ts
 ├── supabase-server.ts
@@ -186,8 +164,6 @@ lib/
 | File | Main exports |
 |---|---|
 | `proyek.ts` | Project queries/mutations, payload builder, override log, delete. |
-| `penawaran.ts` | Penawaran number generation and save workflow. |
-| `personil.ts` | Personil and company experience queries. |
 | `perusahaan.ts` | Company list and projects by company. |
 
 ### constants/
@@ -217,7 +193,6 @@ lib/
 | `supabase.ts` | General singleton client. |
 | `supabase-browser.ts` | Browser client for Client Components. |
 | `supabase-server.ts` | Server client and current user helper. |
-| `generate-penawaran.ts` | DOCX rendering from `public/templates/template_penawaran.docx`. |
 | `utils.ts` | `cn`, `formatRupiah`, `formatTanggal`. |
 
 ---
@@ -249,6 +224,8 @@ docs/
 ├── project_structure.md
 ├── ui_conventions.md
 ├── DB_Audit.sql
+├── DB_Simplification_Audit.sql
+├── DB_Simplification_Cleanup.sql
 └── RLS_Policies.sql
 ```
 
@@ -261,11 +238,10 @@ Markdown docs use lowercase snake_case. SQL files remain uppercase because they 
 ```text
 public/
 └── templates/
-    ├── template_penawaran.docx
-    └── data_perusahaan.pdf
+    └── [optional local reference assets]
 ```
 
-`public/templates/` is intentionally ignored by git because the templates are local/static business files. Keep active templates here, but do not use `public/` as a staging folder for copied source code.
+`public/templates/` is intentionally ignored by git because it may contain local/static business reference files. Keep optional assets here, but do not use `public/` as a staging folder for copied source code.
 
 ---
 

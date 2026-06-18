@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { buildProyekPayload } from '@/lib/actions/proyek'
 import { proyekSchema } from '@/lib/validations/proyek'
 import type { ProyekFormData } from '@/lib/types/proyek'
+import { parseNumberInput } from '@/lib/utils'
 
 export async function GET(
   _req: NextRequest,
@@ -19,6 +20,10 @@ export async function GET(
     .single()
 
   if (error || !proyek) {
+    if (error && error.code !== 'PGRST116') {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
@@ -42,9 +47,9 @@ export async function PATCH(
   const parsed = proyekSchema.safeParse({
     ...form,
     id,
-    pagu_dana: Number(form.pagu_dana),
-    hps: form.hps ? Number(form.hps) : null,
-    nilai_penawaran: form.nilai_penawaran ? Number(form.nilai_penawaran) : null,
+    pagu_dana: parseNumberInput(form.pagu_dana),
+    hps: form.hps ? parseNumberInput(form.hps) : null,
+    nilai_penawaran: form.nilai_penawaran ? parseNumberInput(form.nilai_penawaran) : null,
     status_proyek: form.status_proyek || null,
   })
 

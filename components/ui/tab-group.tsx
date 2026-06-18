@@ -3,6 +3,7 @@ type TabGroupProps<T extends string | number> = {
   value: T
   onChange: (value: T) => void
   className?: string
+  buttonClassName?: string
 }
 
 export function TabGroup<T extends string | number>({
@@ -10,6 +11,7 @@ export function TabGroup<T extends string | number>({
   value,
   onChange,
   className = '',
+  buttonClassName = '',
 }: TabGroupProps<T>) {
   return (
     <div
@@ -23,7 +25,8 @@ export function TabGroup<T extends string | number>({
             key={tab.value}
             onClick={() => onChange(tab.value)}
             className={[
-              'px-3 py-1 rounded-md text-xs font-medium transition-all',
+              'rounded-md text-xs font-medium transition-all',
+              buttonClassName || 'px-3 py-1',
               active
                 ? (tab.accent ?? 'bg-foreground text-background')
                 : 'text-muted-foreground hover:text-foreground',

@@ -22,3 +22,17 @@ export const formatTanggal = (tgl: string | null): string => {
     year: 'numeric',
   })
 }
+
+export const parseNumberInput = (nilai: string | number | null | undefined): number => {
+  if (nilai === null || nilai === undefined) return 0
+  if (typeof nilai === 'number') return Number.isFinite(nilai) ? nilai : 0
+
+  const cleaned = nilai.replace(/[^\d]/g, '')
+  return cleaned ? Number(cleaned) : 0
+}
+
+export const formatNumberInput = (nilai: string | number | null | undefined): string => {
+  const parsed = parseNumberInput(nilai)
+  if (!parsed) return ''
+  return new Intl.NumberFormat('id-ID').format(parsed)
+}

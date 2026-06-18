@@ -5,37 +5,52 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { BadgeJenis, BadgeTahap, BadgeOverride } from '@/components/proyek/badges'
-import { KvField } from '@/components/ui/kv-field'
-import { SectionCard } from '@/components/ui/section-card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { formatRupiah, formatTanggal } from '@/lib/utils'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { formatRupiah } from '@/lib/utils'
 import { TAHAP_BAR_COLOR } from '@/lib/constants/proyek'
 import type { ProyekDetail } from '@/lib/types/proyek'
 
 type OverrideLog = { id: string; field_dioverride: string; alasan: string; dilakukan_pada: string }
 
+function formatCompactRupiah(nilai: number | null) {
+  if (!nilai) return '-'
+  if (nilai >= 1_000_000_000) {
+    return `Rp ${(nilai / 1_000_000_000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} M`
+  }
+  if (nilai >= 1_000_000) {
+    return `Rp ${(nilai / 1_000_000).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt`
+  }
+  return formatRupiah(nilai)
+}
+
 export function ProyekSlideover({ id, onClose }: { id: string | null; onClose: () => void }) {
   const router = useRouter()
   const [proyek, setProyek] = useState<ProyekDetail | null>(null)
-  const [overrideLogs, setOverrideLogs] = useState<OverrideLog[]>([])
   const [loading, setLoading] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   // I2: error state so the panel doesn't silently stay blank on fetch failure
-  const [fetchError, setFetchError] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   const fetchData = useCallback(async (proyekId: string) => {
     setLoading(true)
     setProyek(null)
-    setFetchError(false)
+    setFetchError(null)
     try {
       const res = await fetch(`/api/proyek/${proyekId}`)
-      if (!res.ok) { setFetchError(true); return }
-      const json = await res.json() as { proyek: ProyekDetail; overrideLogs?: OverrideLog[] }
+      const json = await res.json() as {
+        proyek?: ProyekDetail
+        overrideLogs?: OverrideLog[]
+        error?: string
+      }
+      if (!res.ok || !json.proyek) {
+        setFetchError(json.error ?? 'Gagal memuat data proyek.')
+        return
+      }
       setProyek(json.proyek)
-      setOverrideLogs(json.overrideLogs ?? [])
-    } catch {
-      setFetchError(true)
+    } catch (error) {
+      setFetchError(error instanceof Error ? error.message : 'Gagal memuat data proyek.')
     } finally {
       setLoading(false)
     }
@@ -58,7 +73,12 @@ export function ProyekSlideover({ id, onClose }: { id: string | null; onClose: (
     const res = await fetch(`/api/proyek/${id}`, { method: 'DELETE' })
     const json = await res.json() as { error?: string }
     setDeleting(false)
-    if (!res.ok || json.error) { toast.error(`Gagal menghapus: ${json.error ?? 'Terjadi kesalahan'}`); return }
+
+    if (!res.ok || json.error) {
+      toast.error(`Gagal menghapus: ${json.error ?? 'Terjadi kesalahan'}`)
+      return
+    }
+
     toast.success('Proyek berhasil dihapus')
     onClose()
     router.refresh()
@@ -74,65 +94,24 @@ export function ProyekSlideover({ id, onClose }: { id: string | null; onClose: (
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        className={[
-          'fixed inset-0 z-30 bg-black/40 backdrop-blur-sm transition-opacity duration-300',
-          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
-        ].join(' ')}
-        onClick={onClose}
-      />
+      <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
+        <SheetContent side="right" className="w-[340px] max-w-[96vw] border-l border-border bg-card p-0 shadow-xl">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Preview Proyek</SheetTitle>
+          </SheetHeader>
 
-      {/* Panel */}
-      <aside
-        className={[
-          'fixed top-0 right-0 z-40 h-screen w-[560px] max-w-[95vw] bg-background border-l border-border shadow-2xl',
-          'flex flex-col transition-transform duration-300 ease-in-out',
-          open ? 'translate-x-0' : 'translate-x-full',
-        ].join(' ')}
-      >
-        {/* Panel header */}
-        <div className="h-14 px-5 flex items-center justify-between border-b border-border shrink-0 bg-surface/80 backdrop-blur-md">
-          <p className="text-sm font-semibold text-foreground">Detail Proyek</p>
-          <div className="flex items-center gap-2">
-            {proyek && (
-              <Link href={`/proyek/${id}`} className="text-xs text-brand hover:underline" onClick={onClose}>
-                Buka halaman penuh →
-              </Link>
-            )}
-            <button onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-5 py-5">
+          <div className="flex-1 overflow-y-auto px-5 py-5">
 
           {/* Loading skeleton */}
           {loading && (
             <div className="space-y-4">
-              <div className="section-card p-5 space-y-3">
-                <div className="flex gap-2"><div className="skeleton h-5 w-20 rounded-md" /><div className="skeleton h-5 w-24 rounded-md" /></div>
-                <div className="skeleton h-5 w-3/4" />
-                <div className="skeleton h-2 w-full rounded-full mt-2" />
+              <div className="skeleton h-7 w-36" />
+              <div className="skeleton h-12 w-full" />
+              <div className="skeleton h-2 w-full rounded-full" />
+              <div className="grid grid-cols-2 gap-3 pt-8">
+                <div className="skeleton h-20 rounded-xl" />
+                <div className="skeleton h-20 rounded-xl" />
               </div>
-              {[3, 3, 2, 2].map((rows, si) => (
-                <div key={si} className="section-card">
-                  <div className="section-header"><div className="skeleton h-3 w-28" /></div>
-                  <div className="section-body grid grid-cols-2 gap-x-6 gap-y-4">
-                    {[...Array(rows)].map((_, i) => (
-                      <div key={i} className="space-y-1.5">
-                        <div className="skeleton h-2.5 w-16" />
-                        <div className="skeleton h-4 w-3/4" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
             </div>
           )}
 
@@ -147,7 +126,7 @@ export function ProyekSlideover({ id, onClose }: { id: string | null; onClose: (
               </div>
               <div>
                 <p className="text-sm font-medium text-foreground">Gagal memuat data</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Periksa koneksi dan coba lagi</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{fetchError}</p>
               </div>
               <button onClick={() => id && fetchData(id)}
                 className="text-xs text-brand hover:underline transition-colors">
@@ -158,133 +137,97 @@ export function ProyekSlideover({ id, onClose }: { id: string | null; onClose: (
 
           {/* Content fades in after load */}
           {!loading && !fetchError && proyek && (
-            <div className="space-y-4 animate-in fade-in-0 duration-200">
-
-              {/* Header card */}
-              <div className="section-card">
-                <div className="px-5 py-4 flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <BadgeJenis jenis={proyek.jenis_pekerjaan as string} />
-                      <BadgeTahap tahap={proyek.tahap_progress} />
-                      {!!proyek.pernah_dioverride && <BadgeOverride />}
-                    </div>
-                    <h2 className="text-base font-bold text-foreground leading-snug">
-                      {proyek.nama_proyek}
-                    </h2>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Paket: {proyek.paket_pekerjaan_induk ?? '—'}
-                      {perusahaan && (
-                        <> &nbsp;·&nbsp; {perusahaan.nama_perusahaan}{perusahaan.adalah_perusahaan_sendiri ? ' ⭐' : ''}</>
-                      )}
-                    </p>
-                  </div>
-                  {/* I2: delete button now wired in the slideover */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Link href={`/proyek/${id}/edit`} onClick={onClose}
-                      className="px-3 py-1.5 text-xs font-medium border border-border rounded-lg hover:bg-muted transition-colors">
-                      Edit
-                    </Link>
-                    <button onClick={() => setDeleteOpen(true)} disabled={deleting}
-                      className="px-3 py-1.5 text-xs font-medium rounded-lg border bg-rose/10 text-rose border-rose/20 hover:bg-rose/20 transition-colors disabled:opacity-50">
-                      {deleting ? '…' : 'Hapus'}
-                    </button>
-                  </div>
+            <div className="min-h-[calc(100vh-2.5rem)] space-y-5 animate-in fade-in-0 duration-200">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">Preview Proyek</h2>
+                  <p className="mt-1.5 text-xs leading-snug text-muted-foreground">
+                    Klik row untuk menampilkan ringkasan tanpa pindah halaman.
+                  </p>
                 </div>
-                <div className="px-5 pb-4">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-muted-foreground">Progress keseluruhan</span>
-                    <span className={`text-sm font-mono font-bold ${isSelesai ? 'text-emerald' : 'text-brand'}`}>{persen}%</span>
-                  </div>
-                  <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${persen}%` }} />
-                  </div>
+                <button onClick={onClose}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6 6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <BadgeJenis jenis={proyek.jenis_pekerjaan as string} />
+                <BadgeTahap tahap={proyek.tahap_progress} />
+                {!!proyek.pernah_dioverride && <BadgeOverride />}
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold leading-tight text-foreground">
+                  {proyek.nama_proyek}
+                </h3>
+                <p className="mt-3 text-xs text-muted-foreground">{proyek.dinas}</p>
+                <p className="mt-2 text-sm text-foreground">
+                  {perusahaan?.nama_perusahaan ?? '-'}
+                </p>
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">Progress keseluruhan</span>
+                  <span className={`text-xl font-mono font-bold ${isSelesai ? 'text-emerald' : 'text-brand'}`}>{persen}%</span>
+                </div>
+                <div className="h-1.5 w-full rounded-full bg-muted">
+                  <div className={`h-full rounded-full ${barColor}`} style={{ width: `${persen}%` }} />
                 </div>
               </div>
 
-              <SectionCard title="Identitas Proyek">
-                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                  <KvField label="Jenis Pekerjaan" value={proyek.jenis_pekerjaan as string} />
-                  <KvField label="Kategori"         value={proyek.kategori_pekerjaan} />
-                  <KvField label="Tahun Anggaran"   value={String(proyek.tahun_anggaran)} mono />
-                  <KvField label="Sumber Dana"      value={proyek.sumber_dana} />
-                  <KvField label="Perusahaan"
-                    value={perusahaan ? `${perusahaan.nama_perusahaan}${perusahaan.adalah_perusahaan_sendiri ? ' ⭐' : ''}` : undefined}
-                    span2 />
+              <div>
+                <p className="text-xs font-bold text-muted-foreground">Nomor Kontrak</p>
+                <p className="mt-3 text-base font-bold text-foreground">{proyek.nomor_kontrak ?? '-'}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-6">
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Nilai Kontrak</p>
+                  <p className="mt-2 text-2xl font-bold text-foreground">{formatCompactRupiah(proyek.nilai_penawaran)}</p>
                 </div>
-              </SectionCard>
-
-              <SectionCard title="Anggaran">
-                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                  <KvField label="Pagu Dana"     value={formatRupiah(proyek.pagu_dana)} mono accent />
-                  <KvField label="HPS"           value={formatRupiah(proyek.hps)} mono />
-                  <KvField label="Nilai Kontrak" value={formatRupiah(proyek.nilai_penawaran)} mono />
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Tahun</p>
+                  <p className="mt-2 text-2xl font-bold font-mono text-foreground">{proyek.tahun_anggaran}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{proyek.sumber_dana}</p>
                 </div>
-              </SectionCard>
+              </div>
 
-              <SectionCard title="Pemberi Kerja">
-                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                  <KvField label="Dinas / SKPD" value={proyek.dinas} span2 />
-                  <KvField label="Lokasi"        value={proyek.lokasi_kecamatan ?? undefined} />
-                  <KvField label="Nama PPK"      value={proyek.nama_ppk ?? undefined} />
-                </div>
-              </SectionCard>
-
-              <SectionCard title="Pelaksanaan">
-                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                  <KvField label="Tanggal Mulai"   value={formatTanggal(proyek.tanggal_mulai)} />
-                  <KvField label="Tanggal Selesai" value={formatTanggal(proyek.tanggal_selesai)} />
-                  <KvField label="Status Bendera"  value={proyek.status_proyek ?? undefined} />
-                  <KvField label="Jalur Masuk"     value={proyek.jalur_masuk ?? undefined} />
-                </div>
-              </SectionCard>
-
-              {proyek.catatan && (
-                <SectionCard title="Catatan">
-                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                    {proyek.catatan}
-                  </p>
-                </SectionCard>
-              )}
-
-              {overrideLogs.length > 0 && (
-                <SectionCard title="Riwayat Override">
-                  <div className="space-y-3">
-                    {overrideLogs.map((log) => (
-                      <div key={log.id} className="flex gap-4 items-start border-l-2 border-amber/30 pl-4">
-                        <div className="flex-1 space-y-0.5">
-                          <p className="text-sm font-medium text-foreground">{log.field_dioverride}</p>
-                          <p className="text-xs text-muted-foreground">{log.alasan}</p>
-                        </div>
-                        <p className="text-xs text-muted-foreground shrink-0">
-                          {new Date(log.dilakukan_pada).toLocaleString('id-ID')}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </SectionCard>
-              )}
-
-              <SectionCard title="Metadata">
-                <div className="grid grid-cols-2 gap-4">
-                  <KvField label="Dibuat pada"       value={new Date(proyek.created_at).toLocaleString('id-ID')} mono />
-                  <KvField label="Terakhir diupdate" value={new Date(proyek.updated_at).toLocaleString('id-ID')} mono />
-                </div>
-              </SectionCard>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/proyek/${id}`}
+                  onClick={onClose}
+                  className="inline-flex h-10 flex-1 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand/90"
+                >
+                  Buka Detail
+                </Link>
+                <button
+                  onClick={() => setDeleteOpen(true)}
+                  disabled={deleting}
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-rose bg-rose/10 px-5 text-sm font-semibold text-rose transition-colors hover:bg-rose/15 disabled:opacity-50"
+                >
+                  {deleting ? '...' : 'Hapus'}
+                </button>
+              </div>
             </div>
           )}
-        </div>
-      </aside>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <ConfirmDialog
         open={deleteOpen}
-        onOpenChange={(o) => { setDeleteOpen(o); if (!o) setDeleting(false) }}
+        onOpenChange={(open) => { setDeleteOpen(open); if (!open) setDeleting(false) }}
         title="Hapus proyek ini?"
         description="Data proyek akan disembunyikan dari daftar proyek dan export."
         confirmLabel="Ya, Hapus"
         confirmClassName="bg-rose/15 text-rose border border-rose/20 hover:bg-rose/25"
         onConfirm={handleDelete}
       />
+
     </>
   )
 }

@@ -6,9 +6,7 @@ const TITLES: Record<string, { crumb: string; title: string }> = {
   '/proyek':           { crumb: 'Monitoring', title: 'Daftar Proyek' },
   '/proyek/dashboard': { crumb: 'Monitoring', title: 'Dashboard' },
   '/proyek/baru':      { crumb: 'Daftar Proyek', title: 'Tambah Proyek Baru' },
-  '/penawaran/baru':   { crumb: 'Dokumen', title: 'Generator Penawaran' },
-  '/bap/baru':         { crumb: 'Dokumen', title: 'Generator BAP' },
-  '/database':         { crumb: 'Referensi', title: 'Database Perusahaan' },
+  '/database':         { crumb: 'Referensi', title: 'Database' },
 }
 
 export function TopbarTitle() {

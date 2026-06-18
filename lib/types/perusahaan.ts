@@ -16,3 +16,14 @@ export type PerusahaanDetail = {
   bank_rekening: string | null
   bank_atas_nama: string | null
 }
+
+export type PerusahaanFormData = {
+  nama_perusahaan: string
+  adalah_perusahaan_sendiri: boolean
+  inisial_perusahaan?: string
+  kota?: string
+  telepon?: string
+  email?: string
+  nama_direktur?: string
+  alamat?: string
+}

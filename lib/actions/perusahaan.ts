@@ -18,6 +18,22 @@ export async function getPerusahaanDetailList() {
   return { data: data as PerusahaanDetail[] | null, error }
 }
 
+export async function getPerusahaanById(id: string) {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('perusahaan')
+    .select(`
+      id, nama_perusahaan, adalah_perusahaan_sendiri,
+      inisial_perusahaan, kota, kode_pos, npwp, telepon, email,
+      nama_direktur, npwp_direktur, alamat,
+      bank_nama, bank_rekening, bank_atas_nama
+    `)
+    .eq('id', id)
+    .single()
+
+  return { data: (data as PerusahaanDetail | null) ?? null, error }
+}
+
 export async function getProyekByPerusahaan(perusahaanId: string) {
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase

@@ -2,41 +2,64 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { ReactNode, useEffect, useState } from 'react'
-import { ThemeToggle } from '@/components/ui/theme-toggle'
+import type { ComponentType, ReactNode } from 'react'
+import { useEffect, useState } from 'react'
+import {
+  Database,
+  FolderKanban,
+  Gauge,
+  LogOut,
+  Plus,
+  UserRound,
+} from 'lucide-react'
+
 import { TopbarTitle } from '@/components/layout/topbar-title'
+import { Button } from '@/components/ui/button'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+} from '@/components/ui/sidebar'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 type NavGroup = {
   group: string
-  items: { label: string; href: string | null }[]
+  items: {
+    label: string
+    href: string | null
+    icon: ComponentType<{ className?: string }>
+  }[]
 }
 
 const NAV_GROUPS: NavGroup[] = [
   {
     group: 'Monitoring',
     items: [
-      { label: 'Daftar Proyek',    href: '/proyek' },
-      { label: 'Dashboard',        href: '/proyek/dashboard' },
-    ],
-  },
-  {
-    group: 'Dokumen',
-    items: [
-      { label: 'Generator Penawaran', href: null },
-      { label: 'Generator BAP',       href: null },
+      { label: 'Daftar Proyek', href: '/proyek', icon: FolderKanban },
+      { label: 'Dashboard', href: '/proyek/dashboard', icon: Gauge },
     ],
   },
   {
     group: 'Referensi',
-    items: [
-      { label: 'Database Perusahaan', href: '/database' },
-    ],
+    items: [{ label: 'Database', href: '/database', icon: Database }],
   },
 ]
 
 function Clock() {
   const [now, setNow] = useState<Date | null>(null)
+
   useEffect(() => {
     const tick = () => setNow(new Date())
     tick()
@@ -45,15 +68,17 @@ function Clock() {
   }, [])
 
   if (!now) return null
+
   const pad = (n: number) => String(n).padStart(2, '0')
   const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+
   return (
     <div className="text-right">
       <p className="font-mono text-xs font-semibold text-foreground tabular-nums tracking-wide">
         {pad(now.getHours())}:{pad(now.getMinutes())}:{pad(now.getSeconds())}
       </p>
-      <p className="font-mono text-[10px] text-muted-foreground mt-0.5">
+      <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
         {days[now.getDay()]}, {now.getDate()} {months[now.getMonth()]} {now.getFullYear()}
       </p>
     </div>
@@ -80,10 +105,10 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
 
   const isActive = (href: string | null) => {
     if (!href) return false
-    // Dashboard has its own exact match
     if (href === '/proyek/dashboard') return pathname.startsWith('/proyek/dashboard')
-    // Daftar Proyek matches any /proyek/* path (including detail and edit)
-    if (href === '/proyek') return pathname === '/proyek' || (pathname.startsWith('/proyek/') && !pathname.startsWith('/proyek/dashboard'))
+    if (href === '/proyek') {
+      return pathname === '/proyek' || (pathname.startsWith('/proyek/') && !pathname.startsWith('/proyek/dashboard'))
+    }
     return pathname.startsWith(href)
   }
 
@@ -98,97 +123,119 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
   const initial = displayName.slice(0, 1).toUpperCase()
 
   return (
-    <div className="flex flex-col">
-      {/* ── Sidebar ─────────────────────────────────────── */}
-      <aside className="w-56 shrink-0 flex flex-col fixed top-0 left-0 h-screen z-20" style={{ backgroundColor: 'var(--app-sidebar-bg)' }}>
-
-        {/* Brand */}
-        <div className="h-14 px-4 flex items-center gap-3 border-b sidebar-divider shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-brand/20 border border-brand/30 flex items-center justify-center shrink-0">
-            <span className="text-sm font-black text-brand leading-none select-none">K</span>
-          </div>
-          <div>
-            <p className="text-[13px] font-bold sidebar-text-primary leading-none tracking-tight">Awam&apos;s AI</p>
-            <p className="text-[10px] sidebar-text-muted leading-none mt-0.5 tracking-wide">Consultant Helper</p>
-          </div>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
-          {NAV_GROUPS.map((group) => (
-            <div key={group.group}>
-              <p className="text-[9px] font-bold sidebar-text-muted uppercase tracking-[0.14em] px-2 mb-1.5">
-                {group.group}
-              </p>
-              <div className="space-y-0.5">
-                {group.items.map((item) => {
-                  const active = isActive(item.href)
-                  return item.href ? (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      className={[
-                        'flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] transition-all relative',
-                        active
-                          ? 'bg-brand/10 text-brand font-medium'
-                          : 'sidebar-nav-inactive font-normal',
-                      ].join(' ')}
-                    >
-                      {active && (
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-brand rounded-r-full" />
-                      )}
-                      {item.label}
-                    </Link>
-                  ) : (
-                    <span
-                      key={item.label}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] sidebar-text-muted cursor-not-allowed opacity-40"
-                    >
-                      {item.label}
-                    </span>
-                  )
-                })}
-              </div>
+    <SidebarProvider>
+      <Sidebar collapsible="icon">
+        <SidebarHeader>
+          <Link href="/proyek" className="flex min-w-0 items-center gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/10">
+              <span className="text-sm font-black leading-none text-primary">K</span>
             </div>
+            <div className="min-w-0 group-data-[state=collapsed]/sidebar:hidden">
+              <p className="truncate text-sm font-bold leading-none tracking-tight text-sidebar-foreground">
+                Konsultan App
+              </p>
+              <p className="mt-1 truncate text-[10px] leading-none text-sidebar-foreground/55">
+                Monitoring proyek
+              </p>
+            </div>
+          </Link>
+        </SidebarHeader>
+
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/proyek/baru'}>
+                    <Link href="/proyek/baru">
+                      <Plus />
+                      <span className="group-data-[state=collapsed]/sidebar:hidden">Tambah Proyek</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          {NAV_GROUPS.map((group) => (
+            <SidebarGroup key={group.group}>
+              <SidebarGroupLabel>{group.group}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => {
+                    const Icon = item.icon
+                    const active = isActive(item.href)
+
+                    return (
+                      <SidebarMenuItem key={item.label}>
+                        {item.href ? (
+                          <SidebarMenuButton asChild isActive={active}>
+                            <Link href={item.href}>
+                              <Icon />
+                              <span className="truncate group-data-[state=collapsed]/sidebar:hidden">
+                                {item.label}
+                              </span>
+                            </Link>
+                          </SidebarMenuButton>
+                        ) : (
+                          <SidebarMenuButton disabled>
+                            <Icon />
+                            <span className="truncate group-data-[state=collapsed]/sidebar:hidden">
+                              {item.label}
+                            </span>
+                          </SidebarMenuButton>
+                        )}
+                      </SidebarMenuItem>
+                    )
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
           ))}
-        </nav>
+        </SidebarContent>
 
-        {/* User footer */}
-        <div className="px-4 py-3 border-t sidebar-divider flex items-center gap-2.5 shrink-0">
-          <div className="w-7 h-7 rounded-full bg-brand/30 border border-brand/40 flex items-center justify-center shrink-0">
-            <span className="text-[11px] font-bold text-brand">{initial}</span>
+        <SidebarFooter>
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-xs font-bold text-primary">
+              {initial || <UserRound className="size-4" />}
+            </div>
+            <div className="min-w-0 flex-1 group-data-[state=collapsed]/sidebar:hidden">
+              <p className="truncate text-xs font-semibold leading-none text-sidebar-foreground">{displayName}</p>
+              <p className="mt-1 truncate text-[10px] leading-none text-sidebar-foreground/55">
+                {userEmail ?? 'Supabase user'}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="group-data-[state=collapsed]/sidebar:hidden"
+              onClick={handleLogout}
+              aria-label="Keluar"
+            >
+              <LogOut />
+            </Button>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-semibold sidebar-text-primary leading-none truncate">{displayName}</p>
-            <p className="text-[10px] sidebar-text-muted leading-none mt-0.5 truncate">{userEmail ?? 'Supabase user'}</p>
-          </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-md px-2 py-1 text-[10px] font-medium sidebar-nav-inactive hover:bg-black/5 dark:hover:bg-white/5"
-          >
-            Keluar
-          </button>
-        </div>
-      </aside>
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
 
-      {/* ── Main ────────────────────────────────────────── */}
-      <div className="ml-56 flex flex-col min-h-screen">
-        <header className="h-14 px-6 flex items-center justify-between border-b border-border bg-surface/80 backdrop-blur-md sticky top-0 z-10">
-          <TopbarTitle />
+      <SidebarInset>
+        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-surface/80 px-5 backdrop-blur-md">
+          <div className="flex min-w-0 items-center gap-2">
+            <SidebarTrigger />
+            <TopbarTitle />
+          </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <Clock />
           </div>
         </header>
 
-        <main className="flex-1 px-6 py-6">
-          {children}
-        </main>
-      </div>
-    </div>
+        <main className="flex-1 px-5 py-5 md:px-6 md:py-6">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
 
-/* Keep the old named export for any code that may import NavItem type */
 export type NavItem = { label: string; href: string | null }

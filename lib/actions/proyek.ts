@@ -1,11 +1,8 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { getPersentaseFromFase } from '@/lib/constants/proyek'
-import type { ProyekDetail, ProyekDisplay, ProyekFormData, ProyekPayload } from '@/lib/types/proyek'
+import type { DinasOption, ProyekDetail, ProyekDisplay, ProyekFormData, ProyekPayload } from '@/lib/types/proyek'
 import { proyekSchema } from '@/lib/validations/proyek'
-
-// Re-export from split modules so existing imports keep working
-export { getPersonilList, getPengalamanPerusahaan } from '@/lib/actions/personil'
-export { simpanPenawaran, generateNomorPenawaran } from '@/lib/actions/penawaran'
+import { parseNumberInput } from '@/lib/utils'
 
 // ── Queries ──────────────────────────────────────────────────────────────────
 
@@ -50,6 +47,54 @@ export async function getPerusahaanList() {
     .order('nama_perusahaan')
 
   return { data, error }
+}
+
+export async function getDinasList() {
+  const supabase = await createSupabaseServerClient()
+  const dinasTableClient = supabase as unknown as {
+    from: (table: 'dinas_skpd') => {
+      select: (columns: string) => {
+        order: (
+          column: string,
+          options: { ascending: boolean }
+        ) => Promise<{
+          data: { id: string; nama_dinas: string | null }[] | null
+          error: { message: string } | null
+        }>
+      }
+    }
+  }
+  const dinasTableQuery = await dinasTableClient
+    .from('dinas_skpd')
+    .select('id, nama_dinas')
+    .order('nama_dinas', { ascending: true })
+
+  const proyekQuery = await supabase
+    .from('proyek')
+    .select('dinas')
+    .eq('is_deleted', false)
+    .order('dinas', { ascending: true })
+
+  const merged = new Map<string, DinasOption>()
+
+  if (!dinasTableQuery.error) {
+    for (const row of dinasTableQuery.data ?? []) {
+      const nama = row.nama_dinas?.trim()
+      if (!nama) continue
+      merged.set(nama, { id: row.id, dinas: nama })
+    }
+  }
+
+  for (const row of proyekQuery.data ?? []) {
+    const nama = row.dinas?.trim()
+    if (!nama || merged.has(nama)) continue
+    merged.set(nama, { dinas: nama })
+  }
+
+  return {
+    data: [...merged.values()].sort((a, b) => a.dinas.localeCompare(b.dinas)),
+    error: proyekQuery.error ?? null,
+  }
 }
 
 export async function getProyekById(id: string) {
@@ -108,26 +153,25 @@ export function buildProyekPayload(form: ProyekFormData): ProyekPayload {
   return {
     nama_proyek: form.nama_proyek!,
     paket_pekerjaan_induk: form.paket_pekerjaan_induk!,
+    nomor_kontrak: form.nomor_kontrak?.trim() || null,
     jenis_pekerjaan: form.jenis_pekerjaan!,
     kategori_pekerjaan: form.kategori_pekerjaan!,
     tahun_anggaran: form.tahun_anggaran!,
     sumber_dana: form.sumber_dana!,
     dinas: form.dinas!,
     lokasi_kecamatan: form.lokasi_kecamatan!,
-    nama_ppk: form.nama_ppk!,
-    pagu_dana: Number(form.pagu_dana),
-    hps: form.hps ? Number(form.hps) : null,
-    nilai_penawaran: form.nilai_penawaran ? Number(form.nilai_penawaran) : null,
+    nama_ppk: form.nama_ppk?.trim() || '',
+    pagu_dana: parseNumberInput(form.pagu_dana),
+    hps: form.hps ? parseNumberInput(form.hps) : null,
+    nilai_penawaran: form.nilai_penawaran ? parseNumberInput(form.nilai_penawaran) : null,
     perusahaan_id: form.perusahaan_id!,
     tanggal_mulai: form.tanggal_mulai || null,
     tanggal_selesai: form.tanggal_selesai || null,
     tahap_progress: form.tahap_progress || null,
-    durasi_hari: Number(form.durasi_hari),
+    durasi_hari: form.durasi_hari ? Number(form.durasi_hari) : null,
     persentase_progress: persentase,
     status_proyek: (form.status_proyek || null) as 'Work' | 'Borrowed' | 'Get Borrowed' | null,
     catatan: form.catatan || null,
-    // B1: manual entries must record jalur_masuk='manual' so they're distinguishable
-    // from penawaran-originated projects (which set 'penawaran' in simpanPenawaran).
     jalur_masuk: 'manual' as const,
   }
 }
@@ -139,9 +183,9 @@ export async function simpanProyek(
   const supabase = await createSupabaseServerClient()
   const parsed = proyekSchema.safeParse({
     ...form,
-    pagu_dana:       Number(form.pagu_dana),
-    hps:             form.hps       ? Number(form.hps)             : null,
-    nilai_penawaran: form.nilai_penawaran ? Number(form.nilai_penawaran) : null,
+    pagu_dana: parseNumberInput(form.pagu_dana),
+    hps: form.hps ? parseNumberInput(form.hps) : null,
+    nilai_penawaran: form.nilai_penawaran ? parseNumberInput(form.nilai_penawaran) : null,
     status_proyek:   form.status_proyek || null,
   })
 
