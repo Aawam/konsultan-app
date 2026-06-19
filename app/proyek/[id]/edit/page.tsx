@@ -1,8 +1,8 @@
 import { getDinasList, getProyekById, getPerusahaanList } from '@/lib/actions/proyek'
 import { FormEditProyek } from '@/components/proyek/form-edit-proyek'
-import { BackButton } from '@/components/ui/back-button'
 import { notFound } from 'next/navigation'
 import type { ProyekFormData } from '@/lib/types/proyek'
+import Link from 'next/link'
 
 export default async function EditProyekPage({
   params,
@@ -51,17 +51,30 @@ export default async function EditProyekPage({
   }
 
   return (
-    <div className="max-w-3xl mx-auto pb-10">
-      {/* F1: BackButton was missing — present on /baru but absent here */}
-      <BackButton href={`/proyek/${id}`} label="Kembali ke Detail Proyek" />
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-foreground">Edit Proyek</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Field bertanda * wajib diisi. Field lainnya opsional.</p>
+    <div className="mx-auto max-w-7xl pb-10">
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Daftar Proyek</p>
+          <h1 className="mt-0.5 text-3xl font-bold tracking-tight text-foreground">Edit Proyek</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Data ditampilkan read-only. Ubah section tertentu melalui sheet kanan.
+          </p>
+        </div>
+        <Link
+          href={`/proyek/${id}`}
+          className="inline-flex h-10 items-center justify-center rounded-xl border border-border bg-card px-5 text-sm font-bold text-foreground transition-colors hover:bg-muted"
+        >
+          ← Kembali ke Detail Proyek
+        </Link>
       </div>
       <FormEditProyek
         perusahaanList={ordered}
         dinasList={dinasList ?? []}
         initialData={initialData}
+        metadata={{
+          createdAt: proyek.created_at,
+          updatedAt: proyek.updated_at,
+        }}
       />
     </div>
   )

@@ -9,6 +9,14 @@ import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import {
@@ -18,7 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { StepWizard } from '@/components/ui/step-wizard'
 import { Textarea } from '@/components/ui/textarea'
 import {
   FASE_PERENCANAAN,
@@ -30,6 +37,7 @@ import { formatNumberInput, parseNumberInput } from '@/lib/utils'
 
 const STEPS = ['Identitas', 'Anggaran', 'Pemberi Kerja', 'Pelaksanaan']
 const NEW_DINAS_VALUE = '__new__'
+const DRAFTS_STORAGE_KEY = 'konsultan-app:proyek-drafts'
 
 const moneySchema = z
   .string()
@@ -92,6 +100,12 @@ type Props = {
   mode: 'create' | 'edit'
 }
 
+type LocalProjectDraft = {
+  id: string
+  updatedAt: string
+  data: Partial<ProyekFormValues>
+}
+
 function parseDateInput(value: string) {
   const [year, month, day] = value.split('-').map(Number)
   if (!year || !month || !day) return null
@@ -147,13 +161,36 @@ function asPayload(values: ProyekFormValues): ProyekFormData {
   }
 }
 
+function readLocalDrafts() {
+  if (typeof window === 'undefined') return []
+
+  const rawDrafts = window.localStorage.getItem(DRAFTS_STORAGE_KEY)
+  if (!rawDrafts) return []
+
+  try {
+    const parsed = JSON.parse(rawDrafts) as LocalProjectDraft[]
+    return Array.isArray(parsed)
+      ? parsed
+          .filter((draft) => draft.id && draft.updatedAt && draft.data)
+          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      : []
+  } catch {
+    window.localStorage.removeItem(DRAFTS_STORAGE_KEY)
+    return []
+  }
+}
+
 export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }: Props) {
   const router = useRouter()
+  const initialDrafts = mode === 'create' ? readLocalDrafts() : []
   const [step, setStep] = useState(1)
   const [warnings, setWarnings] = useState<string[]>([])
   const [showOverrideDialog, setShowOverrideDialog] = useState(false)
+  const [showDraftDialog, setShowDraftDialog] = useState(initialDrafts.length > 0)
   const [alasanOverride, setAlasanOverride] = useState('')
   const [durasiManuallyEdited, setDurasiManuallyEdited] = useState(false)
+  const [drafts, setDrafts] = useState<LocalProjectDraft[]>(initialDrafts)
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null)
 
   const defaultPerusahaanId = perusahaanList[0]?.id ?? ''
   const baseDinasList = useMemo(
@@ -175,13 +212,46 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
     getValues,
     handleSubmit,
     register,
+    reset,
     setValue,
     trigger,
   } = form
 
-  const [jenisPekerjaan, selectedDinas = '', tanggalMulai = '', tanggalSelesai = ''] = useWatch({
+  const [
+    jenisPekerjaan,
+    selectedDinas = '',
+    tanggalMulai = '',
+    tanggalSelesai = '',
+    namaProyek = '',
+    paketPekerjaanInduk = '',
+    kategoriPekerjaan = '',
+    paguDana = '',
+    tahunAnggaran,
+    sumberDana = '',
+    lokasiKecamatan = '',
+    perusahaanId = '',
+    statusProyek = '',
+    durasiHari = '',
+    nilaiPenawaran = '',
+  ] = useWatch({
     control,
-    name: ['jenis_pekerjaan', 'dinas', 'tanggal_mulai', 'tanggal_selesai'],
+    name: [
+      'jenis_pekerjaan',
+      'dinas',
+      'tanggal_mulai',
+      'tanggal_selesai',
+      'nama_proyek',
+      'paket_pekerjaan_induk',
+      'kategori_pekerjaan',
+      'pagu_dana',
+      'tahun_anggaran',
+      'sumber_dana',
+      'lokasi_kecamatan',
+      'perusahaan_id',
+      'status_proyek',
+      'durasi_hari',
+      'nilai_penawaran',
+    ],
   })
 
   const [isCustomDinas, setIsCustomDinas] = useState(
@@ -211,6 +281,12 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
       shouldValidate: false,
     })
   }, [durasiManuallyEdited, setValue, tanggalMulai, tanggalSelesai])
+
+  const persistDrafts = (nextDrafts: LocalProjectDraft[]) => {
+    setDrafts(nextDrafts)
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(nextDrafts))
+  }
 
   const validateWarnings = () => {
     const values = getValues()
@@ -252,6 +328,43 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
   }
 
   const prev = () => goToStep(Math.max(step - 1, 1))
+
+  const saveDraft = () => {
+    if (typeof window === 'undefined') return
+    const now = new Date().toISOString()
+    const draftId = activeDraftId ?? `draft-${Date.now()}`
+    const nextDraft: LocalProjectDraft = {
+      id: draftId,
+      updatedAt: now,
+      data: getValues(),
+    }
+    const nextDrafts = [
+      nextDraft,
+      ...drafts.filter((draft) => draft.id !== draftId),
+    ].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+
+    setActiveDraftId(draftId)
+    persistDrafts(nextDrafts)
+    toast.success('Draft proyek tersimpan di browser ini')
+  }
+
+  const resumeDraft = (draft: LocalProjectDraft) => {
+    reset({
+      ...buildDefaultValues(undefined, defaultPerusahaanId),
+      ...draft.data,
+    })
+    setActiveDraftId(draft.id)
+    setShowDraftDialog(false)
+    toast.success('Draft proyek dipulihkan')
+  }
+
+  const deleteDraft = (draftId: string) => {
+    const nextDrafts = drafts.filter((draft) => draft.id !== draftId)
+    persistDrafts(nextDrafts)
+    if (activeDraftId === draftId) setActiveDraftId(null)
+    if (nextDrafts.length === 0) setShowDraftDialog(false)
+    toast.success('Draft proyek dihapus')
+  }
 
   const submitToApi = async (values: ProyekFormValues, alasan?: string) => {
     const endpoint = mode === 'edit' && values.id ? `/api/proyek/${values.id}` : '/api/proyek'
@@ -312,6 +425,28 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
 
   const fi = 'field-input'
   const submitLabel = mode === 'edit' ? 'Perbarui Proyek' : 'Simpan Proyek'
+  const stepTitles = ['Identitas Proyek', 'Anggaran', 'Pemberi Kerja', 'Pelaksanaan']
+  const stepDescriptions = [
+    'Mulai dari informasi yang paling sering diketahui di awal pekerjaan.',
+    'Catat pagu, HPS, dan nilai kontrak agar kontrol anggaran tetap terlihat.',
+    'Tentukan dinas, lokasi, dan penanggung jawab pekerjaan.',
+    'Pilih perusahaan/bendera, tanggal kerja, dan tahap progress proyek.',
+  ]
+  const hasRequiredValue = (value: unknown) => value !== undefined && value !== null && String(value).trim() !== ''
+  const stepCompletion = [
+    Boolean(namaProyek.trim() && paketPekerjaanInduk.trim() && jenisPekerjaan && kategoriPekerjaan),
+    hasRequiredValue(tahunAnggaran) && Boolean(sumberDana) && hasRequiredValue(paguDana),
+    Boolean(selectedDinas.trim() && lokasiKecamatan.trim()),
+    Boolean(perusahaanId && statusProyek),
+  ]
+  const checklist = [
+    { label: 'Nama proyek', done: Boolean(namaProyek.trim()) },
+    { label: 'Jenis & kategori', done: Boolean(jenisPekerjaan && kategoriPekerjaan) },
+    { label: 'Tahun & sumber dana', done: hasRequiredValue(tahunAnggaran) && Boolean(sumberDana) },
+    { label: 'Dinas / SKPD', done: Boolean(selectedDinas.trim()) },
+    { label: 'Perusahaan bendera', done: Boolean(perusahaanId) },
+    { label: 'Durasi pekerjaan', done: hasRequiredValue(durasiHari) },
+  ]
 
   return (
     <form
@@ -323,9 +458,83 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
         }
         void submitFinalStep()
       }}
-      className="mx-auto max-w-3xl space-y-6"
+      className="space-y-6"
     >
-      <StepWizard steps={STEPS} currentStep={step} />
+      <div className="grid gap-5 xl:grid-cols-[260px_minmax(0,1fr)_280px]">
+        <aside className="rounded-2xl border border-border bg-card p-5 xl:sticky xl:top-20 xl:self-start">
+          <h2 className="text-base font-bold text-foreground">Progress Pengisian</h2>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            Isi data berurutan. Field bertanda * wajib diisi.
+          </p>
+
+          <div className="mt-6 space-y-5">
+            {STEPS.map((label, index) => {
+              const num = index + 1
+              const active = step === num
+              const done = stepCompletion[index]
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => goToStep(num)}
+                  className="flex w-full items-center gap-3 rounded-xl text-left transition-colors hover:text-primary"
+                >
+                  <span
+                    className={[
+                      'flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold',
+                      done
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : active
+                          ? 'border-primary text-primary'
+                          : 'border-border text-muted-foreground',
+                    ].join(' ')}
+                  >
+                    {done ? '✓' : num}
+                  </span>
+                  <span className={active ? 'text-sm font-bold text-foreground' : 'text-sm font-medium text-muted-foreground'}>
+                    {label}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="my-6 h-px bg-border" />
+
+          <h3 className="text-sm font-bold text-foreground">Checklist minimal</h3>
+          <div className="mt-4 space-y-3">
+            {checklist.map((item) => (
+              <div key={item.label} className="flex items-center gap-2">
+                <span
+                  className={[
+                    'flex size-4 items-center justify-center rounded border text-[10px]',
+                    item.done
+                      ? 'border-teal bg-teal/10 text-teal'
+                      : 'border-border text-transparent',
+                  ].join(' ')}
+                >
+                  ✓
+                </span>
+                <span className="text-xs font-medium text-muted-foreground">{item.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 rounded-xl border border-primary/30 bg-primary/10 p-4">
+            <p className="text-sm font-bold text-primary">Tips</p>
+            <p className="mt-2 text-xs leading-relaxed text-primary">
+              Nomor kontrak, HPS, dan tanggal bisa dikosongkan dulu jika belum tersedia.
+            </p>
+          </div>
+        </aside>
+
+        <div className="min-w-0 space-y-6">
+          <div className="rounded-2xl border border-border bg-card p-5 md:p-6">
+            <p className="text-2xl font-bold tracking-tight text-foreground">
+              {step}. {stepTitles[step - 1]}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{stepDescriptions[step - 1]}</p>
+          </div>
 
       {step === 1 && (
         <div className="section-card">
@@ -738,19 +947,35 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <Button type="button" variant="outline" onClick={prev} disabled={step === 1}>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={prev}
+          disabled={step === 1}
+          className="h-11 border-primary/40 text-primary hover:bg-primary/10"
+        >
           Sebelumnya
         </Button>
 
+        <Button
+          type="button"
+          variant="outline"
+          onClick={saveDraft}
+          className="h-11 border-amber/50 bg-amber/10 text-amber hover:bg-amber/15"
+        >
+          Simpan Draft
+        </Button>
+
         {step < STEPS.length ? (
-          <Button type="button" onClick={next}>
+          <Button type="button" onClick={next} className="h-11 bg-foreground text-background hover:bg-foreground/90">
             Selanjutnya
           </Button>
         ) : (
           <Button
             type="button"
             disabled={isSubmitting}
+            className="h-11 bg-foreground text-background hover:bg-foreground/90"
             onClick={() => {
               void submitFinalStep()
             }}
@@ -759,6 +984,118 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
           </Button>
         )}
       </div>
+        </div>
+
+        <aside className="rounded-2xl border border-border bg-card p-5 xl:sticky xl:top-20 xl:self-start">
+          <h2 className="text-base font-bold text-foreground">Ringkasan Draft</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Akan berubah otomatis saat field diisi.</p>
+          <div className="mt-5 inline-flex rounded-full border border-amber/40 bg-amber/10 px-3 py-1 text-[11px] font-semibold text-amber">
+            Draft baru
+          </div>
+
+          <div className="mt-6 space-y-5">
+            <div>
+              <p className="text-xs font-bold text-muted-foreground">Nama Proyek</p>
+              <p className="mt-1 text-sm font-bold text-foreground">{namaProyek || 'Belum diisi'}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-muted-foreground">Jenis / Kategori</p>
+              <p className="mt-1 text-sm font-semibold text-muted-foreground">
+                {jenisPekerjaan && kategoriPekerjaan ? `${jenisPekerjaan} / ${kategoriPekerjaan}` : 'Belum dipilih'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-muted-foreground">Nilai Kontrak</p>
+              <p className="mt-1 text-xl font-black text-foreground">
+                Rp {parseNumberInput(nilaiPenawaran).toLocaleString('id-ID')}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Pagu: Rp {parseNumberInput(paguDana).toLocaleString('id-ID')}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-muted-foreground">Pemberi Kerja</p>
+              <p className="mt-1 text-sm font-semibold text-muted-foreground">{selectedDinas || 'Belum diisi'}</p>
+            </div>
+          </div>
+
+          <div className="my-6 h-px bg-border" />
+
+          <h3 className="text-sm font-bold text-foreground">Validasi</h3>
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="size-4 rounded border border-border" />
+              <span className="text-xs text-muted-foreground">
+                {checklist.filter((item) => !item.done).length} field wajib belum diisi
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="flex size-4 items-center justify-center rounded border border-teal bg-teal/10 text-[10px] text-teal">
+                ✓
+              </span>
+              <span className="text-xs text-muted-foreground">Data bisa disimpan setelah langkah terakhir valid</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <Dialog open={showDraftDialog} onOpenChange={setShowDraftDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Draft Proyek Tersedia</DialogTitle>
+            <DialogDescription>
+              Pilih draft yang ingin dilanjutkan, atau hapus draft yang sudah tidak diperlukan.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[60vh] space-y-3 overflow-y-auto px-5 py-2">
+            {drafts.length === 0 ? (
+              <div className="rounded-2xl border border-border bg-muted/30 p-5 text-sm text-muted-foreground">
+                Belum ada draft tersimpan di browser ini.
+              </div>
+            ) : (
+              drafts.map((draft) => {
+                const draftName = draft.data.nama_proyek?.trim() || 'Draft tanpa nama'
+                const jenis = draft.data.jenis_pekerjaan || 'Jenis belum dipilih'
+                const updatedAt = new Date(draft.updatedAt).toLocaleString('id-ID', {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                })
+
+                return (
+                  <div key={draft.id} className="rounded-2xl border border-border bg-card p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-foreground">{draftName}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {jenis} · Disimpan {updatedAt}
+                        </p>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Dinas: {draft.data.dinas || 'Belum diisi'} · Nilai kontrak: Rp {parseNumberInput(draft.data.nilai_penawaran).toLocaleString('id-ID')}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Button type="button" size="sm" onClick={() => resumeDraft(draft)}>
+                          Lanjutkan
+                        </Button>
+                        <Button type="button" size="sm" variant="destructive" onClick={() => deleteDraft(draft.id)}>
+                          Hapus
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setShowDraftDialog(false)}>
+              Mulai Baru
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={showOverrideDialog}

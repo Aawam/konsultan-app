@@ -19,11 +19,16 @@ export default async function TambahProyekPage() {
   })
 
   return (
-    <div className="max-w-3xl mx-auto pb-10">
-      <BackButton href="/proyek" label="Kembali ke Daftar Proyek" />
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-foreground">Tambah Proyek Baru</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Field bertanda * wajib diisi. Field lainnya opsional.</p>
+    <div className="mx-auto max-w-7xl pb-10">
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Daftar Proyek</p>
+          <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">Tambah Proyek Baru</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Isi data berurutan. Nomor kontrak, HPS, dan tanggal bisa dikosongkan dulu jika belum tersedia.
+          </p>
+        </div>
+        <BackButton href="/proyek" label="Kembali ke Daftar Proyek" />
       </div>
       <FormCreateProyek perusahaanList={ordered} dinasList={dinasList ?? []} />
     </div>
