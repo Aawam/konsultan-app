@@ -27,6 +27,7 @@ export type ProyekDisplay = {
   status_proyek?: 'Work' | 'Borrowed' | 'Get Borrowed' | null
   perusahaan_id?: string | null
   created_at?: string | null
+  updated_at?: string | null
   is_deleted?: boolean;
   perusahaan: { nama_perusahaan: string } | { nama_perusahaan: string }[] | null
 }

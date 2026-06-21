@@ -259,15 +259,24 @@ export function FormEditProyek({ perusahaanList, dinasList, initialData, metadat
 
     setIsSubmitting(true)
     const values = getValues()
-    const res = await fetch(`/api/proyek/${initialData.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
-    })
-    const json = (await res.json()) as { error?: string }
-    setIsSubmitting(false)
+    let json: { error?: string } = {}
+    let ok = false
 
-    if (!res.ok || json.error) {
+    try {
+      const res = await fetch(`/api/proyek/${initialData.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      })
+      json = (await res.json()) as { error?: string }
+      ok = res.ok
+    } catch (error) {
+      json = { error: error instanceof Error ? error.message : 'Terjadi kesalahan koneksi' }
+    } finally {
+      setIsSubmitting(false)
+    }
+
+    if (!ok || json.error) {
       toast.error(`Gagal menyimpan: ${json.error ?? 'Terjadi kesalahan'}`)
       return
     }

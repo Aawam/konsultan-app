@@ -8,6 +8,14 @@ import { BadgeJenis, BadgeTahap } from '@/components/proyek/badges'
 import { formatRupiah } from '@/lib/utils'
 import { TabGroup } from '@/components/ui/tab-group'
 import { StatCard, MiniBar } from '@/components/ui/stat-card'
+import {
+  filterProjects,
+  getProjectCompanyNames,
+  getProjectStats,
+  getProjectYears,
+  groupProjectsByCount,
+  groupProjectsByValue,
+} from '@/lib/proyek-analytics'
 
 type YearFilter = number | 'semua'
 type JenisFilter = 'Semua' | 'Perencanaan' | 'Pengawasan'
@@ -125,6 +133,60 @@ function pct(part: number, total: number) {
   return Math.round((part / total) * 100)
 }
 
+function worklistHref(params: Record<string, string | number>) {
+  const search = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) search.set(key, String(value))
+  return `/proyek?${search.toString()}`
+}
+
+function MetricLinkCard({
+  label,
+  value,
+  sub,
+  color,
+  href,
+}: {
+  label: string
+  value: string | number
+  sub?: string
+  color: string
+  href: string
+}) {
+  return (
+    <Link href={href} className="stat-card transition-colors hover:border-brand/40 hover:bg-muted/30">
+      <p className="stat-label">{label}</p>
+      <p className={`text-2xl font-bold font-mono leading-tight ${color}`}>{value}</p>
+      {sub && <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>}
+    </Link>
+  )
+}
+
+function ValueBar({
+  label,
+  count,
+  value,
+  total,
+}: {
+  label: string
+  count: number
+  value: number
+  total: number
+}) {
+  const width = total ? Math.round((value / total) * 100) : 0
+  return (
+    <div className="mb-3 last:mb-0">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="truncate text-[12px] font-medium text-foreground">{label}</span>
+        <span className="shrink-0 text-[11px] font-mono text-muted-foreground">{count} proyek</span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+        <div className="h-full rounded-full bg-amber" style={{ width: `${width}%` }} />
+      </div>
+      <p className="mt-1 text-[11px] font-mono text-muted-foreground">{formatRupiah(value)}</p>
+    </div>
+  )
+}
+
 // ── main ─────────────────────────────────────────────────────────────────────
 
 export function DashboardClient({ proyek }: { proyek: ProyekDisplay[] }) {
@@ -134,69 +196,80 @@ export function DashboardClient({ proyek }: { proyek: ProyekDisplay[] }) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('Semua')
 
   const years = useMemo(
-    () => Array.from(new Set(proyek.map((p) => p.tahun_anggaran))).sort((a, b) => b - a),
+    () => getProjectYears(proyek),
     [proyek]
   )
 
   const perusahaanList = useMemo(() => {
-    const names = Array.from(new Set(proyek.map((p) => getNamaPerusahaan(p.perusahaan)))).sort()
+    const names = getProjectCompanyNames(proyek)
     return ['Semua', ...names]
   }, [proyek])
 
   const filtered = useMemo(() => {
-    let list = proyek
-    if (yearFilter !== 'semua') list = list.filter((p) => p.tahun_anggaran === yearFilter)
-    if (jenisFilter !== 'Semua') list = list.filter((p) => p.jenis_pekerjaan === jenisFilter)
-    if (perusahaanFilter !== 'Semua') list = list.filter((p) => getNamaPerusahaan(p.perusahaan) === perusahaanFilter)
-    if (statusFilter !== 'Semua') list = list.filter((p) => p.status_proyek === statusFilter)
-    return list
+    return filterProjects(proyek, {
+      year: yearFilter,
+      jenis: jenisFilter,
+      status: statusFilter,
+      perusahaan: perusahaanFilter,
+      progress: 'semua',
+      search: '',
+    })
   }, [proyek, yearFilter, jenisFilter, perusahaanFilter, statusFilter])
 
-  const stats = useMemo(() => {
-    const total       = filtered.length
-    const selesai     = filtered.filter((p) => p.persentase_progress === 100).length
-    const berjalan    = filtered.filter((p) => (p.persentase_progress ?? 0) > 0 && p.persentase_progress !== 100).length
-    const belumMulai  = filtered.filter((p) => !p.persentase_progress).length
-    const nilaiTotal  = filtered.reduce((s, p) => s + (p.nilai_penawaran ?? 0), 0)
-    const avgProgress = total ? Math.round(filtered.reduce((s, p) => s + (p.persentase_progress ?? 0), 0) / total) : 0
-    return { total, selesai, berjalan, belumMulai, nilaiTotal, avgProgress }
-  }, [filtered])
+  const stats = useMemo(() => getProjectStats(filtered), [filtered])
 
   // By tahap
-  const tahapGroups = useMemo(() => {
-    const m = new Map<string, number>()
-    filtered.forEach((p) => {
-      const key = p.tahap_progress ?? 'Belum mulai'
-      m.set(key, (m.get(key) ?? 0) + 1)
-    })
-    return Array.from(m.entries()).sort((a, b) => b[1] - a[1])
-  }, [filtered])
+  const tahapGroups = useMemo(
+    () => groupProjectsByCount(filtered, (p) => p.tahap_progress ?? 'Belum mulai'),
+    [filtered]
+  )
 
   // By dinas (top 8)
-  const dinasGroups = useMemo(() => {
-    const m = new Map<string, number>()
-    filtered.forEach((p) => { m.set(p.dinas, (m.get(p.dinas) ?? 0) + 1) })
-    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8)
-  }, [filtered])
+  const dinasGroups = useMemo(
+    () => groupProjectsByCount(filtered, (p) => p.dinas, 8),
+    [filtered]
+  )
 
   // By perusahaan (top 6)
-  const compGroups = useMemo(() => {
-    const m = new Map<string, number>()
-    filtered.forEach((p) => {
-      const name = getNamaPerusahaan(p.perusahaan)
-      m.set(name, (m.get(name) ?? 0) + 1)
-    })
-    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6)
-  }, [filtered])
+  const compGroups = useMemo(
+    () => groupProjectsByCount(filtered, (p) => getNamaPerusahaan(p.perusahaan), 6),
+    [filtered]
+  )
+
+  const yearValueGroups = useMemo(
+    () => groupProjectsByValue(filtered, (p) => String(p.tahun_anggaran)),
+    [filtered]
+  )
 
   // Recent 8
-  const recent = useMemo(() => [...filtered].slice(0, 8), [filtered])
+  const recent = useMemo(
+    () =>
+      [...filtered]
+        .sort((a, b) => (b.updated_at ?? b.created_at ?? '').localeCompare(a.updated_at ?? a.created_at ?? ''))
+        .slice(0, 8),
+    [filtered]
+  )
 
   return (
     <div className="space-y-5">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Owner Overview</p>
+          <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">Dashboard Proyek</h1>
+          <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
+            Ringkasan nilai, progress, dan distribusi proyek untuk keputusan harian.
+          </p>
+        </div>
+        <Link
+          href="/proyek"
+          className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+        >
+          Buka Daftar Proyek
+        </Link>
+      </div>
 
       {/* ── Filter bar ── */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3">
         {/* Year tabs */}
         <TabGroup
           className="overflow-x-auto shrink-0"
@@ -242,25 +315,28 @@ export function DashboardClient({ proyek }: { proyek: ProyekDisplay[] }) {
       </div>
 
       {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <StatCard label="Sedang Berjalan" value={stats.berjalan}   color="text-brand"   sub="Ada progress" />
-        <StatCard label="Selesai"         value={stats.selesai}    color="text-emerald" sub={`${pct(stats.selesai, stats.total)}% dari total`} />
-        <StatCard label="Belum Mulai"     value={stats.belumMulai} color="text-muted-foreground" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <MetricLinkCard label="Total Proyek" value={stats.total} color="text-foreground" sub="Sesuai filter" href="/proyek" />
+        <MetricLinkCard label="Sedang Berjalan" value={stats.berjalan} color="text-brand" sub="Ada progress" href={worklistHref({ progress: 'berjalan' })} />
+        <MetricLinkCard label="Selesai" value={stats.selesai} color="text-emerald" sub={`${pct(stats.selesai, stats.total)}% dari total`} href={worklistHref({ progress: 'selesai' })} />
+        <MetricLinkCard label="Belum Mulai" value={stats.belumMulai} color="text-muted-foreground" sub="Belum ada tahap" href={worklistHref({ progress: 'belum_mulai' })} />
+        <MetricLinkCard label="Perlu Update" value={stats.perluUpdate} color="text-amber" sub="Data penting kosong" href={worklistHref({ progress: 'perlu_update' })} />
         <StatCard label="Avg Progress"    value={`${stats.avgProgress}%`} color="text-violet" />
-        <div className="stat-card col-span-1">
+        <div className="stat-card col-span-2 sm:col-span-3 xl:col-span-6">
           <p className="stat-label">Total Kontrak</p>
           <p className="text-2xl font-bold font-mono leading-tight text-amber truncate">{formatRupiah(stats.nilaiTotal)}</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">Akumulasi nilai penawaran/kontrak yang tercatat</p>
         </div>
       </div>
 
       {/* ── Charts grid ── */}
-      <div className="grid grid-cols-3 grid-rows-2 gap-4">
+      <div className="grid gap-4 xl:grid-cols-3">
 
         {/* Jenis komposisi — top-left */}
         <JenisPieCard filtered={filtered} jenisFilter={jenisFilter} onToggle={(j) => setJenisFilter((prev) => prev === j ? 'Semua' : j)} />
 
-        {/* Tahap breakdown — middle column, spans 2 rows */}
-        <div className="section-card row-span-2">
+        {/* Tahap breakdown */}
+        <div className="section-card">
           <div className="section-header"><p className="section-title">Distribusi Tahap</p></div>
           <div className="section-body">
             {tahapGroups.length === 0 ? (
@@ -273,8 +349,8 @@ export function DashboardClient({ proyek }: { proyek: ProyekDisplay[] }) {
           </div>
         </div>
 
-        {/* Top dinas — right column, spans 2 rows */}
-        <div className="section-card row-span-2">
+        {/* Top dinas */}
+        <div className="section-card">
           <div className="section-header"><p className="section-title">Top Dinas / SKPD</p></div>
           <div className="section-body">
             {dinasGroups.length === 0 ? (
@@ -287,7 +363,21 @@ export function DashboardClient({ proyek }: { proyek: ProyekDisplay[] }) {
           </div>
         </div>
 
-        {/* Perusahaan — bottom-left */}
+        {/* Nilai per tahun */}
+        <div className="section-card">
+          <div className="section-header"><p className="section-title">Nilai per Tahun</p></div>
+          <div className="section-body">
+            {yearValueGroups.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Tidak ada data</p>
+            ) : (
+              yearValueGroups.map(([year, data]) => (
+                <ValueBar key={year} label={year} count={data.count} value={data.value} total={stats.nilaiTotal} />
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Perusahaan */}
         <div className="section-card">
           <div className="section-header">
             <p className="section-title">Distribusi per Perusahaan</p>

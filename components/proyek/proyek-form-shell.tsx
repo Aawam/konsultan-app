@@ -368,27 +368,43 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
 
   const submitToApi = async (values: ProyekFormValues, alasan?: string) => {
     const endpoint = mode === 'edit' && values.id ? `/api/proyek/${values.id}` : '/api/proyek'
-    const res = await fetch(endpoint, {
-      method: mode === 'edit' ? 'PATCH' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(asPayload(values)),
-    })
-    const json = (await res.json()) as { data?: { id: string }; error?: string }
+    let json: { data?: { id: string }; error?: string } = {}
+    let ok = false
 
-    if (!res.ok || json.error || !json.data) {
+    try {
+      const res = await fetch(endpoint, {
+        method: mode === 'edit' ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(asPayload(values)),
+      })
+      json = (await res.json()) as { data?: { id: string }; error?: string }
+      ok = res.ok
+    } catch (error) {
+      json = { error: error instanceof Error ? error.message : 'Terjadi kesalahan koneksi' }
+    }
+
+    if (!ok || json.error || !json.data) {
       toast.error(`Gagal menyimpan: ${json.error ?? 'Terjadi kesalahan'}`)
       return
     }
 
     if (alasan) {
-      const overrideRes = await fetch(`/api/proyek/${json.data.id}/override`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ warnings, alasan }),
-      })
-      const overrideJson = (await overrideRes.json()) as { error?: string }
+      let overrideJson: { error?: string } = {}
+      let overrideOk = false
 
-      if (!overrideRes.ok || overrideJson.error) {
+      try {
+        const overrideRes = await fetch(`/api/proyek/${json.data.id}/override`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ warnings, alasan }),
+        })
+        overrideJson = (await overrideRes.json()) as { error?: string }
+        overrideOk = overrideRes.ok
+      } catch (error) {
+        overrideJson = { error: error instanceof Error ? error.message : 'Terjadi kesalahan koneksi' }
+      }
+
+      if (!overrideOk || overrideJson.error) {
         toast.error(`Gagal menyimpan override: ${overrideJson.error ?? 'Terjadi kesalahan'}`)
         return
       }

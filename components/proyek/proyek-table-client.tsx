@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
@@ -11,13 +12,23 @@ import {
 import { Search } from 'lucide-react'
 import { BadgeJenis, BadgeOverride } from '@/components/proyek/badges'
 import { ProgressCell } from '@/components/proyek/progress-cell'
-import { formatRupiah } from '@/lib/utils'
+import {
+  DEFAULT_PROJECT_FILTERS,
+  filterProjects,
+  getMissingProjectFields,
+  getProjectCompanyNames,
+  getProjectStats,
+  type ProjectProgressFilter,
+  type ProjectStatusFilter,
+} from '@/lib/proyek-analytics'
+import { formatRupiah, formatTanggal } from '@/lib/utils'
 import { toast } from 'sonner'
 import { ProyekDisplay, getNamaPerusahaan } from '@/lib/types/proyek'
 import { ProyekSlideover } from '@/components/proyek/proyek-slideover'
 
 type JenisFilter = 'Semua' | 'Perencanaan' | 'Pengawasan'
 type ExportRow = {
+  id: string
   nama_proyek: string
   paket_pekerjaan_induk: string | null
   jenis_pekerjaan: string
@@ -93,6 +104,17 @@ function StatCard({
   return <div className={className}>{content}</div>
 }
 
+function getProgressLabel(value: ProjectProgressFilter) {
+  const labels: Record<ProjectProgressFilter, string> = {
+    semua: 'Semua progress',
+    berjalan: 'Sedang berjalan',
+    selesai: 'Selesai',
+    belum_mulai: 'Belum mulai',
+    perlu_update: 'Perlu update',
+  }
+  return labels[value]
+}
+
 export function ProyekTableClient({
   proyek,
   title,
@@ -100,13 +122,15 @@ export function ProyekTableClient({
   proyek: ProyekDisplay[]
   title?: string
 }) {
+  const searchParams = useSearchParams()
   const [tahunFilter, setTahunFilter] = useState<number | 'semua'>('semua')
   const [jenisFilter, setJenisFilter] = useState<JenisFilter>('Semua')
+  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>('Semua')
+  const [progressFilter, setProgressFilter] = useState<ProjectProgressFilter>('semua')
+  const [perusahaanFilter, setPerusahaanFilter] = useState('Semua')
   const [search, setSearch] = useState('')
   const [exporting, setExporting] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [selesaiFilter, setSelesaiFilter] = useState(false)
-  const [berjalanFilter, setBerjalanFilter] = useState(false)
   const [yearDropdownOpen, setYearDropdownOpen] = useState(false)
   const yearDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -118,6 +142,33 @@ export function ProyekTableClient({
   const inlineYears = tahunList.slice(0, INLINE_YEAR_LIMIT)
   const dropdownYears = tahunList.slice(INLINE_YEAR_LIMIT)
   const selectedYearIsInDropdown = typeof tahunFilter === 'number' && !inlineYears.includes(tahunFilter)
+  const perusahaanList = useMemo(() => getProjectCompanyNames(proyek), [proyek])
+
+  useEffect(() => {
+    const year = searchParams.get('year')
+    const jenis = searchParams.get('jenis')
+    const status = searchParams.get('status')
+    const progress = searchParams.get('progress')
+    const perusahaan = searchParams.get('perusahaan')
+    const q = searchParams.get('q')
+
+    if (year) setTahunFilter(year === 'semua' ? 'semua' : Number(year))
+    if (jenis === 'Perencanaan' || jenis === 'Pengawasan' || jenis === 'Semua') setJenisFilter(jenis)
+    if (status === 'Work' || status === 'Borrowed' || status === 'Get Borrowed' || status === 'Semua') {
+      setStatusFilter(status)
+    }
+    if (
+      progress === 'semua' ||
+      progress === 'berjalan' ||
+      progress === 'selesai' ||
+      progress === 'belum_mulai' ||
+      progress === 'perlu_update'
+    ) {
+      setProgressFilter(progress)
+    }
+    if (perusahaan) setPerusahaanFilter(perusahaan)
+    if (q) setSearch(q)
+  }, [searchParams])
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -130,31 +181,35 @@ export function ProyekTableClient({
   }, [])
 
   const filtered = useMemo(() => {
-    let list = proyek
-    if (tahunFilter !== 'semua') list = list.filter((p) => p.tahun_anggaran === tahunFilter)
-    if (berjalanFilter) list = list.filter((p) => p.tahap_progress != null && p.persentase_progress !== 100)
-    if (selesaiFilter) list = list.filter((p) => p.persentase_progress === 100)
-    if (jenisFilter !== 'Semua') list = list.filter((p) => p.jenis_pekerjaan === jenisFilter)
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      list = list.filter(
-        (p) =>
-          p.nama_proyek.toLowerCase().includes(q) ||
-          p.dinas.toLowerCase().includes(q) ||
-          getNamaPerusahaan(p.perusahaan).toLowerCase().includes(q)
-      )
-    }
-    return list
-  }, [proyek, tahunFilter, berjalanFilter, selesaiFilter, jenisFilter, search])
+    return filterProjects(proyek, {
+      year: tahunFilter,
+      jenis: jenisFilter,
+      status: statusFilter,
+      progress: progressFilter,
+      perusahaan: perusahaanFilter,
+      search,
+    })
+  }, [proyek, tahunFilter, jenisFilter, statusFilter, progressFilter, perusahaanFilter, search])
 
-  const stats = useMemo(() => ({
-    total:       proyek.length,
-    berjalan:    proyek.filter((p) => p.tahap_progress && p.persentase_progress !== 100).length,
-    selesai:     proyek.filter((p) => p.persentase_progress === 100).length,
-    perencanaan: proyek.filter((p) => p.jenis_pekerjaan === 'Perencanaan').length,
-    pengawasan:  proyek.filter((p) => p.jenis_pekerjaan === 'Pengawasan').length,
-    nilaiTotal:  proyek.reduce((s, p) => s + (p.nilai_penawaran ?? 0), 0),
-  }), [proyek])
+  const stats = useMemo(() => getProjectStats(proyek), [proyek])
+  const filteredStats = useMemo(() => getProjectStats(filtered), [filtered])
+  const hasActiveFilters =
+    tahunFilter !== DEFAULT_PROJECT_FILTERS.year ||
+    jenisFilter !== DEFAULT_PROJECT_FILTERS.jenis ||
+    statusFilter !== DEFAULT_PROJECT_FILTERS.status ||
+    progressFilter !== DEFAULT_PROJECT_FILTERS.progress ||
+    perusahaanFilter !== DEFAULT_PROJECT_FILTERS.perusahaan ||
+    search.trim() !== ''
+
+  function resetFilters() {
+    setTahunFilter('semua')
+    setJenisFilter('Semua')
+    setStatusFilter('Semua')
+    setProgressFilter('semua')
+    setPerusahaanFilter('Semua')
+    setSearch('')
+    setYearDropdownOpen(false)
+  }
 
   async function handleExport() {
     setExporting(true)
@@ -166,8 +221,10 @@ export function ProyekTableClient({
       return
     }
     const data = json.data
+    const visibleIds = new Set(filtered.map((p) => p.id))
 
-    const rows = (tahunFilter === 'semua' ? data : data.filter((p) => p.tahun_anggaran === tahunFilter))
+    const rows = data
+      .filter((p) => visibleIds.has(p.id))
       .map((p) => {
         const perusahaan = p.perusahaan
         const namaPerusahaan = Array.isArray(perusahaan)
@@ -208,8 +265,7 @@ export function ProyekTableClient({
   }
 
   function toggleJenis(jenis: 'Perencanaan' | 'Pengawasan') {
-    setBerjalanFilter(false)
-    setSelesaiFilter(false)
+    setProgressFilter('semua')
     setJenisFilter((prev) => prev === jenis ? 'Semua' : jenis)
   }
 
@@ -251,16 +307,16 @@ export function ProyekTableClient({
           value={stats.berjalan}
           caption="Proyek aktif"
           colorClass="text-brand"
-          onClick={() => { setSelesaiFilter(false); setJenisFilter('Semua'); setBerjalanFilter((prev) => !prev) }}
-          active={berjalanFilter}
+          onClick={() => { setJenisFilter('Semua'); setProgressFilter((prev) => prev === 'berjalan' ? 'semua' : 'berjalan') }}
+          active={progressFilter === 'berjalan'}
         />
         <StatCard
           label="Selesai"
           value={stats.selesai}
           caption="Arsip selesai"
           colorClass="text-emerald"
-          onClick={() => { setBerjalanFilter(false); setSelesaiFilter((prev) => !prev) }}
-          active={selesaiFilter}
+          onClick={() => setProgressFilter((prev) => prev === 'selesai' ? 'semua' : 'selesai')}
+          active={progressFilter === 'selesai'}
         />
         <StatCard
           label="Perencanaan"
@@ -281,8 +337,8 @@ export function ProyekTableClient({
         <StatCard label="Total Proyek" value={stats.total} caption="Semua tahun" />
         <StatCard
           label="Total Kontrak"
-          value={formatCompactRupiah(stats.nilaiTotal)}
-          caption="Nilai kontrak tercatat"
+          value={formatCompactRupiah(filteredStats.nilaiTotal)}
+          caption="Sesuai filter aktif"
           colorClass="text-amber"
         />
       </div>
@@ -371,8 +427,7 @@ export function ProyekTableClient({
         <Select
           value={jenisFilter}
           onValueChange={(value) => {
-            setBerjalanFilter(false)
-            setSelesaiFilter(false)
+            setProgressFilter('semua')
             setJenisFilter(value as JenisFilter)
           }}
         >
@@ -386,10 +441,71 @@ export function ProyekTableClient({
           </SelectContent>
         </Select>
 
+        <Select value={progressFilter} onValueChange={(value) => setProgressFilter(value as ProjectProgressFilter)}>
+          <SelectTrigger className="h-10 w-[170px] rounded-lg border-border bg-card px-4 text-sm font-semibold text-foreground">
+            <SelectValue placeholder="Progress" />
+          </SelectTrigger>
+          <SelectContent className="select-content">
+            {(['semua', 'berjalan', 'selesai', 'belum_mulai', 'perlu_update'] as ProjectProgressFilter[]).map((value) => (
+              <SelectItem key={value} value={value} className="select-item">
+                {getProgressLabel(value)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ProjectStatusFilter)}>
+          <SelectTrigger className="h-10 w-[165px] rounded-lg border-border bg-card px-4 text-sm font-semibold text-foreground">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent className="select-content">
+            <SelectItem value="Semua" className="select-item">Semua status</SelectItem>
+            <SelectItem value="Work" className="select-item">Work</SelectItem>
+            <SelectItem value="Borrowed" className="select-item">Borrowed</SelectItem>
+            <SelectItem value="Get Borrowed" className="select-item">Get Borrowed</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={perusahaanFilter} onValueChange={setPerusahaanFilter}>
+          <SelectTrigger className="h-10 w-[210px] rounded-lg border-border bg-card px-4 text-sm font-semibold text-foreground">
+            <SelectValue placeholder="Perusahaan" />
+          </SelectTrigger>
+          <SelectContent className="select-content">
+            <SelectItem value="Semua" className="select-item">Semua perusahaan</SelectItem>
+            {perusahaanList.map((name) => (
+              <SelectItem key={name} value={name} className="select-item">
+                {name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="h-10 rounded-lg border border-border bg-card px-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            Reset
+          </button>
+        )}
+
         <span className="ml-auto text-sm text-muted-foreground shrink-0">
           {filtered.length} proyek
         </span>
       </div>
+
+      {hasActiveFilters && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="font-semibold text-foreground">Filter aktif:</span>
+          {tahunFilter !== 'semua' && <span className="rounded-full bg-muted px-2.5 py-1">Tahun {tahunFilter}</span>}
+          {jenisFilter !== 'Semua' && <span className="rounded-full bg-muted px-2.5 py-1">{jenisFilter}</span>}
+          {progressFilter !== 'semua' && <span className="rounded-full bg-muted px-2.5 py-1">{getProgressLabel(progressFilter)}</span>}
+          {statusFilter !== 'Semua' && <span className="rounded-full bg-muted px-2.5 py-1">{statusFilter}</span>}
+          {perusahaanFilter !== 'Semua' && <span className="rounded-full bg-muted px-2.5 py-1">{perusahaanFilter}</span>}
+          {search.trim() && <span className="rounded-full bg-muted px-2.5 py-1">Cari: {search}</span>}
+        </div>
+      )}
 
       {/* ── Table ── */}
       <div className="overflow-hidden rounded-xl border border-border bg-card">
@@ -433,6 +549,16 @@ export function ProyekTableClient({
                       {p.pernah_dioverride && <BadgeOverride />}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">{p.dinas}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                        Update: {formatTanggal(p.updated_at ?? p.created_at ?? null)}
+                      </span>
+                      {getMissingProjectFields(p).slice(0, 2).map((field) => (
+                        <span key={field} className="rounded-full border border-amber/30 bg-amber/10 px-2 py-0.5 text-[11px] font-medium text-amber">
+                          Butuh {field}
+                        </span>
+                      ))}
+                    </div>
                   </TableCell>
                   <TableCell className="px-4 py-4 text-sm leading-tight text-muted-foreground whitespace-normal">
                     {getNamaPerusahaan(p.perusahaan)}
@@ -464,7 +590,18 @@ export function ProyekTableClient({
             ) : (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground py-16 text-sm">
-                  Tidak ada proyek yang sesuai filter
+                  <div className="space-y-3">
+                    <p>Tidak ada proyek yang sesuai filter</p>
+                    {hasActiveFilters && (
+                      <button
+                        type="button"
+                        onClick={resetFilters}
+                        className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+                      >
+                        Reset filter
+                      </button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             )}

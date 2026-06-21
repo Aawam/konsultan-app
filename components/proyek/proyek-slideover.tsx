@@ -70,11 +70,20 @@ export function ProyekSlideover({ id, onClose }: { id: string | null; onClose: (
     if (!id) return
     setDeleteOpen(false)
     setDeleting(true)
-    const res = await fetch(`/api/proyek/${id}`, { method: 'DELETE' })
-    const json = await res.json() as { error?: string }
-    setDeleting(false)
+    let json: { error?: string } = {}
+    let ok = false
 
-    if (!res.ok || json.error) {
+    try {
+      const res = await fetch(`/api/proyek/${id}`, { method: 'DELETE' })
+      json = await res.json() as { error?: string }
+      ok = res.ok
+    } catch (error) {
+      json = { error: error instanceof Error ? error.message : 'Terjadi kesalahan koneksi' }
+    } finally {
+      setDeleting(false)
+    }
+
+    if (!ok || json.error) {
       toast.error(`Gagal menghapus: ${json.error ?? 'Terjadi kesalahan'}`)
       return
     }

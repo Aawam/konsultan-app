@@ -15,11 +15,20 @@ export function TombolAksi({ id, editLabel = 'Edit' }: { id: string; editLabel?:
   const handleHapus = async () => {
     setOpen(false)
     setDeleting(true)
-    const res = await fetch(`/api/proyek/${id}`, { method: 'DELETE' })
-    const json = await res.json() as { error?: string }
-    setDeleting(false)
+    let json: { error?: string } = {}
+    let ok = false
 
-    if (!res.ok || json.error) {
+    try {
+      const res = await fetch(`/api/proyek/${id}`, { method: 'DELETE' })
+      json = await res.json() as { error?: string }
+      ok = res.ok
+    } catch (error) {
+      json = { error: error instanceof Error ? error.message : 'Terjadi kesalahan koneksi' }
+    } finally {
+      setDeleting(false)
+    }
+
+    if (!ok || json.error) {
       toast.error(`Gagal menghapus: ${json.error ?? 'Terjadi kesalahan'}`)
       return
     }
@@ -53,7 +62,7 @@ export function TombolAksi({ id, editLabel = 'Edit' }: { id: string; editLabel?:
         open={open}
         onOpenChange={setOpen}
         title="Hapus proyek ini?"
-        description="Data proyek akan disembunyikan dari daftar proyek dan export."
+        description="Data proyek akan disembunyikan dari daftar proyek, dashboard, dan export. Aksi ini tidak menghapus data permanen dari database."
         confirmLabel="Ya, Hapus"
         confirmClassName="bg-rose/15 text-rose border border-rose/20 hover:bg-rose/25"
         onConfirm={handleHapus}

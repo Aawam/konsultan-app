@@ -26,6 +26,7 @@ export async function getDaftarProyek() {
       status_proyek,
       perusahaan_id,
       created_at,
+      updated_at,
       perusahaan:perusahaan_id (
         nama_perusahaan
       )
@@ -127,6 +128,7 @@ export async function getAllProyekForExport() {
   const { data, error } = await supabase
     .from('proyek')
     .select(`
+      id,
       nama_proyek, paket_pekerjaan_induk, jenis_pekerjaan, kategori_pekerjaan,
       tahun_anggaran, sumber_dana, dinas, lokasi_kecamatan, nama_ppk,
       pagu_dana, hps, nilai_penawaran, status_proyek,
