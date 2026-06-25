@@ -25,21 +25,35 @@ function useSidebar() {
 
 function SidebarProvider({
   defaultOpen = true,
+  open: openProp,
+  onOpenChange,
   className,
   children,
   ...props
 }: React.ComponentProps<'div'> & {
   defaultOpen?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
-  const [open, setOpen] = React.useState(defaultOpen)
-  const toggleSidebar = React.useCallback(() => setOpen((value) => !value), [])
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen)
+  const open = openProp ?? uncontrolledOpen
+  const setOpen = React.useCallback(
+    (nextOpen: boolean) => {
+      if (openProp === undefined) {
+        setUncontrolledOpen(nextOpen)
+      }
+      onOpenChange?.(nextOpen)
+    },
+    [onOpenChange, openProp]
+  )
+  const toggleSidebar = React.useCallback(() => setOpen(!open), [open, setOpen])
 
   return (
     <SidebarContext.Provider value={{ open, setOpen, toggleSidebar }}>
       <div
         data-slot="sidebar-wrapper"
         data-sidebar-state={open ? 'expanded' : 'collapsed'}
-        className={cn('flex min-h-screen w-full bg-background text-foreground', className)}
+        className={cn('app-shell-background flex min-h-screen w-full text-foreground', className)}
         {...props}
       >
         {children}
@@ -63,7 +77,7 @@ function Sidebar({
       data-slot="sidebar"
       data-state={open ? 'expanded' : 'collapsed'}
       className={cn(
-        'group/sidebar sticky top-0 z-30 flex h-screen shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out',
+        'app-sidebar-shell group/sidebar sticky top-0 z-30 flex h-screen shrink-0 flex-col border-r border-sidebar-border text-sidebar-foreground transition-[width] duration-200 ease-out',
         widthClass,
         className
       )}
@@ -159,7 +173,7 @@ function SidebarMenuButton({
       className={cn(
         'group/menu-button relative flex h-9 w-full items-center gap-2 rounded-xl px-2.5 text-sm font-medium outline-none transition-colors',
         'text-sidebar-foreground/72 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-        'data-[active=true]:bg-primary/10 data-[active=true]:text-primary',
+        'data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground data-[active=true]:shadow-sm data-[active=true]:shadow-black/10',
         'group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:px-0',
         '[&_svg]:size-4 [&_svg]:shrink-0',
         className

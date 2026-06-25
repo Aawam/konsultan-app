@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { BadgeJenis, BadgeTahap, BadgeOverride } from '@/components/proyek/badges'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { formatRupiah } from '@/lib/utils'
 import { TAHAP_BAR_COLOR } from '@/lib/constants/proyek'
 import type { ProyekDetail } from '@/lib/types/proyek'
@@ -107,6 +107,7 @@ export function ProyekSlideover({ id, onClose }: { id: string | null; onClose: (
         <SheetContent side="right" className="w-[340px] max-w-[96vw] border-l border-border bg-card p-0 shadow-xl">
           <SheetHeader className="sr-only">
             <SheetTitle>Preview Proyek</SheetTitle>
+            <SheetDescription>Ringkasan cepat proyek, nilai kontrak, progress, dan aksi terkait.</SheetDescription>
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto px-5 py-5">

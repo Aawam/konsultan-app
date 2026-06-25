@@ -326,7 +326,7 @@ export function FormEditProyek({ perusahaanList, dinasList, initialData, metadat
                   control={control}
                   name="jenis_pekerjaan"
                   render={({ field }) => (
-                    <Select value={field.value || undefined} onValueChange={field.onChange}>
+                    <Select value={field.value ?? ''} onValueChange={field.onChange}>
                       <SelectTrigger className={fi}>
                         <SelectValue placeholder="Pilih jenis" />
                       </SelectTrigger>
@@ -344,7 +344,7 @@ export function FormEditProyek({ perusahaanList, dinasList, initialData, metadat
                   control={control}
                   name="kategori_pekerjaan"
                   render={({ field }) => (
-                    <Select value={field.value || undefined} onValueChange={field.onChange}>
+                    <Select value={field.value ?? ''} onValueChange={field.onChange}>
                       <SelectTrigger className={fi}>
                         <SelectValue placeholder="Pilih kategori" />
                       </SelectTrigger>
@@ -380,7 +380,7 @@ export function FormEditProyek({ perusahaanList, dinasList, initialData, metadat
                 control={control}
                 name="sumber_dana"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select value={field.value ?? ''} onValueChange={field.onChange}>
                     <SelectTrigger className={fi}>
                       <SelectValue />
                     </SelectTrigger>
@@ -443,7 +443,7 @@ export function FormEditProyek({ perusahaanList, dinasList, initialData, metadat
                 render={({ field }) => (
                   <div className="space-y-2">
                     <Select
-                      value={isCustomDinas ? NEW_DINAS_VALUE : field.value || undefined}
+                      value={isCustomDinas ? NEW_DINAS_VALUE : (field.value ?? '')}
                       onValueChange={(value) => {
                         if (value === NEW_DINAS_VALUE) {
                           setIsCustomDinas(true)
@@ -469,7 +469,7 @@ export function FormEditProyek({ perusahaanList, dinasList, initialData, metadat
                       </SelectContent>
                     </Select>
                     {isCustomDinas && (
-                      <Input className={fi} value={field.value} onChange={field.onChange} />
+                      <Input className={fi} value={field.value ?? ''} onChange={field.onChange} />
                     )}
                   </div>
                 )}
@@ -494,7 +494,7 @@ export function FormEditProyek({ perusahaanList, dinasList, initialData, metadat
                 control={control}
                 name="perusahaan_id"
                 render={({ field }) => (
-                  <Select value={field.value || undefined} onValueChange={field.onChange}>
+                  <Select value={field.value ?? ''} onValueChange={field.onChange}>
                     <SelectTrigger className={fi}>
                       <SelectValue placeholder="Pilih perusahaan" />
                     </SelectTrigger>
@@ -516,7 +516,7 @@ export function FormEditProyek({ perusahaanList, dinasList, initialData, metadat
                 control={control}
                 name="status_proyek"
                 render={({ field }) => (
-                  <Select value={field.value || undefined} onValueChange={field.onChange}>
+                  <Select value={field.value ?? ''} onValueChange={field.onChange}>
                     <SelectTrigger className={fi}>
                       <SelectValue placeholder="Pilih status bendera" />
                     </SelectTrigger>
@@ -572,7 +572,7 @@ export function FormEditProyek({ perusahaanList, dinasList, initialData, metadat
                 control={control}
                 name="tahap_progress"
                 render={({ field }) => (
-                  <Select value={field.value || undefined} onValueChange={field.onChange} disabled={!jenisPekerjaan}>
+                  <Select value={field.value ?? ''} onValueChange={field.onChange} disabled={!jenisPekerjaan}>
                     <SelectTrigger className={fi}>
                       <SelectValue placeholder={jenisPekerjaan ? 'Pilih tahap' : 'Pilih jenis pekerjaan dulu'} />
                     </SelectTrigger>

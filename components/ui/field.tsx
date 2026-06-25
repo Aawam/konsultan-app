@@ -6,7 +6,7 @@ function Field({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="field"
-      className={cn("grid gap-2 data-[invalid=true]:text-rose", className)}
+      className={cn("grid min-w-0 gap-2 data-[invalid=true]:text-rose", className)}
       {...props}
     />
   )
@@ -16,7 +16,7 @@ function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="field-group"
-      className={cn("grid gap-4", className)}
+      className={cn("grid min-w-0 gap-4", className)}
       {...props}
     />
   )
@@ -56,7 +56,8 @@ function FieldError({
   return (
     <p
       data-slot="field-error"
-      className={cn("text-xs font-medium text-rose", className)}
+      role="alert"
+      className={cn("sr-only", className)}
       {...props}
     >
       {body}

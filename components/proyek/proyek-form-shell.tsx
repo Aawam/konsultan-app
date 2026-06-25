@@ -313,8 +313,43 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
       4: ['perusahaan_id', 'status_proyek', 'tanggal_mulai', 'tanggal_selesai'],
     }
 
+    const fieldLabels: Partial<Record<keyof ProyekFormValues, string>> = {
+      nama_proyek: 'Nama proyek',
+      paket_pekerjaan_induk: 'Paket pekerjaan induk',
+      jenis_pekerjaan: 'Jenis pekerjaan',
+      kategori_pekerjaan: 'Kategori pekerjaan',
+      tahun_anggaran: 'Tahun anggaran',
+      sumber_dana: 'Sumber dana',
+      pagu_dana: 'Pagu dana',
+      hps: 'HPS',
+      nilai_penawaran: 'Nilai penawaran',
+      dinas: 'Dinas / SKPD',
+      lokasi_kecamatan: 'Lokasi kecamatan',
+      perusahaan_id: 'Perusahaan',
+      status_proyek: 'Status bendera',
+      tanggal_mulai: 'Tanggal mulai',
+      tanggal_selesai: 'Tanggal selesai',
+    }
+
+    const showValidationToast = (fields: (keyof ProyekFormValues)[]) => {
+      const messages = fields
+        .map((field) => {
+          const state = form.getFieldState(field)
+          if (!state.invalid) return null
+          return state.error?.message ?? `${fieldLabels[field] ?? field} belum valid`
+        })
+        .filter(Boolean)
+        .slice(0, 4)
+
+      toast.error('Data belum lengkap', {
+        description: messages.length > 0
+          ? messages.join(' • ')
+          : 'Lengkapi field wajib sebelum melanjutkan.',
+      })
+    }
+
     const valid = await trigger(fieldsByStep[currentStep], { shouldFocus: true })
-    if (!valid) toast.error('Periksa kembali field yang wajib diisi')
+    if (!valid) showValidationToast(fieldsByStep[currentStep])
     return valid
   }
 
@@ -415,15 +450,22 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
     router.refresh()
   }
 
-  const submitFinalStep = handleSubmit(async (values) => {
-    const nextWarnings = validateWarnings()
-    if (nextWarnings.length > 0) {
-      setShowOverrideDialog(true)
-      return
-    }
+  const submitFinalStep = handleSubmit(
+    async (values) => {
+      const nextWarnings = validateWarnings()
+      if (nextWarnings.length > 0) {
+        setShowOverrideDialog(true)
+        return
+      }
 
-    await submitToApi(values)
-  })
+      await submitToApi(values)
+    },
+    () => {
+      toast.error('Data belum lengkap', {
+        description: 'Lengkapi field wajib pada setiap langkah sebelum menyimpan proyek.',
+      })
+    }
+  )
 
   const submitWithOverride = handleSubmit(async (values) => {
     if (!alasanOverride.trim()) {
@@ -439,7 +481,7 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
     setValue(field, formatNumberInput(value), { shouldDirty: true, shouldValidate: true })
   }
 
-  const fi = 'field-input'
+  const fi = 'field-input aria-invalid:border-border aria-invalid:ring-0 dark:aria-invalid:border-white/10'
   const submitLabel = mode === 'edit' ? 'Perbarui Proyek' : 'Simpan Proyek'
   const stepTitles = ['Identitas Proyek', 'Anggaran', 'Pemberi Kerja', 'Pelaksanaan']
   const stepDescriptions = [
@@ -600,7 +642,7 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
                 control={control}
                 name="jenis_pekerjaan"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select value={field.value ?? ''} onValueChange={field.onChange}>
                     <SelectTrigger className={fi} aria-invalid={Boolean(errors.jenis_pekerjaan)}>
                       <SelectValue placeholder="Pilih jenis" />
                     </SelectTrigger>
@@ -624,7 +666,7 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
                 control={control}
                 name="kategori_pekerjaan"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select value={field.value ?? ''} onValueChange={field.onChange}>
                     <SelectTrigger className={fi} aria-invalid={Boolean(errors.kategori_pekerjaan)}>
                       <SelectValue placeholder="Pilih kategori" />
                     </SelectTrigger>
@@ -668,7 +710,7 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
                 control={control}
                 name="sumber_dana"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select value={field.value ?? ''} onValueChange={field.onChange}>
                     <SelectTrigger className={fi} aria-invalid={Boolean(errors.sumber_dana)}>
                       <SelectValue />
                     </SelectTrigger>
@@ -743,7 +785,7 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
             <p className="section-title">Pemberi Kerja</p>
           </div>
           <FieldGroup className="section-body grid-cols-1 gap-4 md:grid-cols-2">
-            <Field data-invalid={Boolean(errors.dinas)}>
+            <Field className="md:col-span-2" data-invalid={Boolean(errors.dinas)}>
               <FieldLabel>Dinas *</FieldLabel>
               <Controller
                 control={control}
@@ -751,11 +793,11 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
                 render={({ field }) => (
                   <div className="space-y-2">
                     <Select
-                      value={isCustomDinas ? NEW_DINAS_VALUE : field.value || undefined}
+                      value={isCustomDinas ? NEW_DINAS_VALUE : (field.value ?? '')}
                       onValueChange={(value) => {
                         if (value === NEW_DINAS_VALUE) {
                           setIsCustomDinas(true)
-                          if (normalizedDinasList.includes(field.value)) field.onChange('')
+                          if (normalizedDinasList.includes(field.value ?? '')) field.onChange('')
                           return
                         }
                         setIsCustomDinas(false)
@@ -779,7 +821,7 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
                     {isCustomDinas && (
                       <Input
                         className={fi}
-                        value={field.value}
+                        value={field.value ?? ''}
                         onChange={field.onChange}
                         placeholder="Ketik nama dinas baru"
                       />
@@ -801,7 +843,7 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
               <FieldError errors={[errors.lokasi_kecamatan]} />
             </Field>
 
-            <Field className="md:col-span-2" data-invalid={Boolean(errors.nama_ppk)}>
+            <Field data-invalid={Boolean(errors.nama_ppk)}>
               <FieldLabel htmlFor="nama_ppk">Nama PPK</FieldLabel>
               <Input
                 id="nama_ppk"
@@ -828,7 +870,7 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
                 control={control}
                 name="perusahaan_id"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select value={field.value ?? ''} onValueChange={field.onChange}>
                     <SelectTrigger className={fi} aria-invalid={Boolean(errors.perusahaan_id)}>
                       <SelectValue placeholder="Pilih perusahaan" />
                     </SelectTrigger>
@@ -852,7 +894,7 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
                 control={control}
                 name="status_proyek"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select value={field.value ?? ''} onValueChange={field.onChange}>
                     <SelectTrigger className={fi} aria-invalid={Boolean(errors.status_proyek)}>
                       <SelectValue placeholder="Pilih status bendera" />
                     </SelectTrigger>
@@ -920,7 +962,7 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
                 control={control}
                 name="tahap_progress"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange} disabled={!jenisPekerjaan}>
+                  <Select value={field.value ?? ''} onValueChange={field.onChange} disabled={!jenisPekerjaan}>
                     <SelectTrigger className={fi} aria-invalid={Boolean(errors.tahap_progress)}>
                       <SelectValue placeholder={jenisPekerjaan ? 'Pilih tahap' : 'Pilih jenis pekerjaan dulu'} />
                     </SelectTrigger>
@@ -969,7 +1011,7 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
           variant="outline"
           onClick={prev}
           disabled={step === 1}
-          className="h-11 border-primary/40 text-primary hover:bg-primary/10"
+          className="h-11 border-brand/35 bg-brand/5 text-brand hover:bg-brand/10"
         >
           Sebelumnya
         </Button>
@@ -978,20 +1020,20 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
           type="button"
           variant="outline"
           onClick={saveDraft}
-          className="h-11 border-amber/50 bg-amber/10 text-amber hover:bg-amber/15"
+          className="h-11 border-amber/35 bg-amber/10 text-amber hover:bg-amber/15"
         >
           Simpan Draft
         </Button>
 
         {step < STEPS.length ? (
-          <Button type="button" onClick={next} className="h-11 bg-foreground text-background hover:bg-foreground/90">
+          <Button type="button" onClick={next} className="h-11 bg-brand text-primary-foreground shadow-sm shadow-brand/20 hover:bg-brand/90">
             Selanjutnya
           </Button>
         ) : (
           <Button
             type="button"
             disabled={isSubmitting}
-            className="h-11 bg-foreground text-background hover:bg-foreground/90"
+            className="h-11 bg-brand text-primary-foreground shadow-sm shadow-brand/20 hover:bg-brand/90"
             onClick={() => {
               void submitFinalStep()
             }}

@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input'
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
@@ -157,6 +158,9 @@ function DinasSlideover({
       <SheetContent side="right" className="p-0">
         <SheetHeader className="bg-surface/80 backdrop-blur-md">
           <SheetTitle>Detail Dinas / SKPD</SheetTitle>
+          <SheetDescription className="sr-only">
+            Ringkasan dinas, statistik proyek terkait, dan daftar proyek pada filter tahun aktif.
+          </SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-5 py-5">

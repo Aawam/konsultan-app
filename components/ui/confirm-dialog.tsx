@@ -45,6 +45,11 @@ export function ConfirmDialog({
               </div>
             </AlertDialogDescription>
           )}
+          {!description && !children && (
+            <AlertDialogDescription className="sr-only">
+              Konfirmasi tindakan sebelum melanjutkan.
+            </AlertDialogDescription>
+          )}
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel className="border-border bg-muted text-foreground hover:bg-accent">

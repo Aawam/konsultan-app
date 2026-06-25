@@ -57,6 +57,8 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ]
 
+const SIDEBAR_STORAGE_KEY = 'konsultan:sidebar-open'
+
 function Clock() {
   const [now, setNow] = useState<Date | null>(null)
 
@@ -89,6 +91,10 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) !== 'false'
+  })
 
   useEffect(() => {
     let mounted = true
@@ -102,6 +108,10 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
       mounted = false
     }
   }, [])
+
+  useEffect(() => {
+    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(sidebarOpen))
+  }, [sidebarOpen])
 
   const isActive = (href: string | null) => {
     if (!href) return false
@@ -123,12 +133,15 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
   const initial = displayName.slice(0, 1).toUpperCase()
 
   return (
-    <SidebarProvider>
+    <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
       <Sidebar collapsible="icon">
         <SidebarHeader>
-          <Link href="/proyek" className="flex min-w-0 items-center gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/10">
-              <span className="text-sm font-black leading-none text-primary">K</span>
+          <Link
+            href="/proyek"
+            className="flex min-w-0 items-center gap-3 group-data-[state=collapsed]/sidebar:justify-center"
+          >
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-sidebar-primary/35 bg-sidebar-primary text-sidebar-primary-foreground shadow-sm shadow-black/10">
+              <span className="text-sm font-black leading-none">K</span>
             </div>
             <div className="min-w-0 group-data-[state=collapsed]/sidebar:hidden">
               <p className="truncate text-sm font-bold leading-none tracking-tight text-sidebar-foreground">
@@ -212,6 +225,7 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
               className="group-data-[state=collapsed]/sidebar:hidden"
               onClick={handleLogout}
               aria-label="Keluar"
+              title="Keluar"
             >
               <LogOut />
             </Button>
@@ -221,9 +235,9 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
       </Sidebar>
 
       <SidebarInset>
-        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-surface/80 px-5 backdrop-blur-md">
+        <header className="app-topbar sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border/70 px-5 backdrop-blur-md">
           <div className="flex min-w-0 items-center gap-2">
-            <SidebarTrigger />
+            <SidebarTrigger title={sidebarOpen ? 'Minimize sidebar' : 'Expand sidebar'} />
             <TopbarTitle />
           </div>
           <div className="flex items-center gap-3">
