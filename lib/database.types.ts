@@ -32,71 +32,6 @@ export type Database = {
         }
         Relationships: []
       }
-      checklist_proyek: {
-        Row: {
-          catatan: string | null
-          id: string
-          nama_item: string
-          proyek_id: string
-          status: string
-          urutan: number | null
-        }
-        Insert: {
-          catatan?: string | null
-          id?: string
-          nama_item: string
-          proyek_id: string
-          status?: string
-          urutan?: number | null
-        }
-        Update: {
-          catatan?: string | null
-          id?: string
-          nama_item?: string
-          proyek_id?: string
-          status?: string
-          urutan?: number | null
-        }
-        Relationships: []
-      }
-      nomor_surat: {
-        Row: {
-          created_at: string
-          id: string
-          is_manual: boolean
-          jenis_surat: string
-          nomor_surat: string
-          proyek_id: string
-          tanggal_surat: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_manual?: boolean
-          jenis_surat: string
-          nomor_surat: string
-          proyek_id: string
-          tanggal_surat: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_manual?: boolean
-          jenis_surat?: string
-          nomor_surat?: string
-          proyek_id?: string
-          tanggal_surat?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "nomor_surat_proyek_id_fkey"
-            columns: ["proyek_id"]
-            isOneToOne: false
-            referencedRelation: "proyek"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       override_log: {
         Row: {
           alasan: string
@@ -131,122 +66,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "override_log_proyek_id_fkey"
-            columns: ["proyek_id"]
-            isOneToOne: false
-            referencedRelation: "proyek"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      pengalaman_perusahaan: {
-        Row: {
-          id: string
-          kategori_pekerjaan: string
-          lokasi: string | null
-          nama_paket: string
-          nilai_kontrak: number
-          nomor_kontrak: string | null
-          pemberi_kerja: string
-          perusahaan_id: string
-          tanggal_mulai: string
-          tanggal_selesai: string
-        }
-        Insert: {
-          id?: string
-          kategori_pekerjaan: string
-          lokasi?: string | null
-          nama_paket: string
-          nilai_kontrak: number
-          nomor_kontrak?: string | null
-          pemberi_kerja: string
-          perusahaan_id: string
-          tanggal_mulai: string
-          tanggal_selesai: string
-        }
-        Update: {
-          id?: string
-          kategori_pekerjaan?: string
-          lokasi?: string | null
-          nama_paket?: string
-          nilai_kontrak?: number
-          nomor_kontrak?: string | null
-          pemberi_kerja?: string
-          perusahaan_id?: string
-          tanggal_mulai?: string
-          tanggal_selesai?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pengalaman_perusahaan_perusahaan_id_fkey"
-            columns: ["perusahaan_id"]
-            isOneToOne: false
-            referencedRelation: "perusahaan"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      personil: {
-        Row: {
-          alamat: string | null
-          id: string
-          klasifikasi_skk: string | null
-          nama_lengkap: string
-          nomor_skk: string | null
-        }
-        Insert: {
-          alamat?: string | null
-          id?: string
-          klasifikasi_skk?: string | null
-          nama_lengkap: string
-          nomor_skk?: string | null
-        }
-        Update: {
-          alamat?: string | null
-          id?: string
-          klasifikasi_skk?: string | null
-          nama_lengkap?: string
-          nomor_skk?: string | null
-        }
-        Relationships: []
-      }
-      personil_proyek: {
-        Row: {
-          durasi_bulan: number
-          id: string
-          personil_id: string
-          posisi: string
-          proyek_id: string
-          tanggal_mulai_tugas: string | null
-          tanggal_selesai_tugas: string | null
-        }
-        Insert: {
-          durasi_bulan: number
-          id?: string
-          personil_id: string
-          posisi: string
-          proyek_id: string
-          tanggal_mulai_tugas?: string | null
-          tanggal_selesai_tugas?: string | null
-        }
-        Update: {
-          durasi_bulan?: number
-          id?: string
-          personil_id?: string
-          posisi?: string
-          proyek_id?: string
-          tanggal_mulai_tugas?: string | null
-          tanggal_selesai_tugas?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "personil_proyek_personil_id_fkey"
-            columns: ["personil_id"]
-            isOneToOne: false
-            referencedRelation: "personil"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "personil_proyek_proyek_id_fkey"
             columns: ["proyek_id"]
             isOneToOne: false
             referencedRelation: "proyek"
@@ -362,7 +181,7 @@ export type Database = {
           durasi_hari: number | null
           hps: number | null
           id: string
-          is_deleted: boolean | null
+          is_deleted: boolean
           jalur_masuk: string
           jenis_pekerjaan: string
           kategori_pekerjaan: string
@@ -398,19 +217,19 @@ export type Database = {
           durasi_hari?: number | null
           hps?: number | null
           id?: string
-          is_deleted?: boolean | null
+          is_deleted?: boolean
           jalur_masuk?: string
           jenis_pekerjaan: string
           kategori_pekerjaan: string
           lokasi_kecamatan: string
           nama_kpa?: string | null
-          nama_ppk: string
+          nama_ppk?: string
           nama_pptk?: string | null
           nama_proyek: string
           nilai_penawaran?: number | null
           nomor_kontrak?: string | null
           nomor_spk?: string | null
-          pagu_dana: number
+          pagu_dana?: number
           paket_pekerjaan_induk: string
           pernah_dioverride?: boolean
           persentase_progress?: number
@@ -434,7 +253,7 @@ export type Database = {
           durasi_hari?: number | null
           hps?: number | null
           id?: string
-          is_deleted?: boolean | null
+          is_deleted?: boolean
           jalur_masuk?: string
           jenis_pekerjaan?: string
           kategori_pekerjaan?: string
@@ -472,76 +291,15 @@ export type Database = {
           },
         ]
       }
-      template_metodologi: {
-        Row: {
-          id: string
-          kategori_pekerjaan: string
-          konten: string
-          tipe_pekerjaan: string
-        }
-        Insert: {
-          id?: string
-          kategori_pekerjaan: string
-          konten: string
-          tipe_pekerjaan: string
-        }
-        Update: {
-          id?: string
-          kategori_pekerjaan?: string
-          konten?: string
-          tipe_pekerjaan?: string
-        }
-        Relationships: []
-      }
-      termin_pembayaran: {
-        Row: {
-          deskripsi: string
-          id: string
-          jenis_termin: string
-          nilai: number | null
-          persentase: number
-          proyek_id: string
-          status: string
-          syarat_pencairan: string | null
-          tanggal_dibayar: string | null
-          urutan: number
-        }
-        Insert: {
-          deskripsi: string
-          id?: string
-          jenis_termin: string
-          nilai?: number | null
-          persentase: number
-          proyek_id: string
-          status?: string
-          syarat_pencairan?: string | null
-          tanggal_dibayar?: string | null
-          urutan: number
-        }
-        Update: {
-          deskripsi?: string
-          id?: string
-          jenis_termin?: string
-          nilai?: number | null
-          persentase?: number
-          proyek_id?: string
-          status?: string
-          syarat_pencairan?: string | null
-          tanggal_dibayar?: string | null
-          urutan?: number
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      next_nomor_penawaran: { Args: { p_tahun: number }; Returns: number }
+      [_ in never]: never
     }
     Enums: {
-      jenis_pekerjaan_enum: "Perencanaan" | "Pengawasan"
-      sumber_dana_enum: "APBD" | "APBD-Perubahan"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -665,12 +423,3 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
-
-export const Constants = {
-  public: {
-    Enums: {
-      jenis_pekerjaan_enum: ["Perencanaan", "Pengawasan"],
-      sumber_dana_enum: ["APBD", "APBD-Perubahan"],
-    },
-  },
-} as const

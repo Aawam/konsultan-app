@@ -85,6 +85,7 @@ Kode aktif saat ini bergantung pada tabel berikut:
 - `proyek`
 - `perusahaan`
 - `override_log`
+- `dinas_skpd`
 
 Tabel legacy yang sebelumnya dipakai modul dokumen dan sekarang bisa ditinjau untuk dihapus setelah audit database:
 
@@ -93,6 +94,8 @@ Tabel legacy yang sebelumnya dipakai modul dokumen dan sekarang bisa ditinjau un
 - `pengalaman_perusahaan`
 - `nomor_surat`
 - `template_metodologi`
+- `checklist_proyek`
+- `termin_pembayaran`
 
 Types Supabase berada di `lib/database.types.ts`. Client Supabase dipisah menjadi:
 
