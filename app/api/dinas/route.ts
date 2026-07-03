@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function POST(req: NextRequest) {
   const body = await req.json() as { dinas?: string }
@@ -9,7 +9,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Nama dinas minimal 2 karakter' }, { status: 400 })
   }
 
-  const supabase = await createSupabaseServerClient()
+  const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
+  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { data, error } = await supabase
     .from('dinas_skpd')
     .insert({ nama_dinas: dinas })

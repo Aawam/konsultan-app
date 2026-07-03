@@ -56,15 +56,12 @@ export async function proxy(request: NextRequest) {
   return response
 }
 
-// Beri tahu satpam folder mana saja yang harus dijaga
+// Protect app pages only. API routes authenticate inside each handler so
+// ordinary API/static requests do not pay the global proxy auth round trip.
 export const config = {
   matcher: [
-    /*
-     * Cocokkan semua request path KECUALI:
-     * - _next/static (file statis web)
-     * - _next/image (optimasi gambar)
-     * - favicon.ico (ikon web)
-     */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/login',
+    '/proyek/:path*',
+    '/database/:path*',
   ],
 }

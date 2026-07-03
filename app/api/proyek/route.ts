@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import { buildProyekPayload } from '@/lib/actions/proyek'
+import { PROYEK_MUTATION_RETURN_SELECT } from '@/lib/queries/proyek-selects'
 import { proyekSchema } from '@/lib/validations/proyek'
 import type { ProyekFormData } from '@/lib/types/proyek'
 import { parseNumberInput } from '@/lib/utils'
 
 export async function POST(req: NextRequest) {
   const form = await req.json() as ProyekFormData
-  const supabase = await createSupabaseServerClient()
+  const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
+  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const parsed = proyekSchema.safeParse({
     ...form,
@@ -25,7 +27,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('proyek')
     .insert(buildProyekPayload(form))
-    .select()
+    .select(PROYEK_MUTATION_RETURN_SELECT)
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

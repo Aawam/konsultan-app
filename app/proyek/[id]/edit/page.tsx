@@ -1,8 +1,9 @@
-import { getDinasList, getProyekById, getPerusahaanList } from '@/lib/actions/proyek'
+import { getProyekEditData } from '@/lib/actions/proyek'
 import { FormEditProyek } from '@/components/proyek/form-edit-proyek'
 import { notFound } from 'next/navigation'
 import type { ProyekFormData } from '@/lib/types/proyek'
 import Link from 'next/link'
+import { PageError } from '@/components/ui/page-error'
 
 export default async function EditProyekPage({
   params,
@@ -11,20 +12,11 @@ export default async function EditProyekPage({
 }) {
   const { id } = await params
 
-  const [{ data: proyek }, { data: perusahaanList }, { data: dinasList }] = await Promise.all([
-    getProyekById(id),
-    getPerusahaanList(),
-    getDinasList(),
-  ])
+  const { data, error } = await getProyekEditData(id)
+  const { proyek, perusahaanList, dinasList } = data
 
   if (!proyek) notFound()
-
-  const ordered = [...(perusahaanList ?? [])].sort((a, b) => {
-    if (a.adalah_perusahaan_sendiri !== b.adalah_perusahaan_sendiri) {
-      return a.adalah_perusahaan_sendiri ? -1 : 1
-    }
-    return a.nama_perusahaan.localeCompare(b.nama_perusahaan)
-  })
+  if (error) return <PageError error={error} />
 
   const initialData: ProyekFormData = {
     id: proyek.id,
@@ -68,8 +60,8 @@ export default async function EditProyekPage({
         </Link>
       </div>
       <FormEditProyek
-        perusahaanList={ordered}
-        dinasList={dinasList ?? []}
+        perusahaanList={perusahaanList}
+        dinasList={dinasList}
         initialData={initialData}
         metadata={{
           createdAt: proyek.created_at,

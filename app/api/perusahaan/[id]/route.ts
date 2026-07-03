@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import type { PerusahaanFormData } from '@/lib/types/perusahaan'
 
 export async function PATCH(
@@ -14,7 +14,8 @@ export async function PATCH(
     return NextResponse.json({ error: 'Nama perusahaan minimal 3 karakter' }, { status: 400 })
   }
 
-  const supabase = await createSupabaseServerClient()
+  const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
+  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const payload = {
     nama_perusahaan: nama,
     adalah_perusahaan_sendiri: Boolean(form.adalah_perusahaan_sendiri),
@@ -47,7 +48,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const supabase = await createSupabaseServerClient()
+  const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
+  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { count, error: countError } = await supabase
     .from('proyek')

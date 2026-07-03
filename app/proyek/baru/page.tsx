@@ -1,22 +1,12 @@
-import { getDinasList, getPerusahaanList } from '@/lib/actions/proyek'
+import { getProyekFormReferences } from '@/lib/actions/proyek'
 import { FormCreateProyek } from '@/components/proyek/form-create-proyek'
 import { BackButton } from '@/components/ui/back-button'
 import { PageError } from '@/components/ui/page-error'
 
 export default async function TambahProyekPage() {
-  const [{ data: perusahaan, error }, { data: dinasList }] = await Promise.all([
-    getPerusahaanList(),
-    getDinasList(),
-  ])
+  const { data, error } = await getProyekFormReferences()
 
   if (error) return <PageError error={error} />
-
-  const ordered = [...(perusahaan ?? [])].sort((a, b) => {
-    if (a.adalah_perusahaan_sendiri !== b.adalah_perusahaan_sendiri) {
-      return a.adalah_perusahaan_sendiri ? -1 : 1
-    }
-    return a.nama_perusahaan.localeCompare(b.nama_perusahaan)
-  })
 
   return (
     <div className="mx-auto max-w-7xl pb-10">
@@ -30,7 +20,7 @@ export default async function TambahProyekPage() {
         </div>
         <BackButton href="/proyek" label="Kembali ke Daftar Proyek" />
       </div>
-      <FormCreateProyek perusahaanList={ordered} dinasList={dinasList ?? []} />
+      <FormCreateProyek perusahaanList={data.perusahaanList} dinasList={data.dinasList} />
     </div>
   )
 }

@@ -154,6 +154,7 @@ Generic shadcn/Radix primitives and shared helpers live here. Domain-specific co
 lib/
 ├── actions/
 ├── constants/
+├── queries/
 ├── types/
 ├── validations/
 ├── database.types.ts
@@ -168,8 +169,14 @@ lib/
 
 | File | Main exports |
 |---|---|
-| `proyek.ts` | Project queries/mutations, payload builder, override log, delete. |
+| `proyek.ts` | Project queries/mutations, form reference loaders, payload builder, override log, delete. |
 | `perusahaan.ts` | Company list and projects by company. |
+
+### queries/
+
+| File | Purpose |
+|---|---|
+| `proyek-selects.ts` | Shared exact Supabase select strings for project detail, mutation returns, and override logs. |
 
 ### constants/
 
@@ -198,7 +205,7 @@ lib/
 | `proyek-analytics.ts` | Project analytics calculations. |
 | `supabase-browser.ts` | Browser client for Client Components. |
 | `supabase-config.ts` | Shared Supabase environment config helpers. |
-| `supabase-server.ts` | Server client and current user helper. |
+| `supabase-server.ts` | Server client, authenticated API client helper, and current user helper. |
 | `utils.ts` | `cn`, number/currency/date formatting helpers. |
 
 ---

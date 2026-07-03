@@ -1,14 +1,20 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { getPersentaseFromFase } from '@/lib/constants/proyek'
+import {
+  OVERRIDE_LOG_SELECT,
+  PROYEK_DETAIL_SELECT,
+  PROYEK_MUTATION_RETURN_SELECT,
+} from '@/lib/queries/proyek-selects'
 import type { DinasOption, ProyekDetail, ProyekDisplay, ProyekFormData, ProyekPayload } from '@/lib/types/proyek'
 import { proyekSchema } from '@/lib/validations/proyek'
 import { parseNumberInput } from '@/lib/utils'
 
 // ── Queries ──────────────────────────────────────────────────────────────────
 
+type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>
 
-export async function getDaftarProyek() {
-  const supabase = await createSupabaseServerClient()
+export async function getDaftarProyek(client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
   const { data, error } = await supabase
     .from('proyek')
     .select(`
@@ -40,8 +46,8 @@ export async function getDaftarProyek() {
   return { data: data as ProyekDisplay[] | null, error }
 }
 
-export async function getPerusahaanList() {
-  const supabase = await createSupabaseServerClient()
+export async function getPerusahaanList(client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
   const { data, error } = await supabase
     .from('perusahaan')
     .select('id, nama_perusahaan, adalah_perusahaan_sendiri')
@@ -50,8 +56,20 @@ export async function getPerusahaanList() {
   return { data, error }
 }
 
-export async function getDinasList() {
-  const supabase = await createSupabaseServerClient()
+export function orderPerusahaanList<T extends {
+  adalah_perusahaan_sendiri: boolean
+  nama_perusahaan: string
+}>(items: T[]) {
+  return [...items].sort((a, b) => {
+    if (a.adalah_perusahaan_sendiri !== b.adalah_perusahaan_sendiri) {
+      return a.adalah_perusahaan_sendiri ? -1 : 1
+    }
+    return a.nama_perusahaan.localeCompare(b.nama_perusahaan)
+  })
+}
+
+export async function getDinasList(client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
   const dinasTableClient = supabase as unknown as {
     from: (table: 'dinas_skpd') => {
       select: (columns: string) => {
@@ -99,11 +117,44 @@ export async function getDinasList() {
   }
 }
 
-export async function getProyekById(id: string) {
+export async function getProyekFormReferences(client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
+  const [{ data: perusahaan, error }, { data: dinasList, error: dinasError }] = await Promise.all([
+    getPerusahaanList(supabase),
+    getDinasList(supabase),
+  ])
+
+  return {
+    data: {
+      perusahaanList: orderPerusahaanList(perusahaan ?? []),
+      dinasList: dinasList ?? [],
+    },
+    error: error ?? dinasError,
+  }
+}
+
+export async function getProyekEditData(id: string) {
   const supabase = await createSupabaseServerClient()
+  const [{ data: proyek, error }, { data: references, error: referenceError }] = await Promise.all([
+    getProyekById(id, supabase),
+    getProyekFormReferences(supabase),
+  ])
+
+  return {
+    data: {
+      proyek,
+      perusahaanList: references.perusahaanList,
+      dinasList: references.dinasList,
+    },
+    error: error ?? referenceError,
+  }
+}
+
+export async function getProyekById(id: string, client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
   const { data, error } = await supabase
     .from('proyek')
-    .select(`*, perusahaan:perusahaan_id (nama_perusahaan, adalah_perusahaan_sendiri)`)
+    .select(PROYEK_DETAIL_SELECT)
     .eq('id', id)
     .eq('is_deleted', false)
     .single()
@@ -111,19 +162,19 @@ export async function getProyekById(id: string) {
   return { data: data as ProyekDetail | null, error }
 }
 
-export async function getOverrideLogsByProyekId(proyekId: string) {
-  const supabase = await createSupabaseServerClient()
+export async function getOverrideLogsByProyekId(proyekId: string, client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
   const { data, error } = await supabase
     .from('override_log')
-    .select('*')
+    .select(OVERRIDE_LOG_SELECT)
     .eq('proyek_id', proyekId)
     .order('dilakukan_pada', { ascending: false })
 
   return { data, error }
 }
 
-export async function getAllProyekForExport() {
-  const supabase = await createSupabaseServerClient()
+export async function getAllProyekForExport(client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
   // B2: removed dead columns never written by FormProyek (alamat_dinas, nomor_kontrak,
   // nomor_spk, tanggal_kontrak) — they produced blank columns in Excel output.
   const { data, error } = await supabase
@@ -201,8 +252,8 @@ export async function simpanProyek(
 
   const { data, error } =
     mode === 'edit' && form.id
-      ? await supabase.from('proyek').update(payload).eq('id', form.id).select().single()
-      : await supabase.from('proyek').insert(payload).select().single()
+      ? await supabase.from('proyek').update(payload).eq('id', form.id).select(PROYEK_MUTATION_RETURN_SELECT).single()
+      : await supabase.from('proyek').insert(payload).select(PROYEK_MUTATION_RETURN_SELECT).single()
 
   return { data, error }
 }

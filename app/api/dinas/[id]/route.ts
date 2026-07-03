@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function PATCH(
   req: NextRequest,
@@ -13,7 +13,8 @@ export async function PATCH(
     return NextResponse.json({ error: 'Nama dinas minimal 2 karakter' }, { status: 400 })
   }
 
-  const supabase = await createSupabaseServerClient()
+  const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
+  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { data: existing, error: existingError } = await supabase
     .from('dinas_skpd')
     .select('id, nama_dinas')
@@ -49,7 +50,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const supabase = await createSupabaseServerClient()
+  const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
+  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { data: existing, error: existingError } = await supabase
     .from('dinas_skpd')
     .select('id, nama_dinas')

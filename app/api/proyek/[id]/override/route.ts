@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function POST(
   req: NextRequest,
@@ -15,8 +15,8 @@ export async function POST(
     return NextResponse.json({ error: 'warnings and alasan are required' }, { status: 400 })
   }
 
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user, authError } = await createAuthenticatedSupabaseServerClient()
+  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const now = new Date().toISOString()
 
   const [{ error: proyekError }, { error: logError }] = await Promise.all([

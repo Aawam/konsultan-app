@@ -148,6 +148,10 @@ npm test
 ## Catatan Teknis
 
 - `vercel.json` menjalankan Vercel Functions di region `sin1` agar dekat dengan pengguna Indonesia dan Supabase Singapore.
+- `proxy.ts` hanya menjaga route halaman (`/login`, `/proyek/*`, `/database/*`). API route melakukan auth sendiri agar request API tidak selalu melewati proxy global.
+- API route memakai helper authenticated Supabase server client dari `lib/supabase-server.ts`.
+- Select detail proyek dan override log dipusatkan di `lib/queries/proyek-selects.ts` supaya payload Supabase tidak memakai `select('*')`.
+- Create/edit proyek memakai loader referensi bersama agar daftar perusahaan dan dinas dibaca dengan satu client Supabase per request.
 - `app/proyek/loading.tsx` dan `app/database/loading.tsx` memberi skeleton cepat untuk route dinamis yang menunggu Supabase.
 - `public/templates/` masih boleh dipakai untuk aset referensi lokal, tetapi tidak lagi dibutuhkan untuk fitur inti aplikasi.
 - `.env.example` disimpan sebagai template konfigurasi aman; `.env.local` tetap lokal dan di-ignore.

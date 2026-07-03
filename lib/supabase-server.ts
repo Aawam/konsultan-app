@@ -37,3 +37,14 @@ export async function getCurrentUserEmail() {
   const { data: { user } } = await supabase.auth.getUser()
   return user?.email ?? null
 }
+
+export async function createAuthenticatedSupabaseServerClient() {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+
+  return {
+    supabase,
+    user,
+    authError: error || !user ? (error?.message ?? 'Unauthorized') : null,
+  }
+}

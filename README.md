@@ -96,6 +96,7 @@ For the full maintained structure, read `docs/project_structure.md`.
 - Shared domain types live in `lib/types/`.
 - Zod validation lives in `lib/validations/`.
 - Project constants and progress rules live in `lib/constants/proyek.ts`.
+- Shared Supabase select strings live in `lib/queries/`.
 - Client-heavy components use `'use client'` and usually `*-client.tsx`.
 - Generic UI belongs in `components/ui/`; domain UI belongs in `components/proyek/` or `components/database/`.
 - Keep unused primitives out of the repo. Re-add shadcn components only when an active screen imports them.
@@ -113,6 +114,13 @@ Production deploys run Vercel Functions in Singapore via `vercel.json`:
 ```
 
 Keep the Supabase project in Singapore too. If Vercel runs in Singapore but Supabase is in another region, dynamic pages still pay database round-trip latency.
+
+Auth is split deliberately:
+
+- `proxy.ts` protects page navigation only: `/login`, `/proyek/*`, and `/database/*`.
+- API route handlers authenticate themselves through `createAuthenticatedSupabaseServerClient()`.
+
+This avoids a global proxy auth round trip for every API request while keeping API access protected.
 
 To inspect Vercel cache behavior after deployment:
 
