@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback, useTransition } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
@@ -14,9 +14,7 @@ import { BadgeJenis, BadgeOverride } from '@/components/proyek/badges'
 import { ProgressCell } from '@/components/proyek/progress-cell'
 import {
   DEFAULT_PROJECT_FILTERS,
-  filterProjects,
   getMissingProjectFields,
-  getProjectCompanyNames,
   getProjectStats,
   type ProjectProgressFilter,
   type ProjectStatusFilter,
@@ -25,6 +23,7 @@ import { formatRupiah, formatTanggal } from '@/lib/utils'
 import { toast } from 'sonner'
 import { ProyekDisplay, getNamaPerusahaan } from '@/lib/types/proyek'
 import { ProyekSlideover } from '@/components/proyek/proyek-slideover'
+import type { ProyekListFilters } from '@/lib/actions/proyek'
 
 type JenisFilter = 'Semua' | 'Perencanaan' | 'Pengawasan'
 type ExportRow = {
@@ -51,6 +50,21 @@ type ExportRow = {
   catatan: string | null
   created_at: string | null
   updated_at: string | null
+}
+
+type ProyekTablePagination = {
+  page: number
+  pageSize: number
+  total: number
+  pageCount: number
+}
+
+type ProyekTableFilterOptions = {
+  years: number[]
+  perusahaanList: {
+    id: string
+    nama_perusahaan: string
+  }[]
 }
 
 const INLINE_YEAR_LIMIT = 3
@@ -117,58 +131,66 @@ function getProgressLabel(value: ProjectProgressFilter) {
 
 export function ProyekTableClient({
   proyek,
+  pagination,
+  filters,
+  filterOptions,
   title,
 }: {
   proyek: ProyekDisplay[]
+  pagination: ProyekTablePagination
+  filters: ProyekListFilters
+  filterOptions: ProyekTableFilterOptions
   title?: string
 }) {
+  const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [tahunFilter, setTahunFilter] = useState<number | 'semua'>('semua')
-  const [jenisFilter, setJenisFilter] = useState<JenisFilter>('Semua')
-  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>('Semua')
-  const [progressFilter, setProgressFilter] = useState<ProjectProgressFilter>('semua')
-  const [perusahaanFilter, setPerusahaanFilter] = useState('Semua')
-  const [search, setSearch] = useState('')
+  const [isPending, startTransition] = useTransition()
+  const [tahunFilter, setTahunFilter] = useState<number | 'semua'>(filters.year)
+  const [jenisFilter, setJenisFilter] = useState<JenisFilter>(filters.jenis)
+  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>(filters.status)
+  const [progressFilter, setProgressFilter] = useState<ProjectProgressFilter>(filters.progress)
+  const [perusahaanFilter, setPerusahaanFilter] = useState(filters.perusahaanId)
+  const [search, setSearch] = useState(filters.search)
   const [exporting, setExporting] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [yearDropdownOpen, setYearDropdownOpen] = useState(false)
   const yearDropdownRef = useRef<HTMLDivElement>(null)
 
-  const tahunList = useMemo(() => {
-    const set = new Set(proyek.map((p) => p.tahun_anggaran))
-    return Array.from(set).sort((a, b) => b - a)
-  }, [proyek])
+  const replaceQuery = useCallback((patch: Record<string, string | number | null>) => {
+    const params = new URLSearchParams(searchParams.toString())
+
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === null || value === '' || value === 'Semua' || value === 'semua') {
+        params.delete(key)
+      } else {
+        params.set(key, String(value))
+      }
+    }
+
+    const query = params.toString()
+    startTransition(() => {
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
+    })
+  }, [pathname, router, searchParams])
+
+  const tahunList = filterOptions.years
 
   const inlineYears = tahunList.slice(0, INLINE_YEAR_LIMIT)
   const dropdownYears = tahunList.slice(INLINE_YEAR_LIMIT)
   const selectedYearIsInDropdown = typeof tahunFilter === 'number' && !inlineYears.includes(tahunFilter)
-  const perusahaanList = useMemo(() => getProjectCompanyNames(proyek), [proyek])
+  const perusahaanById = useMemo(() => new Map(
+    filterOptions.perusahaanList.map((perusahaan) => [perusahaan.id, perusahaan.nama_perusahaan])
+  ), [filterOptions.perusahaanList])
 
   useEffect(() => {
-    const year = searchParams.get('year')
-    const jenis = searchParams.get('jenis')
-    const status = searchParams.get('status')
-    const progress = searchParams.get('progress')
-    const perusahaan = searchParams.get('perusahaan')
-    const q = searchParams.get('q')
-
-    if (year) setTahunFilter(year === 'semua' ? 'semua' : Number(year))
-    if (jenis === 'Perencanaan' || jenis === 'Pengawasan' || jenis === 'Semua') setJenisFilter(jenis)
-    if (status === 'Work' || status === 'Borrowed' || status === 'Get Borrowed' || status === 'Semua') {
-      setStatusFilter(status)
-    }
-    if (
-      progress === 'semua' ||
-      progress === 'berjalan' ||
-      progress === 'selesai' ||
-      progress === 'belum_mulai' ||
-      progress === 'perlu_update'
-    ) {
-      setProgressFilter(progress)
-    }
-    if (perusahaan) setPerusahaanFilter(perusahaan)
-    if (q) setSearch(q)
-  }, [searchParams])
+    setTahunFilter(filters.year)
+    setJenisFilter(filters.jenis)
+    setStatusFilter(filters.status)
+    setProgressFilter(filters.progress)
+    setPerusahaanFilter(filters.perusahaanId)
+    setSearch(filters.search)
+  }, [filters])
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -180,25 +202,22 @@ export function ProyekTableClient({
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
-  const filtered = useMemo(() => {
-    return filterProjects(proyek, {
-      year: tahunFilter,
-      jenis: jenisFilter,
-      status: statusFilter,
-      progress: progressFilter,
-      perusahaan: perusahaanFilter,
-      search,
-    })
-  }, [proyek, tahunFilter, jenisFilter, statusFilter, progressFilter, perusahaanFilter, search])
+  useEffect(() => {
+    if (search === filters.search) return
+    const timeout = window.setTimeout(() => {
+      replaceQuery({ q: search.trim(), page: null })
+    }, 350)
+
+    return () => window.clearTimeout(timeout)
+  }, [filters.search, replaceQuery, search])
 
   const stats = useMemo(() => getProjectStats(proyek), [proyek])
-  const filteredStats = useMemo(() => getProjectStats(filtered), [filtered])
   const hasActiveFilters =
     tahunFilter !== DEFAULT_PROJECT_FILTERS.year ||
     jenisFilter !== DEFAULT_PROJECT_FILTERS.jenis ||
     statusFilter !== DEFAULT_PROJECT_FILTERS.status ||
     progressFilter !== DEFAULT_PROJECT_FILTERS.progress ||
-    perusahaanFilter !== DEFAULT_PROJECT_FILTERS.perusahaan ||
+    perusahaanFilter !== 'Semua' ||
     search.trim() !== ''
 
   function resetFilters() {
@@ -209,6 +228,15 @@ export function ProyekTableClient({
     setPerusahaanFilter('Semua')
     setSearch('')
     setYearDropdownOpen(false)
+    replaceQuery({
+      year: null,
+      jenis: null,
+      status: null,
+      progress: null,
+      perusahaan: null,
+      q: null,
+      page: null,
+    })
   }
 
   async function handleExport() {
@@ -221,7 +249,7 @@ export function ProyekTableClient({
       return
     }
     const data = json.data
-    const visibleIds = new Set(filtered.map((p) => p.id))
+    const visibleIds = new Set(proyek.map((p) => p.id))
 
     const rows = data
       .filter((p) => visibleIds.has(p.id))
@@ -265,8 +293,45 @@ export function ProyekTableClient({
   }
 
   function toggleJenis(jenis: 'Perencanaan' | 'Pengawasan') {
+    const next = jenisFilter === jenis ? 'Semua' : jenis
     setProgressFilter('semua')
-    setJenisFilter((prev) => prev === jenis ? 'Semua' : jenis)
+    setJenisFilter(next)
+    replaceQuery({ jenis: next, progress: null, page: null })
+  }
+
+  function updateYear(value: number | 'semua') {
+    setTahunFilter(value)
+    setYearDropdownOpen(false)
+    replaceQuery({ year: value, page: null })
+  }
+
+  function updateJenis(value: JenisFilter) {
+    setProgressFilter('semua')
+    setJenisFilter(value)
+    replaceQuery({ jenis: value, progress: null, page: null })
+  }
+
+  function updateProgress(value: ProjectProgressFilter) {
+    setProgressFilter(value)
+    replaceQuery({ progress: value, page: null })
+  }
+
+  function updateStatus(value: ProjectStatusFilter) {
+    setStatusFilter(value)
+    replaceQuery({ status: value, page: null })
+  }
+
+  function updatePerusahaan(value: string) {
+    setPerusahaanFilter(value)
+    replaceQuery({ perusahaan: value, page: null })
+  }
+
+  function updatePage(page: number) {
+    replaceQuery({ page: Math.min(Math.max(page, 1), pagination.pageCount) })
+  }
+
+  function updatePageSize(pageSize: string) {
+    replaceQuery({ pageSize, page: null })
   }
 
   return (
@@ -305,23 +370,28 @@ export function ProyekTableClient({
         <StatCard
           label="Sedang Berjalan"
           value={stats.berjalan}
-          caption="Proyek aktif"
+          caption="Di halaman ini"
           colorClass="text-brand"
-          onClick={() => { setJenisFilter('Semua'); setProgressFilter((prev) => prev === 'berjalan' ? 'semua' : 'berjalan') }}
+          onClick={() => {
+            const next = progressFilter === 'berjalan' ? 'semua' : 'berjalan'
+            setJenisFilter('Semua')
+            setProgressFilter(next)
+            replaceQuery({ jenis: null, progress: next, page: null })
+          }}
           active={progressFilter === 'berjalan'}
         />
         <StatCard
           label="Selesai"
           value={stats.selesai}
-          caption="Arsip selesai"
+          caption="Di halaman ini"
           colorClass="text-emerald"
-          onClick={() => setProgressFilter((prev) => prev === 'selesai' ? 'semua' : 'selesai')}
+          onClick={() => updateProgress(progressFilter === 'selesai' ? 'semua' : 'selesai')}
           active={progressFilter === 'selesai'}
         />
         <StatCard
           label="Perencanaan"
           value={stats.perencanaan}
-          caption="Dokumen rencana"
+          caption="Di halaman ini"
           colorClass="text-violet"
           onClick={() => toggleJenis('Perencanaan')}
           active={jenisFilter === 'Perencanaan'}
@@ -329,16 +399,16 @@ export function ProyekTableClient({
         <StatCard
           label="Pengawasan"
           value={stats.pengawasan}
-          caption="Proyek lapangan"
+          caption="Di halaman ini"
           colorClass="text-teal"
           onClick={() => toggleJenis('Pengawasan')}
           active={jenisFilter === 'Pengawasan'}
         />
-        <StatCard label="Total Proyek" value={stats.total} caption="Semua tahun" />
+        <StatCard label="Total Proyek" value={pagination.total} caption="Sesuai filter" />
         <StatCard
           label="Total Kontrak"
-          value={formatCompactRupiah(filteredStats.nilaiTotal)}
-          caption="Sesuai filter aktif"
+          value={formatCompactRupiah(stats.nilaiTotal)}
+          caption="Di halaman ini"
           colorClass="text-amber"
         />
       </div>
@@ -356,7 +426,7 @@ export function ProyekTableClient({
             return (
               <button
                 key={tab.value}
-                onClick={() => { setTahunFilter(tab.value); setYearDropdownOpen(false) }}
+                onClick={() => updateYear(tab.value)}
                 className={[
                   'h-9 rounded-full border px-4 text-sm font-semibold transition-colors',
                   active
@@ -391,7 +461,7 @@ export function ProyekTableClient({
                   {dropdownYears.map((y) => (
                     <button
                       key={y}
-                      onClick={() => { setTahunFilter(y); setYearDropdownOpen(false) }}
+                      onClick={() => updateYear(y)}
                       className={`w-full text-left px-3 py-1.5 text-sm transition-colors hover:bg-muted ${
                         tahunFilter === y ? 'font-semibold text-foreground' : 'text-muted-foreground'
                       }`}
@@ -411,7 +481,7 @@ export function ProyekTableClient({
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nama, dinas, perusahaan…"
+            placeholder="Cari nama proyek, dinas, kecamatan…"
             className="h-10 w-full rounded-lg border border-border bg-muted pl-10 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/30"
           />
           {search && (
@@ -426,10 +496,7 @@ export function ProyekTableClient({
 
         <Select
           value={jenisFilter}
-          onValueChange={(value) => {
-            setProgressFilter('semua')
-            setJenisFilter(value as JenisFilter)
-          }}
+          onValueChange={(value) => updateJenis(value as JenisFilter)}
         >
           <SelectTrigger className="h-10 w-[180px] rounded-lg border-border bg-card px-4 text-sm font-semibold text-foreground">
             <SelectValue placeholder="Jenis pekerjaan" />
@@ -441,7 +508,7 @@ export function ProyekTableClient({
           </SelectContent>
         </Select>
 
-        <Select value={progressFilter} onValueChange={(value) => setProgressFilter(value as ProjectProgressFilter)}>
+        <Select value={progressFilter} onValueChange={(value) => updateProgress(value as ProjectProgressFilter)}>
           <SelectTrigger className="h-10 w-[170px] rounded-lg border-border bg-card px-4 text-sm font-semibold text-foreground">
             <SelectValue placeholder="Progress" />
           </SelectTrigger>
@@ -454,7 +521,7 @@ export function ProyekTableClient({
           </SelectContent>
         </Select>
 
-        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ProjectStatusFilter)}>
+        <Select value={statusFilter} onValueChange={(value) => updateStatus(value as ProjectStatusFilter)}>
           <SelectTrigger className="h-10 w-[165px] rounded-lg border-border bg-card px-4 text-sm font-semibold text-foreground">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -466,15 +533,15 @@ export function ProyekTableClient({
           </SelectContent>
         </Select>
 
-        <Select value={perusahaanFilter} onValueChange={setPerusahaanFilter}>
+        <Select value={perusahaanFilter} onValueChange={updatePerusahaan}>
           <SelectTrigger className="h-10 w-[210px] rounded-lg border-border bg-card px-4 text-sm font-semibold text-foreground">
             <SelectValue placeholder="Perusahaan" />
           </SelectTrigger>
           <SelectContent className="select-content">
             <SelectItem value="Semua" className="select-item">Semua perusahaan</SelectItem>
-            {perusahaanList.map((name) => (
-              <SelectItem key={name} value={name} className="select-item">
-                {name}
+            {filterOptions.perusahaanList.map((perusahaan) => (
+              <SelectItem key={perusahaan.id} value={perusahaan.id} className="select-item">
+                {perusahaan.nama_perusahaan}
               </SelectItem>
             ))}
           </SelectContent>
@@ -491,7 +558,7 @@ export function ProyekTableClient({
         )}
 
         <span className="ml-auto text-sm text-muted-foreground shrink-0">
-          {filtered.length} proyek
+          {pagination.total} proyek{isPending ? ' · memuat...' : ''}
         </span>
       </div>
 
@@ -502,7 +569,7 @@ export function ProyekTableClient({
           {jenisFilter !== 'Semua' && <span className="rounded-full bg-muted px-2.5 py-1">{jenisFilter}</span>}
           {progressFilter !== 'semua' && <span className="rounded-full bg-muted px-2.5 py-1">{getProgressLabel(progressFilter)}</span>}
           {statusFilter !== 'Semua' && <span className="rounded-full bg-muted px-2.5 py-1">{statusFilter}</span>}
-          {perusahaanFilter !== 'Semua' && <span className="rounded-full bg-muted px-2.5 py-1">{perusahaanFilter}</span>}
+          {perusahaanFilter !== 'Semua' && <span className="rounded-full bg-muted px-2.5 py-1">{perusahaanById.get(perusahaanFilter) ?? 'Perusahaan'}</span>}
           {search.trim() && <span className="rounded-full bg-muted px-2.5 py-1">Cari: {search}</span>}
         </div>
       )}
@@ -531,8 +598,8 @@ export function ProyekTableClient({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length > 0 ? (
-              filtered.map((p) => (
+            {proyek.length > 0 ? (
+              proyek.map((p) => (
                 <TableRow
                   key={p.id}
                   className="cursor-pointer border-border transition-colors hover:bg-brand/5"
@@ -607,6 +674,45 @@ export function ProyekTableClient({
             )}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm md:flex-row md:items-center md:justify-between">
+        <div className="text-muted-foreground">
+          Halaman <span className="font-semibold text-foreground">{pagination.page}</span> dari{' '}
+          <span className="font-semibold text-foreground">{pagination.pageCount}</span>
+          {' · '}
+          {proyek.length} ditampilkan dari {pagination.total} proyek
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={String(pagination.pageSize)} onValueChange={updatePageSize}>
+            <SelectTrigger className="h-9 w-[130px] rounded-lg border-border bg-card px-3 text-sm font-semibold text-foreground">
+              <SelectValue placeholder="Per halaman" />
+            </SelectTrigger>
+            <SelectContent className="select-content">
+              {['10', '25', '50', '100'].map((size) => (
+                <SelectItem key={size} value={size} className="select-item">
+                  {size} / halaman
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <button
+            type="button"
+            onClick={() => updatePage(pagination.page - 1)}
+            disabled={pagination.page <= 1 || isPending}
+            className="h-9 rounded-lg border border-border bg-card px-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+          >
+            Sebelumnya
+          </button>
+          <button
+            type="button"
+            onClick={() => updatePage(pagination.page + 1)}
+            disabled={pagination.page >= pagination.pageCount || isPending}
+            className="h-9 rounded-lg border border-border bg-card px-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+          >
+            Berikutnya
+          </button>
+        </div>
       </div>
 
       <ProyekSlideover id={selectedId} onClose={() => setSelectedId(null)} />

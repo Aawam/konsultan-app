@@ -31,6 +31,27 @@ export const PROYEK_DETAIL_SELECT = `
   )
 `
 
+export const PROYEK_LIST_SELECT = `
+  id,
+  nama_proyek,
+  jenis_pekerjaan,
+  tahun_anggaran,
+  dinas,
+  lokasi_kecamatan,
+  pagu_dana,
+  nilai_penawaran,
+  tahap_progress,
+  persentase_progress,
+  pernah_dioverride,
+  status_proyek,
+  perusahaan_id,
+  created_at,
+  updated_at,
+  perusahaan:perusahaan_id (
+    nama_perusahaan
+  )
+`
+
 export const OVERRIDE_LOG_SELECT = `
   id,
   proyek_id,

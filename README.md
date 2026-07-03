@@ -47,6 +47,7 @@ npm run lint           # ESLint
 npm test               # Vitest
 npm run types:supabase # regenerate Supabase types
 npm run db:export:data # export database data script
+npm run latency -- https://your-domain.com 5 # measure deployed route latency
 ```
 
 ## Active Modules
@@ -115,6 +116,8 @@ Production deploys run Vercel Functions in Singapore via `vercel.json`:
 
 Keep the Supabase project in Singapore too. If Vercel runs in Singapore but Supabase is in another region, dynamic pages still pay database round-trip latency.
 
+The `/proyek` list is paginated and filtered by the server. Keep that pattern for large tables: send `page`, `pageSize`, and filter params to the route, then let Supabase return only the rows needed for the current screen. Use full-table reads only for dashboard aggregation or explicit export jobs.
+
 Auth is split deliberately:
 
 - `proxy.ts` protects page navigation only: `/login`, `/proyek/*`, and `/database/*`.
@@ -139,6 +142,20 @@ Check `x-vercel-cache`:
 | `STALE` | Served stale while refreshing. |
 | `PRERENDER` | Served from static/prerendered storage. |
 | `REVALIDATED` | Refreshed in foreground. |
+
+To compare latency before and after deploys:
+
+```bash
+npm run latency -- https://your-domain.com 5
+```
+
+The script reports status code, Vercel cache header, Vercel edge region, average latency, p50, and p95 for `/`, `/login`, `/proyek`, and `/database`.
+
+To verify production database indexes without changing data:
+
+```bash
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f docs/DB_Index_Verification.sql
+```
 
 ## Verification
 

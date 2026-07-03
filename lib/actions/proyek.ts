@@ -3,9 +3,11 @@ import { getPersentaseFromFase } from '@/lib/constants/proyek'
 import {
   OVERRIDE_LOG_SELECT,
   PROYEK_DETAIL_SELECT,
+  PROYEK_LIST_SELECT,
   PROYEK_MUTATION_RETURN_SELECT,
 } from '@/lib/queries/proyek-selects'
 import type { DinasOption, ProyekDetail, ProyekDisplay, ProyekFormData, ProyekPayload } from '@/lib/types/proyek'
+import type { ProjectJenisFilter, ProjectProgressFilter, ProjectStatusFilter, ProjectYearFilter } from '@/lib/proyek-analytics'
 import { proyekSchema } from '@/lib/validations/proyek'
 import { parseNumberInput } from '@/lib/utils'
 
@@ -13,30 +15,33 @@ import { parseNumberInput } from '@/lib/utils'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>
 
+export type ProyekListFilters = {
+  page: number
+  pageSize: number
+  year: ProjectYearFilter
+  jenis: ProjectJenisFilter
+  status: ProjectStatusFilter
+  progress: ProjectProgressFilter
+  perusahaanId: string
+  search: string
+}
+
+export type ProyekListPage = {
+  rows: ProyekDisplay[]
+  total: number
+  page: number
+  pageSize: number
+  pageCount: number
+}
+
+export const DEFAULT_PROYEK_LIST_PAGE_SIZE = 25
+export const PROYEK_LIST_PAGE_SIZES = [10, 25, 50, 100] as const
+
 export async function getDaftarProyek(client?: SupabaseServerClient) {
   const supabase = client ?? await createSupabaseServerClient()
   const { data, error } = await supabase
     .from('proyek')
-    .select(`
-      id,
-      nama_proyek,
-      jenis_pekerjaan,
-      tahun_anggaran,
-      dinas,
-      lokasi_kecamatan,
-      pagu_dana,
-      nilai_penawaran,
-      tahap_progress,
-      persentase_progress,
-      pernah_dioverride,
-      status_proyek,
-      perusahaan_id,
-      created_at,
-      updated_at,
-      perusahaan:perusahaan_id (
-        nama_perusahaan
-      )
-    `)
+    .select(PROYEK_LIST_SELECT)
     .eq('is_deleted', false)
     .order('tahun_anggaran', { ascending: false })
     .order('nama_proyek', { ascending: true })
@@ -44,6 +49,96 @@ export async function getDaftarProyek(client?: SupabaseServerClient) {
     
 
   return { data: data as ProyekDisplay[] | null, error }
+}
+
+export async function getDaftarProyekPage(filters: ProyekListFilters, client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
+  const pageSize = PROYEK_LIST_PAGE_SIZES.includes(filters.pageSize as (typeof PROYEK_LIST_PAGE_SIZES)[number])
+    ? filters.pageSize
+    : DEFAULT_PROYEK_LIST_PAGE_SIZE
+  const page = Number.isFinite(filters.page) && filters.page > 0 ? Math.floor(filters.page) : 1
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  let query = supabase
+    .from('proyek')
+    .select(PROYEK_LIST_SELECT, { count: 'exact' })
+    .eq('is_deleted', false)
+
+  if (filters.year !== 'semua') query = query.eq('tahun_anggaran', filters.year)
+  if (filters.jenis !== 'Semua') query = query.eq('jenis_pekerjaan', filters.jenis)
+  if (filters.status !== 'Semua') query = query.eq('status_proyek', filters.status)
+  if (filters.perusahaanId !== 'Semua') query = query.eq('perusahaan_id', filters.perusahaanId)
+
+  const search = filters.search.trim()
+  if (search) {
+    const escaped = search.replaceAll('%', '\\%').replaceAll('_', '\\_')
+    query = query.or([
+      `nama_proyek.ilike.%${escaped}%`,
+      `dinas.ilike.%${escaped}%`,
+      `lokasi_kecamatan.ilike.%${escaped}%`,
+      `status_proyek.ilike.%${escaped}%`,
+      `tahap_progress.ilike.%${escaped}%`,
+    ].join(','))
+  }
+
+  if (filters.progress === 'selesai') {
+    query = query.eq('persentase_progress', 100)
+  } else if (filters.progress === 'belum_mulai') {
+    query = query.or('persentase_progress.is.null,persentase_progress.eq.0').is('tahap_progress', null)
+  } else if (filters.progress === 'berjalan') {
+    query = query.or('tahap_progress.not.is.null,persentase_progress.gt.0').lt('persentase_progress', 100)
+  } else if (filters.progress === 'perlu_update') {
+    query = query.or([
+      'perusahaan_id.is.null',
+      'status_proyek.is.null',
+      'lokasi_kecamatan.is.null',
+      'nilai_penawaran.is.null',
+      'persentase_progress.is.null',
+      'persentase_progress.eq.0',
+    ].join(','))
+  }
+
+  const { data, error, count } = await query
+    .order('tahun_anggaran', { ascending: false })
+    .order('nama_proyek', { ascending: true })
+    .range(from, to)
+
+  const total = count ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
+
+  return {
+    data: {
+      rows: (data ?? []) as ProyekDisplay[],
+      total,
+      page: Math.min(page, pageCount),
+      pageSize,
+      pageCount,
+    },
+    error,
+  }
+}
+
+export async function getProyekListFilterOptions(client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
+  const [yearsQuery, perusahaanQuery] = await Promise.all([
+    supabase
+      .from('proyek')
+      .select('tahun_anggaran')
+      .eq('is_deleted', false)
+      .order('tahun_anggaran', { ascending: false }),
+    getPerusahaanList(supabase),
+  ])
+
+  const years = [...new Set((yearsQuery.data ?? []).map((row) => row.tahun_anggaran))]
+
+  return {
+    data: {
+      years,
+      perusahaanList: orderPerusahaanList(perusahaanQuery.data ?? []),
+    },
+    error: yearsQuery.error ?? perusahaanQuery.error,
+  }
 }
 
 export async function getPerusahaanList(client?: SupabaseServerClient) {
