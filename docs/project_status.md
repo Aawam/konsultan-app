@@ -99,8 +99,8 @@ Tabel legacy yang sebelumnya dipakai modul dokumen dan sekarang bisa ditinjau un
 
 Types Supabase berada di `lib/database.types.ts`. Client Supabase dipisah menjadi:
 
-- `lib/supabase.ts` untuk client singleton lama/umum.
 - `lib/supabase-browser.ts` untuk Client Components.
+- `lib/supabase-config.ts` untuk helper konfigurasi environment Supabase.
 - `lib/supabase-server.ts` untuk Server Components, Server Actions, dan Route Handlers.
 
 ---

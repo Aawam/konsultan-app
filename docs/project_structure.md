@@ -1,8 +1,8 @@
 # Project Structure - Konsulindo Project Suite
 
-**Tanggal:** 2026-06-16
+**Tanggal:** 2026-07-03
 
-Dokumen ini mengikuti struktur aktual aplikasi. Next.js 16 memakai App Router berbasis folder di `app/`; file khusus seperti `page.tsx`, `layout.tsx`, `route.ts`, dan `proxy.ts` mengikuti dokumentasi lokal di `node_modules/next/dist/docs/`.
+Dokumen ini mengikuti struktur tracked aplikasi saat ini. Next.js 16 memakai App Router berbasis folder di `app/`; file khusus seperti `page.tsx`, `layout.tsx`, `route.ts`, dan `proxy.ts` mengikuti dokumentasi lokal di `node_modules/next/dist/docs/`.
 
 ---
 
@@ -13,9 +13,9 @@ konsultan-app/
 ├── app/                    # Routes, layouts, API handlers, global CSS
 ├── .github/workflows/      # GitHub Actions CI
 ├── components/             # React components by domain and shared UI
-├── docs/                   # Project docs, SQL notes, audit scripts
+├── docs/                   # Project docs and SQL admin/reference scripts
+├── hooks/                  # Shared React hooks
 ├── lib/                    # Data access, Supabase clients, types, validation
-├── public/                 # Static assets served by Next.js
 ├── .env.example            # Safe env template
 ├── AGENTS.md               # Agent instructions
 ├── .nvmrc                  # Node version for local/CI
@@ -26,27 +26,11 @@ konsultan-app/
 ├── postcss.config.mjs      # Tailwind/PostCSS config
 ├── proxy.ts                # Next proxy for Supabase auth protection
 ├── tsconfig.json           # TypeScript config
-├── vitest.config.ts        # Vitest config
+├── vitest.config.mts       # Vitest config
 └── vitest.setup.ts         # Test setup
 ```
 
 Generated and machine-local folders such as `.next/`, `node_modules/`, `.claude/`, `.vscode/`, `supabase/.temp/`, and `.DS_Store` files are not part of the project structure.
-
----
-
-## .github/
-
-```text
-.github/
-└── workflows/
-    └── ci.yml
-```
-
-CI runs on pushes and pull requests to `main`:
-
-- `npm ci`
-- `npm run lint`
-- `npm test`
 
 ---
 
@@ -70,14 +54,22 @@ app/
 │       └── edit/page.tsx
 ├── database/
 │   ├── layout.tsx
-│   └── page.tsx
+│   ├── page.tsx
+│   └── perusahaan/
+│       └── [id]/page.tsx
 └── api/
-    ├── proyek/
+    ├── dinas/
     │   ├── route.ts
-    │   ├── export/route.ts
-    │   └── [id]/
-    │       ├── route.ts
-    │       └── override/route.ts
+    │   └── [id]/route.ts
+    ├── perusahaan/
+    │   ├── route.ts
+    │   └── [id]/route.ts
+    └── proyek/
+        ├── route.ts
+        ├── export/route.ts
+        └── [id]/
+            ├── route.ts
+            └── override/route.ts
 ```
 
 Key responsibilities:
@@ -89,7 +81,7 @@ Key responsibilities:
 | `app/globals.css` | Tailwind v4 imports, theme variables, shared component classes. |
 | `app/login/page.tsx` | Supabase login screen. |
 | `app/proyek/*` | Main project management routes. |
-| `app/database/*` | Company/database dashboard. |
+| `app/database/*` | Company/database dashboard and company detail page. |
 | `app/api/**/route.ts` | Route Handlers for CRUD, export, and override workflows. |
 
 ---
@@ -115,15 +107,15 @@ components/
 
 | File | Purpose |
 |---|---|
-| `form-proyek.tsx` | Client create/edit wizard with validation warnings and override flow. |
+| `form-create-proyek.tsx` | Create-project entry wrapper around the shared form shell. |
+| `form-edit-proyek.tsx` | Edit-project workflow with responsive drawer/sheet editing. |
+| `proyek-form-shell.tsx` | Shared create/edit project form logic, validation, draft, and override flow. |
 | `proyek-table-client.tsx` | Filterable/searchable table, export entry point, slide-over launcher. |
 | `dashboard-client.tsx` | Stats, charts, phase distribution, top dinas/company summaries. |
 | `proyek-slideover.tsx` | Right-side project detail panel. |
 | `proyek-actions.tsx` | Edit/delete actions. |
 | `badges.tsx` | Domain badges for jenis, tahap, override state. |
 | `progress-cell.tsx` | Table progress display. |
-| `form-field.tsx` | Form label/required wrapper. |
-| `section.tsx` | Domain section wrapper. |
 
 ### database/
 
@@ -133,14 +125,22 @@ components/
 
 ### ui/
 
-Generic primitives and shared helpers live here. Domain-specific code should not be added to `components/ui/`.
+Generic shadcn/Radix primitives and shared helpers live here. Domain-specific code should not be added to `components/ui/`.
 
 | File | Purpose |
 |---|---|
-| `button.tsx`, `input.tsx`, `label.tsx`, `select.tsx`, `textarea.tsx`, `table.tsx`, `badge.tsx`, `card.tsx` | shadcn-style primitives. |
-| `alert-dialog.tsx`, `confirm-dialog.tsx` | Dialog primitives and confirmation wrapper. |
-| `back-button.tsx`, `theme-toggle.tsx`, `tooltip.tsx`, `sonner.tsx` | Shared app utilities. |
-| `section-card.tsx`, `kv-field.tsx`, `stat-card.tsx`, `tab-group.tsx`, `step-wizard.tsx`, `page-error.tsx` | Reusable display/workflow helpers. |
+| `button.tsx`, `input.tsx`, `label.tsx`, `select.tsx`, `textarea.tsx`, `table.tsx` | shadcn-style primitives used by forms and tables. |
+| `alert-dialog.tsx`, `confirm-dialog.tsx`, `dialog.tsx`, `drawer.tsx`, `sheet.tsx` | Dialog, drawer, sheet, and confirmation primitives. |
+| `back-button.tsx`, `theme-toggle.tsx`, `sonner.tsx`, `sidebar.tsx` | Shared app utilities and shell helpers. |
+| `field.tsx`, `section-card.tsx`, `kv-field.tsx`, `stat-card.tsx`, `tab-group.tsx`, `page-error.tsx` | Reusable display/workflow helpers. |
+
+---
+
+## hooks/
+
+| File | Purpose |
+|---|---|
+| `use-media-query.ts` | Shared responsive-state hook for drawer/sheet decisions. |
 
 ---
 
@@ -153,8 +153,9 @@ lib/
 ├── types/
 ├── validations/
 ├── database.types.ts
-├── supabase.ts
+├── proyek-analytics.ts
 ├── supabase-browser.ts
+├── supabase-config.ts
 ├── supabase-server.ts
 └── utils.ts
 ```
@@ -190,10 +191,11 @@ lib/
 | File | Purpose |
 |---|---|
 | `database.types.ts` | Generated Supabase database types. |
-| `supabase.ts` | General singleton client. |
+| `proyek-analytics.ts` | Project analytics calculations. |
 | `supabase-browser.ts` | Browser client for Client Components. |
+| `supabase-config.ts` | Shared Supabase environment config helpers. |
 | `supabase-server.ts` | Server client and current user helper. |
-| `utils.ts` | `cn`, `formatRupiah`, `formatTanggal`. |
+| `utils.ts` | `cn`, number/currency/date formatting helpers. |
 
 ---
 
@@ -204,6 +206,7 @@ Tests are colocated with the logic they cover:
 ```text
 lib/actions/proyek.test.ts
 lib/constants/proyek.test.ts
+lib/proyek-analytics.test.ts
 lib/utils.test.ts
 lib/validations/proyek.test.ts
 ```
@@ -223,25 +226,16 @@ docs/
 ├── project_status.md
 ├── project_structure.md
 ├── ui_conventions.md
+├── DB_Add_Dinas_SKPD.sql
 ├── DB_Audit.sql
+├── DB_Production_Core_Fix.sql
+├── DB_SUPABASE_DEPLOY.sql
 ├── DB_Simplification_Audit.sql
 ├── DB_Simplification_Cleanup.sql
 └── RLS_Policies.sql
 ```
 
 Markdown docs use lowercase snake_case. SQL files remain uppercase because they are standalone admin/reference scripts.
-
----
-
-## public/
-
-```text
-public/
-└── templates/
-    └── [optional local reference assets]
-```
-
-`public/templates/` is intentionally ignored by git because it may contain local/static business reference files. Keep optional assets here, but do not use `public/` as a staging folder for copied source code.
 
 ---
 
@@ -258,27 +252,3 @@ public/
 | `lib/actions/*` | Server-side data access and mutations. |
 | `lib/types/*` | Shared TypeScript domain types. |
 | `lib/validations/*` | Zod schemas. |
-
----
-
-## Cleanup Rules
-
-Safe to delete when present:
-
-- `.next/`
-- `tsconfig.tsbuildinfo`
-- `.DS_Store`
-- `.claude/`
-- `.vscode/` when empty or only local preferences
-- `supabase/.temp/`
-- Empty `supabase/` folders with no migrations/config
-- Empty staging folders such as `public/external/`
-
-Do not delete without checking references:
-
-- `.env.example`
-- `public/templates/`
-- `lib/database.types.ts`
-- `proxy.ts`
-- Route files under `app/api/`
-- Config files used by Next, Tailwind, ESLint, shadcn, Vitest, or TypeScript.

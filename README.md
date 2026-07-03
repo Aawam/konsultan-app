@@ -1,21 +1,25 @@
 # Konsulindo Project Suite
 
-Internal management tool for a construction consulting firm. Focused on project monitoring and company database management.
+Internal operations app for a construction consulting workflow in Berau, East Kalimantan. The current production scope is project monitoring, company/reference data, project analytics, export, and Supabase-backed authentication.
+
+The app is intentionally kept small: no document-maker module, no unused UI wrappers, and no duplicate Supabase singleton. Shared code is kept only where it is reused by active routes.
 
 ## Stack
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 16 (App Router) |
-| UI | React 19, Tailwind CSS v4, shadcn/ui (Radix UI) |
-| Database | Supabase (PostgreSQL) |
-| Language | TypeScript 5 |
-| Notifications | Sonner (toast) |
+| Framework | Next.js 16.2.3 App Router |
+| Runtime | React 19, Node.js >=20.19.0 |
+| UI | Tailwind CSS v4, shadcn/Radix primitives, lucide-react |
+| Database/Auth | Supabase PostgreSQL + Supabase Auth |
+| Validation | Zod, react-hook-form |
+| Charts | Recharts |
 | Export | xlsx |
+| Tests | Vitest |
 
 ## Getting Started
 
-Use Node.js `>=20.19.0` (`.nvmrc` uses Node 22).
+Use Node.js from `.nvmrc`.
 
 ```bash
 nvm use
@@ -24,103 +28,109 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Environment variables required:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - use the browser-safe publishable/anon key, not a secret key
+Required environment variables:
 
-Optional local reference assets may live in `public/templates/` and are intentionally not committed.
+```bash
+NEXT_PUBLIC_SUPABASE_URL=(Your SUPABASE URL)
+NEXT_PUBLIC_SUPABASE_ANON_KEY=(Your SUPABASE ANON KEY)
+```
+
+Do not put Supabase service-role keys in browser-exposed `NEXT_PUBLIC_*` variables.
+
+## Scripts
+
+```bash
+npm run dev            # local development
+npm run build          # production build
+npm run start          # run production server after build
+npm run lint           # ESLint
+npm test               # Vitest
+npm run types:supabase # regenerate Supabase types
+npm run db:export:data # export database data script
+```
+
+## Active Modules
+
+| Module | Routes | Purpose |
+|---|---|---|
+| Auth | `/login`, `proxy.ts` | Supabase login, route protection, logout from app shell. |
+| Proyek | `/proyek`, `/proyek/baru`, `/proyek/[id]`, `/proyek/[id]/edit`, `/proyek/dashboard` | Project list, create/edit, detail, dashboard, export, override log. |
+| Database | `/database`, `/database/perusahaan/[id]` | Company records, project history, Dinas/SKPD aggregation. |
+| API | `/api/proyek/*`, `/api/perusahaan/*`, `/api/dinas/*` | CRUD, export, override, and reference-data endpoints. |
+
+Document-generation modules are out of active scope. The product currently focuses on monitoring and database workflows.
 
 ## Project Structure
 
-```
+```text
 konsultan-app/
-├── app/                          # Next.js App Router
-│   ├── layout.tsx                # Root layout (fonts, Toaster)
-│   ├── page.tsx                  # Redirects to /proyek
-│   ├── globals.css               # Tailwind v4 config + CSS design tokens
-│   ├── proyek/                   # Project management module
-│   │   ├── layout.tsx            # Wraps children in SidebarLayout
-│   │   ├── page.tsx              # Project list (server)
-│   │   ├── baru/page.tsx         # New project form (server)
-│   │   ├── dashboard/page.tsx    # Analytics dashboard (server)
-│   │   └── [id]/
-│   │       ├── page.tsx          # Project detail (server)
-│   │       └── edit/page.tsx     # Edit project form (server)
-│   ├── database/                 # Company database module
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   └── api/
-│       ├── proyek/[id]/route.ts        # GET project + override logs
-│       └── proyek/export/route.ts      # GET project export data
-│
+├── app/                    # App Router pages, layouts, API route handlers
 ├── components/
-│   ├── layout/
-│   │   ├── sidebar-layout.tsx    # Shared sidebar + topbar shell
-│   │   └── topbar-title.tsx      # Dynamic breadcrumb title
-│   ├── proyek/
-│   │   ├── form-proyek.tsx       # Create/edit project form (client)
-│   │   ├── proyek-table-client.tsx  # Filterable project table (client)
-│   │   ├── proyek-slideover.tsx  # Quick-view side panel (client)
-│   │   ├── dashboard-client.tsx  # Analytics dashboard (client)
-│   │   ├── proyek-actions.tsx    # Edit + Delete action buttons (client)
-│   │   ├── badges.tsx            # BadgeJenis, BadgeTahap, BadgeOverride
-│   │   ├── progress-cell.tsx     # Progress bar + label for tables
-│   │   ├── form-field.tsx        # Label + required marker for forms
-│   │   └── section.tsx           # Section card wrapper for project forms
-│   ├── database/
-│   │   └── database-client.tsx   # Company database viewer (client)
-│   └── ui/                       # Generic UI primitives
-│       ├── kv-field.tsx          # Key-value display field (label + value)
-│       ├── section-card.tsx      # Card with titled header section
-│       ├── confirm-dialog.tsx    # AlertDialog wrapper for confirmations
-│       ├── back-button.tsx       # Navigation back button
-│       ├── page-error.tsx        # Error boundary display
-│       ├── theme-toggle.tsx      # Dark/light mode toggle
-│       └── [shadcn primitives]   # button, input, select, table, etc.
-│
+│   ├── database/           # Database module client UI
+│   ├── layout/             # Sidebar/topbar app shell
+│   ├── proyek/             # Project module UI and forms
+│   └── ui/                 # Used shadcn/Radix primitives and shared helpers
+├── hooks/                  # Shared React hooks
 ├── lib/
-│   ├── supabase.ts               # Supabase client singleton
-│   ├── utils.ts                  # cn(), formatRupiah(), formatTanggal()
-│   ├── constants/
-│   │   └── proyek.ts             # FASE_*, TAHAP_BAR_COLOR, getPersentaseFromFase()
-│   ├── types/
-│   │   ├── proyek.ts             # Perusahaan, ProyekFormData, ProyekPayload, ProyekDisplay
-│   │   └── perusahaan.ts         # PerusahaanDetail
-│   └── actions/
-│       ├── proyek.ts             # Project CRUD (getDaftarProyek, simpanProyek, hapusProyek…)
-│       └── perusahaan.ts         # getPerusahaanDetailList, getProyekByPerusahaan
-│
-├── docs/
-│   ├── project_status.md         # Module status and feature list
-│   ├── project_structure.md      # Detailed structure documentation
-│   └── ui_conventions.md         # Design system conventions
-│
-└── public/
-    └── templates/                # Optional local reference assets
+│   ├── actions/            # Server-side data access and mutations
+│   ├── constants/          # Domain constants
+│   ├── types/              # Shared TypeScript domain types
+│   ├── validations/        # Zod schemas
+│   ├── proyek-analytics.ts
+│   ├── supabase-browser.ts
+│   ├── supabase-config.ts
+│   ├── supabase-server.ts
+│   └── utils.ts
+├── docs/                   # Structure, status, UI conventions, SQL scripts
+├── scripts/                # Operational scripts
+└── tests are colocated beside lib files as *.test.ts
 ```
 
-## Modules
-
-### Proyek (Project Management)
-- List, filter, search, and export projects
-- Create, edit, delete projects with 4-step form
-- Budget validation with override log (HPS ≤ Pagu, Penawaran ≤ HPS)
-- Progress tracking by phase (Perencanaan / Pengawasan)
-- Quick-view side panel + full detail page
-
-### Database (Company Reference)
-- View all company records with linked project history
+For the full maintained structure, read `docs/project_structure.md`.
 
 ## Conventions
 
-- All components use `kebab-case.tsx` filenames
-- Client components are marked `'use client'` and named `*-client.tsx` where disambiguation helps
-- Types live in `lib/types/`, never in `components/`
-- Data fetching in pages uses `lib/actions/` functions — never raw `supabase` calls in pages
-- Constants (`FASE_*`, `TAHAP_BAR_COLOR`) live in `lib/constants/proyek.ts`
-- Shared display primitives (`KvField`, `SectionCard`) live in `components/ui/`
+- App Router routes live under `app/`; route handlers use `route.ts`.
+- Server-side data access lives in `lib/actions/`.
+- Shared domain types live in `lib/types/`.
+- Zod validation lives in `lib/validations/`.
+- Project constants and progress rules live in `lib/constants/proyek.ts`.
+- Client-heavy components use `'use client'` and usually `*-client.tsx`.
+- Generic UI belongs in `components/ui/`; domain UI belongs in `components/proyek/` or `components/database/`.
+- Keep unused primitives out of the repo. Re-add shadcn components only when an active screen imports them.
 
-## Known Technical Debt
+## Performance Notes
 
-- `ProyekRow` in `proyek-slideover.tsx` uses `Record<string, unknown>` — needs a proper typed DB row type once Supabase types are generated
-- `lib/database.types.ts` still reflects legacy document-related tables until Supabase types are regenerated from the simplified schema
+Most business pages are dynamic because they depend on Supabase auth and database reads. Static routes are limited to pages that do not need request-time data.
+
+To inspect Vercel cache behavior after deployment:
+
+```bash
+curl -I https://your-domain.com
+curl -I https://your-domain.com/proyek
+curl -I https://your-domain.com/api/proyek
+```
+
+Check `x-vercel-cache`:
+
+| Value | Meaning |
+|---|---|
+| `HIT` | Served from Vercel cache. |
+| `MISS` | Fetched from origin/function. |
+| `STALE` | Served stale while refreshing. |
+| `PRERENDER` | Served from static/prerendered storage. |
+| `REVALIDATED` | Refreshed in foreground. |
+
+## Verification
+
+Before pushing changes:
+
+```bash
+npm test
+npm run build
+```
+
+Current cleanup verification:
+
+- `npm test`: 5 files, 20 tests passed.
+- `npm run build`: production build passed on Next.js 16.2.3.
