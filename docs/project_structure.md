@@ -26,6 +26,7 @@ konsultan-app/
 ├── postcss.config.mjs      # Tailwind/PostCSS config
 ├── proxy.ts                # Next proxy for Supabase auth protection
 ├── tsconfig.json           # TypeScript config
+├── vercel.json             # Vercel Function region config
 ├── vitest.config.mts       # Vitest config
 └── vitest.setup.ts         # Test setup
 ```
@@ -46,6 +47,7 @@ app/
 │   └── page.tsx
 ├── proyek/
 │   ├── layout.tsx
+│   ├── loading.tsx
 │   ├── page.tsx
 │   ├── baru/page.tsx
 │   ├── dashboard/page.tsx
@@ -54,6 +56,7 @@ app/
 │       └── edit/page.tsx
 ├── database/
 │   ├── layout.tsx
+│   ├── loading.tsx
 │   ├── page.tsx
 │   └── perusahaan/
 │       └── [id]/page.tsx
@@ -83,6 +86,7 @@ Key responsibilities:
 | `app/proyek/*` | Main project management routes. |
 | `app/database/*` | Company/database dashboard and company detail page. |
 | `app/api/**/route.ts` | Route Handlers for CRUD, export, and override workflows. |
+| `app/**/loading.tsx` | Lightweight skeleton UI shown while dynamic route data loads. |
 
 ---
 
@@ -132,7 +136,7 @@ Generic shadcn/Radix primitives and shared helpers live here. Domain-specific co
 | `button.tsx`, `input.tsx`, `label.tsx`, `select.tsx`, `textarea.tsx`, `table.tsx` | shadcn-style primitives used by forms and tables. |
 | `alert-dialog.tsx`, `confirm-dialog.tsx`, `dialog.tsx`, `drawer.tsx`, `sheet.tsx` | Dialog, drawer, sheet, and confirmation primitives. |
 | `back-button.tsx`, `theme-toggle.tsx`, `sonner.tsx`, `sidebar.tsx` | Shared app utilities and shell helpers. |
-| `field.tsx`, `section-card.tsx`, `kv-field.tsx`, `stat-card.tsx`, `tab-group.tsx`, `page-error.tsx` | Reusable display/workflow helpers. |
+| `field.tsx`, `section-card.tsx`, `kv-field.tsx`, `stat-card.tsx`, `tab-group.tsx`, `page-error.tsx`, `loading-state.tsx` | Reusable display/workflow helpers. |
 
 ---
 

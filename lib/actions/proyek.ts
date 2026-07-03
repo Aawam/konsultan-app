@@ -65,16 +65,17 @@ export async function getDinasList() {
       }
     }
   }
-  const dinasTableQuery = await dinasTableClient
-    .from('dinas_skpd')
-    .select('id, nama_dinas')
-    .order('nama_dinas', { ascending: true })
-
-  const proyekQuery = await supabase
-    .from('proyek')
-    .select('dinas')
-    .eq('is_deleted', false)
-    .order('dinas', { ascending: true })
+  const [dinasTableQuery, proyekQuery] = await Promise.all([
+    dinasTableClient
+      .from('dinas_skpd')
+      .select('id, nama_dinas')
+      .order('nama_dinas', { ascending: true }),
+    supabase
+      .from('proyek')
+      .select('dinas')
+      .eq('is_deleted', false)
+      .order('dinas', { ascending: true }),
+  ])
 
   const merged = new Map<string, DinasOption>()
 

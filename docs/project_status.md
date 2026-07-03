@@ -147,6 +147,8 @@ npm test
 
 ## Catatan Teknis
 
+- `vercel.json` menjalankan Vercel Functions di region `sin1` agar dekat dengan pengguna Indonesia dan Supabase Singapore.
+- `app/proyek/loading.tsx` dan `app/database/loading.tsx` memberi skeleton cepat untuk route dinamis yang menunggu Supabase.
 - `public/templates/` masih boleh dipakai untuk aset referensi lokal, tetapi tidak lagi dibutuhkan untuk fitur inti aplikasi.
 - `.env.example` disimpan sebagai template konfigurasi aman; `.env.local` tetap lokal dan di-ignore.
 - GitHub Actions menjalankan `npm ci`, lint, dan test di `.github/workflows/ci.yml`.

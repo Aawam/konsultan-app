@@ -83,6 +83,7 @@ konsultan-app/
 │   └── utils.ts
 ├── docs/                   # Structure, status, UI conventions, SQL scripts
 ├── scripts/                # Operational scripts
+├── vercel.json             # Vercel Function region config
 └── tests are colocated beside lib files as *.test.ts
 ```
 
@@ -102,6 +103,16 @@ For the full maintained structure, read `docs/project_structure.md`.
 ## Performance Notes
 
 Most business pages are dynamic because they depend on Supabase auth and database reads. Static routes are limited to pages that do not need request-time data.
+
+Production deploys run Vercel Functions in Singapore via `vercel.json`:
+
+```json
+{
+  "regions": ["sin1"]
+}
+```
+
+Keep the Supabase project in Singapore too. If Vercel runs in Singapore but Supabase is in another region, dynamic pages still pay database round-trip latency.
 
 To inspect Vercel cache behavior after deployment:
 
