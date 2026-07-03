@@ -70,14 +70,14 @@ function Sidebar({
   collapsible?: 'icon' | 'none'
 }) {
   const { open } = useSidebar()
-  const widthClass = collapsible === 'none' ? 'w-60' : open ? 'w-60' : 'w-[4.35rem]'
+  const widthClass = collapsible === 'none' ? 'w-60' : open ? 'w-60' : 'w-0 lg:w-[4.35rem]'
 
   return (
     <aside
       data-slot="sidebar"
       data-state={open ? 'expanded' : 'collapsed'}
       className={cn(
-        'app-sidebar-shell group/sidebar sticky top-0 z-30 flex h-screen shrink-0 flex-col border-r border-sidebar-border text-sidebar-foreground transition-[width] duration-200 ease-out',
+        'app-sidebar-shell group/sidebar sticky top-0 z-30 flex h-screen shrink-0 flex-col overflow-hidden border-r border-sidebar-border text-sidebar-foreground transition-[width] duration-200 ease-out lg:overflow-visible',
         widthClass,
         className
       )}
@@ -145,6 +145,17 @@ function SidebarGroupLabel({ className, ...props }: React.ComponentProps<'div'>)
 
 function SidebarGroupContent({ className, ...props }: React.ComponentProps<'div'>) {
   return <div data-slot="sidebar-group-content" className={cn('grid gap-1', className)} {...props} />
+}
+
+function SidebarSeparator({ className, ...props }: React.ComponentProps<'div'>) {
+  return (
+    <div
+      data-slot="sidebar-separator"
+      role="separator"
+      className={cn('mx-2 h-px bg-sidebar-border/80 group-data-[state=collapsed]/sidebar:mx-3', className)}
+      {...props}
+    />
+  )
 }
 
 function SidebarMenu({ className, ...props }: React.ComponentProps<'ul'>) {
@@ -237,6 +248,7 @@ export {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
+  SidebarSeparator,
   SidebarTrigger,
   useSidebar,
 }

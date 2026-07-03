@@ -3,13 +3,12 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { ComponentType, ReactNode } from 'react'
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import {
   Database,
   FolderKanban,
   Gauge,
   LogOut,
-  Plus,
   UserRound,
 } from 'lucide-react'
 
@@ -29,9 +28,11 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
+  SidebarSeparator,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 type NavGroup = {
@@ -90,6 +91,7 @@ function Clock() {
 export function SidebarLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
+  const isCompactViewport = useMediaQuery('(max-width: 1023px)')
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window === 'undefined') return true
@@ -110,8 +112,23 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(sidebarOpen))
-  }, [sidebarOpen])
+    if (isCompactViewport) {
+      setSidebarOpen(false)
+      return
+    }
+
+    setSidebarOpen(window.localStorage.getItem(SIDEBAR_STORAGE_KEY) !== 'false')
+  }, [isCompactViewport])
+
+  useEffect(() => {
+    if (isCompactViewport) setSidebarOpen(false)
+  }, [isCompactViewport, pathname])
+
+  useEffect(() => {
+    if (!isCompactViewport) {
+      window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(sidebarOpen))
+    }
+  }, [isCompactViewport, sidebarOpen])
 
   const isActive = (href: string | null) => {
     if (!href) return false
@@ -154,56 +171,44 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
           </Link>
         </SidebarHeader>
 
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/proyek/baru'}>
-                    <Link href="/proyek/baru">
-                      <Plus />
-                      <span className="group-data-[state=collapsed]/sidebar:hidden">Tambah Proyek</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+        <SidebarContent className="gap-3">
+          {NAV_GROUPS.map((group, index) => (
+            <Fragment key={group.group}>
+              {index > 0 && <SidebarSeparator />}
+              <SidebarGroup>
+                <SidebarGroupLabel>{group.group}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.map((item) => {
+                      const Icon = item.icon
+                      const active = isActive(item.href)
 
-          {NAV_GROUPS.map((group) => (
-            <SidebarGroup key={group.group}>
-              <SidebarGroupLabel>{group.group}</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item) => {
-                    const Icon = item.icon
-                    const active = isActive(item.href)
-
-                    return (
-                      <SidebarMenuItem key={item.label}>
-                        {item.href ? (
-                          <SidebarMenuButton asChild isActive={active}>
-                            <Link href={item.href}>
+                      return (
+                        <SidebarMenuItem key={item.label}>
+                          {item.href ? (
+                            <SidebarMenuButton asChild isActive={active}>
+                              <Link href={item.href}>
+                                <Icon />
+                                <span className="truncate group-data-[state=collapsed]/sidebar:hidden">
+                                  {item.label}
+                                </span>
+                              </Link>
+                            </SidebarMenuButton>
+                          ) : (
+                            <SidebarMenuButton disabled>
                               <Icon />
                               <span className="truncate group-data-[state=collapsed]/sidebar:hidden">
                                 {item.label}
                               </span>
-                            </Link>
-                          </SidebarMenuButton>
-                        ) : (
-                          <SidebarMenuButton disabled>
-                            <Icon />
-                            <span className="truncate group-data-[state=collapsed]/sidebar:hidden">
-                              {item.label}
-                            </span>
-                          </SidebarMenuButton>
-                        )}
-                      </SidebarMenuItem>
-                    )
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+                            </SidebarMenuButton>
+                          )}
+                        </SidebarMenuItem>
+                      )
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </Fragment>
           ))}
         </SidebarContent>
 
