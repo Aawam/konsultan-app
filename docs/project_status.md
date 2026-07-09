@@ -147,6 +147,7 @@ npm test
 
 ## Catatan Teknis
 
+- Strategi branch aktif memakai `experiment` untuk kerja utama/uji coba fitur, `staging` untuk kandidat uji sebelum deploy, dan `main` untuk production. Detail ada di `docs/branching_strategy.md`.
 - `vercel.json` menjalankan Vercel Functions di region `sin1` agar dekat dengan pengguna Indonesia dan Supabase Singapore.
 - `proxy.ts` hanya menjaga route halaman (`/login`, `/proyek/*`, `/database/*`). API route melakukan auth sendiri agar request API tidak selalu melewati proxy global.
 - API route memakai helper authenticated Supabase server client dari `lib/supabase-server.ts`.
