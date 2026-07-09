@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import type { ProyekFormData } from '@/lib/types/proyek'
 import Link from 'next/link'
 import { PageError } from '@/components/ui/page-error'
+import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 
 export default async function EditProyekPage({
   params,

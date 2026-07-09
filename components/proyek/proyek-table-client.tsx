@@ -21,11 +21,14 @@ import {
 } from '@/lib/proyek-analytics'
 import { formatRupiah, formatTanggal } from '@/lib/utils'
 import { toast } from 'sonner'
-import { ProyekDisplay, getNamaPerusahaan } from '@/lib/types/proyek'
+import { getNamaPerusahaan, type ProyekDisplay } from '@/lib/types/proyek'
 import { ProyekSlideover } from '@/components/proyek/proyek-slideover'
 import type { ProyekListFilters } from '@/lib/actions/proyek'
+import { PageHeader } from '@/components/ui/page-header'
 
 type JenisFilter = 'Semua' | 'Perencanaan' | 'Pengawasan'
+type CsvValue = string | number | boolean | null | undefined
+type CsvRow = Record<string, CsvValue>
 type ExportRow = {
   id: string
   nama_proyek: string
@@ -149,36 +152,6 @@ function getProgressLabel(value: ProjectProgressFilter) {
     perlu_update: 'Perlu update',
   }
   return labels[value]
-}
-
-type SearchParamReader = {
-  get(name: string): string | null
-}
-
-function getInitialYearFilter(searchParams: SearchParamReader): number | 'semua' {
-  const year = searchParams.get('year')
-  if (!year || year === 'semua') return 'semua'
-  const parsed = Number(year)
-  return Number.isFinite(parsed) ? parsed : 'semua'
-}
-
-function getInitialJenisFilter(searchParams: SearchParamReader): JenisFilter {
-  const jenis = searchParams.get('jenis')
-  return jenis === 'Perencanaan' || jenis === 'Pengawasan' || jenis === 'Semua' ? jenis : 'Semua'
-}
-
-function getInitialStatusFilter(searchParams: SearchParamReader): ProjectStatusFilter {
-  const status = searchParams.get('status')
-  return status === 'Work' || status === 'Borrowed' || status === 'Get Borrowed' || status === 'Semua'
-    ? status
-    : 'Semua'
-}
-
-function getInitialProgressFilter(searchParams: SearchParamReader): ProjectProgressFilter {
-  const progress = searchParams.get('progress')
-  return progress === 'berjalan' || progress === 'selesai' || progress === 'belum_mulai' || progress === 'perlu_update'
-    ? progress
-    : 'semua'
 }
 
 export function ProyekTableClient({

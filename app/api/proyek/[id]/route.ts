@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import { buildProyekPayload } from '@/lib/actions/proyek'
+import { apiData, apiError, apiOk } from '@/lib/api-response'
 import {
   OVERRIDE_LOG_SELECT,
   PROYEK_DETAIL_SELECT,
@@ -59,6 +60,10 @@ export async function PATCH(
   const form = await req.json() as ProyekFormData
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
   if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { profile } = await getCurrentUserProfile()
+  if (!isOwnerAdmin(profile)) {
+    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh mengubah proyek.', 403)
+  }
 
   const parsed = proyekSchema.safeParse({
     ...form,
@@ -93,6 +98,10 @@ export async function DELETE(
   const { id } = await params
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
   if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { profile } = await getCurrentUserProfile()
+  if (!isOwnerAdmin(profile)) {
+    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh menghapus proyek.', 403)
+  }
 
   const { error } = await supabase
     .from('proyek')

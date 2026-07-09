@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
+import { apiData, apiError, apiOk, readJsonBody } from '@/lib/api-response'
+import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 
 export async function PATCH(
   req: NextRequest,
@@ -57,6 +59,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
+  const { profile } = await getCurrentUserProfile()
+  if (!isOwnerAdmin(profile)) {
+    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh menghapus dinas.', 403)
+  }
+
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
   if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { data: existing, error: existingError } = await supabase

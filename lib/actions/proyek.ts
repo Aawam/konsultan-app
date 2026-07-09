@@ -13,6 +13,30 @@ import { parseNumberInput } from '@/lib/utils'
 
 // ── Queries ──────────────────────────────────────────────────────────────────
 
+type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>
+
+export type ProyekListFilters = {
+  page: number
+  pageSize: number
+  year: ProjectYearFilter
+  jenis: ProjectJenisFilter
+  status: ProjectStatusFilter
+  progress: ProjectProgressFilter
+  perusahaanId: string
+  search: string
+}
+
+export type ProyekListPage = {
+  rows: ProyekDisplay[]
+  total: number
+  page: number
+  pageSize: number
+  pageCount: number
+}
+
+export const DEFAULT_PROYEK_LIST_PAGE_SIZE = 25
+export const PROYEK_LIST_PAGE_SIZES = [10, 25, 50, 100] as const
+
 type ProyekTeknisRow = {
   id: string
   nama_proyek: string
@@ -120,6 +144,41 @@ async function getProyekTeknisRows(targetProyekId?: string) {
   })
 }
 
+function filterProyekListRows(rows: ProyekDisplay[], filters: ProyekListFilters) {
+  const search = filters.search.trim().toLowerCase()
+
+  return rows.filter((project) => {
+    const progress = project.persentase_progress ?? 0
+    const isBelumMulai = !project.tahap_progress && progress === 0
+    const isSelesai = progress === 100
+    const isBerjalan = !isBelumMulai && !isSelesai
+    const perluUpdate =
+      !project.perusahaan_id ||
+      !project.status_proyek ||
+      !project.lokasi_kecamatan ||
+      progress === 0
+
+    if (filters.year !== 'semua' && project.tahun_anggaran !== filters.year) return false
+    if (filters.jenis !== 'Semua' && project.jenis_pekerjaan !== filters.jenis) return false
+    if (filters.status !== 'Semua' && project.status_proyek !== filters.status) return false
+    if (filters.perusahaanId !== 'Semua' && project.perusahaan_id !== filters.perusahaanId) return false
+    if (filters.progress === 'selesai' && !isSelesai) return false
+    if (filters.progress === 'belum_mulai' && !isBelumMulai) return false
+    if (filters.progress === 'berjalan' && !isBerjalan) return false
+    if (filters.progress === 'perlu_update' && !perluUpdate) return false
+
+    if (!search) return true
+
+    return [
+      project.nama_proyek,
+      project.dinas,
+      project.lokasi_kecamatan,
+      project.status_proyek,
+      project.tahap_progress,
+    ].some((value) => value?.toLowerCase().includes(search))
+  })
+}
+
 export async function getDaftarProyek({ includeSensitive = true }: { includeSensitive?: boolean } = {}) {
   const supabase = await createSupabaseServerClient()
   if (!includeSensitive) {
@@ -171,7 +230,16 @@ export async function getDaftarProyek({ includeSensitive = true }: { includeSens
   }
 }
 
-export async function getDaftarProyekPage(filters: ProyekListFilters, client?: SupabaseServerClient) {
+export async function getDaftarProyekPage(
+  filters: ProyekListFilters,
+  {
+    client,
+    includeSensitive = true,
+  }: {
+    client?: SupabaseServerClient
+    includeSensitive?: boolean
+  } = {}
+) {
   const supabase = client ?? await createSupabaseServerClient()
   const pageSize = PROYEK_LIST_PAGE_SIZES.includes(filters.pageSize as (typeof PROYEK_LIST_PAGE_SIZES)[number])
     ? filters.pageSize
@@ -179,6 +247,25 @@ export async function getDaftarProyekPage(filters: ProyekListFilters, client?: S
   const page = Number.isFinite(filters.page) && filters.page > 0 ? Math.floor(filters.page) : 1
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
+
+  if (!includeSensitive) {
+    const { data, error } = await getDaftarProyek({ includeSensitive: false })
+    const filteredRows = filterProyekListRows(data ?? [], filters)
+      .sort((a, b) => b.tahun_anggaran - a.tahun_anggaran || a.nama_proyek.localeCompare(b.nama_proyek))
+    const total = filteredRows.length
+    const pageCount = Math.max(1, Math.ceil(total / pageSize))
+
+    return {
+      data: {
+        rows: filteredRows.slice(from, to + 1),
+        total,
+        page: Math.min(page, pageCount),
+        pageSize,
+        pageCount,
+      },
+      error,
+    }
+  }
 
   let query = supabase
     .from('proyek')
@@ -229,7 +316,7 @@ export async function getDaftarProyekPage(filters: ProyekListFilters, client?: S
 
   return {
     data: {
-      rows: (data ?? []) as ProyekDisplay[],
+        rows: (data ?? []) as unknown as ProyekDisplay[],
       total,
       page: Math.min(page, pageCount),
       pageSize,
@@ -332,8 +419,32 @@ export async function getDinasList(client?: SupabaseServerClient) {
   }
 }
 
-export async function getProyekById(id: string, { includeSensitive = true }: { includeSensitive?: boolean } = {}) {
-  const supabase = await createSupabaseServerClient()
+export async function getProyekFormReferences(client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
+  const [{ data: perusahaan, error }, { data: dinasList, error: dinasError }] = await Promise.all([
+    getPerusahaanList(supabase),
+    getDinasList(supabase),
+  ])
+
+  return {
+    data: {
+      perusahaanList: orderPerusahaanList(perusahaan ?? []),
+      dinasList: dinasList ?? [],
+    },
+    error: error ?? dinasError,
+  }
+}
+
+export async function getProyekById(
+  id: string,
+  {
+    client,
+    includeSensitive = true,
+  }: {
+    client?: SupabaseServerClient
+    includeSensitive?: boolean
+  } = {}
+) {
   if (!includeSensitive) {
     const { data, error } = await getProyekTeknisRows(id)
     return {
@@ -342,39 +453,10 @@ export async function getProyekById(id: string, { includeSensitive = true }: { i
     }
   }
 
-  const selectColumns = includeSensitive
-    ? `*, perusahaan:perusahaan_id (nama_perusahaan, adalah_perusahaan_sendiri)`
-    : `
-      id,
-      nama_proyek,
-      paket_pekerjaan_induk,
-      nomor_kontrak,
-      jenis_pekerjaan,
-      kategori_pekerjaan,
-      tahun_anggaran,
-      sumber_dana,
-      dinas,
-      lokasi_kecamatan,
-      nama_ppk,
-      pagu_dana,
-      hps,
-      perusahaan_id,
-      tanggal_mulai,
-      tanggal_selesai,
-      durasi_hari,
-      tahap_progress,
-      persentase_progress,
-      pernah_dioverride,
-      status_proyek,
-      jalur_masuk,
-      created_at,
-      updated_at,
-      is_deleted,
-      perusahaan:perusahaan_id (nama_perusahaan, adalah_perusahaan_sendiri)
-    `
+  const supabase = client ?? await createSupabaseServerClient()
   const { data, error } = await supabase
     .from('proyek')
-    .select(selectColumns)
+    .select(PROYEK_DETAIL_SELECT)
     .eq('id', id)
     .eq('is_deleted', false)
     .single()
@@ -389,6 +471,23 @@ export async function getProyekById(id: string, { includeSensitive = true }: { i
         } as ProyekDetail)
       : null,
     error,
+  }
+}
+
+export async function getProyekEditData(id: string) {
+  const supabase = await createSupabaseServerClient()
+  const [{ data: proyek, error }, { data: references, error: referenceError }] = await Promise.all([
+    getProyekById(id, { client: supabase, includeSensitive: true }),
+    getProyekFormReferences(supabase),
+  ])
+
+  return {
+    data: {
+      proyek,
+      perusahaanList: references.perusahaanList,
+      dinasList: references.dinasList,
+    },
+    error: error ?? referenceError,
   }
 }
 

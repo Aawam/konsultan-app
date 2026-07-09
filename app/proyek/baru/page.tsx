@@ -6,6 +6,9 @@ import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 import { notFound } from 'next/navigation'
 
 export default async function TambahProyekPage() {
+  const { profile } = await getCurrentUserProfile()
+  if (!isOwnerAdmin(profile)) notFound()
+
   const { data, error } = await getProyekFormReferences()
 
   if (error) return <PageError error={error} />

@@ -10,6 +10,7 @@ import {
   FolderKanban,
   Gauge,
   LogOut,
+  Plus,
   UserRound,
 } from 'lucide-react'
 
@@ -105,37 +106,10 @@ export function SidebarLayout({
   const pathname = usePathname()
   const router = useRouter()
   const isCompactViewport = useMediaQuery('(max-width: 1023px)')
-  const [userEmail, setUserEmail] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window === 'undefined') return true
     return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) !== 'false'
   })
-
-  useEffect(() => {
-    let mounted = true
-    const supabase = createSupabaseBrowserClient()
-
-    supabase.auth.getUser().then(({ data }) => {
-      if (mounted) setUserEmail(data.user?.email ?? null)
-    })
-
-    return () => {
-      mounted = false
-    }
-  }, [])
-
-  useEffect(() => {
-    if (isCompactViewport) {
-      setSidebarOpen(false)
-      return
-    }
-
-    setSidebarOpen(window.localStorage.getItem(SIDEBAR_STORAGE_KEY) !== 'false')
-  }, [isCompactViewport])
-
-  useEffect(() => {
-    if (isCompactViewport) setSidebarOpen(false)
-  }, [isCompactViewport, pathname])
 
   useEffect(() => {
     if (!isCompactViewport) {
@@ -165,9 +139,15 @@ export function SidebarLayout({
   const initial = displayName.slice(0, 1).toUpperCase()
   const roleLabel = getRoleLabel(profile?.role)
   const canManageProjects = isOwnerAdmin(profile)
+  const effectiveSidebarOpen = isCompactViewport ? false : sidebarOpen
 
   return (
-    <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
+    <SidebarProvider
+      open={effectiveSidebarOpen}
+      onOpenChange={(open) => {
+        if (!isCompactViewport) setSidebarOpen(open)
+      }}
+    >
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <Link
@@ -188,7 +168,7 @@ export function SidebarLayout({
           </Link>
         </SidebarHeader>
 
-        <SidebarContent>
+        <SidebarContent className="gap-3">
           {canManageProjects && (
             <SidebarGroup>
               <SidebarGroupContent>
@@ -206,20 +186,30 @@ export function SidebarLayout({
             </SidebarGroup>
           )}
 
-          {NAV_GROUPS.map((group) => (
-            <SidebarGroup key={group.group}>
-              <SidebarGroupLabel>{group.group}</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.filter((item) => !item.ownerOnly || canManageProjects).map((item) => {
-                    const Icon = item.icon
-                    const active = isActive(item.href)
+          {NAV_GROUPS.map((group, index) => (
+            <Fragment key={group.group}>
+              {(index > 0 || canManageProjects) && <SidebarSeparator />}
+              <SidebarGroup>
+                <SidebarGroupLabel>{group.group}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.filter((item) => !item.ownerOnly || canManageProjects).map((item) => {
+                      const Icon = item.icon
+                      const active = isActive(item.href)
 
-                    return (
-                      <SidebarMenuItem key={item.label}>
-                        {item.href ? (
-                          <SidebarMenuButton asChild isActive={active}>
-                            <Link href={item.href}>
+                      return (
+                        <SidebarMenuItem key={item.label}>
+                          {item.href ? (
+                            <SidebarMenuButton asChild isActive={active}>
+                              <Link href={item.href}>
+                                <Icon />
+                                <span className="truncate group-data-[state=collapsed]/sidebar:hidden">
+                                  {item.label}
+                                </span>
+                              </Link>
+                            </SidebarMenuButton>
+                          ) : (
+                            <SidebarMenuButton disabled>
                               <Icon />
                               <span className="truncate group-data-[state=collapsed]/sidebar:hidden">
                                 {item.label}

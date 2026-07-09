@@ -48,8 +48,10 @@ function parseFilters(params: Awaited<SearchParams>): ProyekListFilters {
 
 export default async function DaftarProyekPage({ searchParams }: { searchParams: SearchParams }) {
   const filters = parseFilters(await searchParams)
+  const { profile } = await getCurrentUserProfile()
+  const canViewCommercial = isOwnerAdmin(profile)
   const [{ data: proyekPage, error }, { data: filterOptions, error: filterError }] = await Promise.all([
-    getDaftarProyekPage(filters),
+    getDaftarProyekPage(filters, { includeSensitive: canViewCommercial }),
     getProyekListFilterOptions(),
   ])
 
