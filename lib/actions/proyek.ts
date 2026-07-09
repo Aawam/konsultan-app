@@ -1,6 +1,13 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { getPersentaseFromFase } from '@/lib/constants/proyek'
+import {
+  OVERRIDE_LOG_SELECT,
+  PROYEK_DETAIL_SELECT,
+  PROYEK_LIST_SELECT,
+  PROYEK_MUTATION_RETURN_SELECT,
+} from '@/lib/queries/proyek-selects'
 import type { DinasOption, ProyekDetail, ProyekDisplay, ProyekFormData, ProyekPayload } from '@/lib/types/proyek'
+import type { ProjectJenisFilter, ProjectProgressFilter, ProjectStatusFilter, ProjectYearFilter } from '@/lib/proyek-analytics'
 import { proyekSchema } from '@/lib/validations/proyek'
 import { parseNumberInput } from '@/lib/utils'
 
@@ -164,8 +171,98 @@ export async function getDaftarProyek({ includeSensitive = true }: { includeSens
   }
 }
 
-export async function getPerusahaanList() {
-  const supabase = await createSupabaseServerClient()
+export async function getDaftarProyekPage(filters: ProyekListFilters, client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
+  const pageSize = PROYEK_LIST_PAGE_SIZES.includes(filters.pageSize as (typeof PROYEK_LIST_PAGE_SIZES)[number])
+    ? filters.pageSize
+    : DEFAULT_PROYEK_LIST_PAGE_SIZE
+  const page = Number.isFinite(filters.page) && filters.page > 0 ? Math.floor(filters.page) : 1
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  let query = supabase
+    .from('proyek')
+    .select(PROYEK_LIST_SELECT, { count: 'exact' })
+    .eq('is_deleted', false)
+
+  if (filters.year !== 'semua') query = query.eq('tahun_anggaran', filters.year)
+  if (filters.jenis !== 'Semua') query = query.eq('jenis_pekerjaan', filters.jenis)
+  if (filters.status !== 'Semua') query = query.eq('status_proyek', filters.status)
+  if (filters.perusahaanId !== 'Semua') query = query.eq('perusahaan_id', filters.perusahaanId)
+
+  const search = filters.search.trim()
+  if (search) {
+    const escaped = search.replaceAll('%', '\\%').replaceAll('_', '\\_')
+    query = query.or([
+      `nama_proyek.ilike.%${escaped}%`,
+      `dinas.ilike.%${escaped}%`,
+      `lokasi_kecamatan.ilike.%${escaped}%`,
+      `status_proyek.ilike.%${escaped}%`,
+      `tahap_progress.ilike.%${escaped}%`,
+    ].join(','))
+  }
+
+  if (filters.progress === 'selesai') {
+    query = query.eq('persentase_progress', 100)
+  } else if (filters.progress === 'belum_mulai') {
+    query = query.or('persentase_progress.is.null,persentase_progress.eq.0').is('tahap_progress', null)
+  } else if (filters.progress === 'berjalan') {
+    query = query.or('tahap_progress.not.is.null,persentase_progress.gt.0').lt('persentase_progress', 100)
+  } else if (filters.progress === 'perlu_update') {
+    query = query.or([
+      'perusahaan_id.is.null',
+      'status_proyek.is.null',
+      'lokasi_kecamatan.is.null',
+      'nilai_penawaran.is.null',
+      'persentase_progress.is.null',
+      'persentase_progress.eq.0',
+    ].join(','))
+  }
+
+  const { data, error, count } = await query
+    .order('tahun_anggaran', { ascending: false })
+    .order('nama_proyek', { ascending: true })
+    .range(from, to)
+
+  const total = count ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
+
+  return {
+    data: {
+      rows: (data ?? []) as ProyekDisplay[],
+      total,
+      page: Math.min(page, pageCount),
+      pageSize,
+      pageCount,
+    },
+    error,
+  }
+}
+
+export async function getProyekListFilterOptions(client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
+  const [yearsQuery, perusahaanQuery] = await Promise.all([
+    supabase
+      .from('proyek')
+      .select('tahun_anggaran')
+      .eq('is_deleted', false)
+      .order('tahun_anggaran', { ascending: false }),
+    getPerusahaanList(supabase),
+  ])
+
+  const years = [...new Set((yearsQuery.data ?? []).map((row) => row.tahun_anggaran))]
+
+  return {
+    data: {
+      years,
+      perusahaanList: orderPerusahaanList(perusahaanQuery.data ?? []),
+    },
+    error: yearsQuery.error ?? perusahaanQuery.error,
+  }
+}
+
+export async function getPerusahaanList(client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
   const { data, error } = await supabase
     .from('perusahaan')
     .select('id, nama_perusahaan, adalah_perusahaan_sendiri')
@@ -174,8 +271,20 @@ export async function getPerusahaanList() {
   return { data, error }
 }
 
-export async function getDinasList() {
-  const supabase = await createSupabaseServerClient()
+export function orderPerusahaanList<T extends {
+  adalah_perusahaan_sendiri: boolean
+  nama_perusahaan: string
+}>(items: T[]) {
+  return [...items].sort((a, b) => {
+    if (a.adalah_perusahaan_sendiri !== b.adalah_perusahaan_sendiri) {
+      return a.adalah_perusahaan_sendiri ? -1 : 1
+    }
+    return a.nama_perusahaan.localeCompare(b.nama_perusahaan)
+  })
+}
+
+export async function getDinasList(client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
   const dinasTableClient = supabase as unknown as {
     from: (table: 'dinas_skpd') => {
       select: (columns: string) => {
@@ -189,16 +298,17 @@ export async function getDinasList() {
       }
     }
   }
-  const dinasTableQuery = await dinasTableClient
-    .from('dinas_skpd')
-    .select('id, nama_dinas')
-    .order('nama_dinas', { ascending: true })
-
-  const proyekQuery = await supabase
-    .from('proyek')
-    .select('dinas')
-    .eq('is_deleted', false)
-    .order('dinas', { ascending: true })
+  const [dinasTableQuery, proyekQuery] = await Promise.all([
+    dinasTableClient
+      .from('dinas_skpd')
+      .select('id, nama_dinas')
+      .order('nama_dinas', { ascending: true }),
+    supabase
+      .from('proyek')
+      .select('dinas')
+      .eq('is_deleted', false)
+      .order('dinas', { ascending: true }),
+  ])
 
   const merged = new Map<string, DinasOption>()
 
@@ -282,19 +392,19 @@ export async function getProyekById(id: string, { includeSensitive = true }: { i
   }
 }
 
-export async function getOverrideLogsByProyekId(proyekId: string) {
-  const supabase = await createSupabaseServerClient()
+export async function getOverrideLogsByProyekId(proyekId: string, client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
   const { data, error } = await supabase
     .from('override_log')
-    .select('*')
+    .select(OVERRIDE_LOG_SELECT)
     .eq('proyek_id', proyekId)
     .order('dilakukan_pada', { ascending: false })
 
   return { data, error }
 }
 
-export async function getAllProyekForExport() {
-  const supabase = await createSupabaseServerClient()
+export async function getAllProyekForExport(client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
   // B2: removed dead columns never written by FormProyek (alamat_dinas, nomor_kontrak,
   // nomor_spk, tanggal_kontrak) — they produced blank columns in Excel output.
   const { data, error } = await supabase
@@ -372,8 +482,8 @@ export async function simpanProyek(
 
   const { data, error } =
     mode === 'edit' && form.id
-      ? await supabase.from('proyek').update(payload).eq('id', form.id).select().single()
-      : await supabase.from('proyek').insert(payload).select().single()
+      ? await supabase.from('proyek').update(payload).eq('id', form.id).select(PROYEK_MUTATION_RETURN_SELECT).single()
+      : await supabase.from('proyek').insert(payload).select(PROYEK_MUTATION_RETURN_SELECT).single()
 
   return { data, error }
 }

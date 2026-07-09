@@ -1,7 +1,5 @@
-import { NextRequest } from 'next/server'
-import { apiError, apiOk, readJsonBody } from '@/lib/api-response'
-import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { NextRequest, NextResponse } from 'next/server'
+import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function POST(
   req: NextRequest,
@@ -25,8 +23,8 @@ export async function POST(
     return apiError('VALIDATION_ERROR', 'warnings and alasan are required', 400)
   }
 
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user, authError } = await createAuthenticatedSupabaseServerClient()
+  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const now = new Date().toISOString()
 
   const [{ error: proyekError }, { error: logError }] = await Promise.all([

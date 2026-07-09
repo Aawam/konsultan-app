@@ -11,8 +11,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "types:supabase": "supabase gen types typescript --project-id lpowysaggivhinnhbnll > lib/database.types.ts",
-    "db:export:data": "node scripts/export-db-data.mjs"
+    "types:supabase": "supabase gen types typescript --project-id otivzjkfedxlwkgiewkm > lib/database.types.ts",
+    "db:export:data": "node scripts/export-db-data.mjs",
+    "latency": "node scripts/measure-latency.mjs"
   },
   "dependencies": {
     "@fontsource-variable/geist-mono": "^5.2.8",

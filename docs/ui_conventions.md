@@ -124,26 +124,7 @@ Use for bounded operational sections. Avoid decorative oversized cards.
 
 ## Components
 
-### FormField
-
-```tsx
-<FormField label="Nama Proyek" required className="col-span-2">
-  <Input className="field-input" />
-</FormField>
-```
-
-Use in domain forms for label consistency and required markers.
-
-### StepWizard
-
-```tsx
-<StepWizard
-  steps={['Identitas', 'Anggaran', 'Pemberi Kerja', 'Pelaksanaan']}
-  currentStep={currentStep}
-/>
-```
-
-Use for multi-step forms. Keep labels short.
+Keep `components/ui/` for primitives and shared helpers that are actually used by the app. Domain wrappers belong in `components/proyek/` or `components/database/`.
 
 ### TabGroup
 

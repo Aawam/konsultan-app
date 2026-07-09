@@ -2,7 +2,7 @@
 
 **Tanggal:** 2026-07-09
 
-Dokumen ini mengikuti struktur aktual aplikasi. Next.js 16 memakai App Router berbasis folder di `app/`; file khusus seperti `page.tsx`, `layout.tsx`, `route.ts`, dan `proxy.ts` mengikuti dokumentasi lokal di `node_modules/next/dist/docs/`.
+Dokumen ini mengikuti struktur tracked aplikasi saat ini. Next.js 16 memakai App Router berbasis folder di `app/`; file khusus seperti `page.tsx`, `layout.tsx`, `route.ts`, dan `proxy.ts` mengikuti dokumentasi lokal di `node_modules/next/dist/docs/`.
 
 ---
 
@@ -13,7 +13,8 @@ konsultan-app/
 ├── app/                    # Routes, layouts, API handlers, global CSS
 ├── .github/workflows/      # GitHub Actions CI
 ├── components/             # React components by domain and shared UI
-├── docs/                   # Project docs, SQL notes, audit scripts
+├── docs/                   # Project docs and SQL admin/reference scripts
+├── hooks/                  # Shared React hooks
 ├── lib/                    # Data access, Supabase clients, types, validation
 ├── public/                 # Static assets served by Next.js
 ├── supabase/migrations/    # Ordered runnable database migrations
@@ -27,27 +28,12 @@ konsultan-app/
 ├── postcss.config.mjs      # Tailwind/PostCSS config
 ├── proxy.ts                # Next proxy for Supabase auth protection
 ├── tsconfig.json           # TypeScript config
-├── vitest.config.ts        # Vitest config
+├── vercel.json             # Vercel Function region config
+├── vitest.config.mts       # Vitest config
 └── vitest.setup.ts         # Test setup
 ```
 
 Generated and machine-local folders such as `.next/`, `node_modules/`, `.claude/`, `.vscode/`, `supabase/.temp/`, `.vercel/`, `tsconfig.tsbuildinfo`, and `.DS_Store` files are not part of the project structure.
-
----
-
-## .github/
-
-```text
-.github/
-└── workflows/
-    └── ci.yml
-```
-
-CI runs on pushes and pull requests to `main`:
-
-- `npm ci`
-- `npm run lint`
-- `npm test`
 
 ---
 
@@ -63,6 +49,7 @@ app/
 │   └── page.tsx
 ├── proyek/
 │   ├── layout.tsx
+│   ├── loading.tsx
 │   ├── page.tsx
 │   ├── baru/page.tsx
 │   ├── dashboard/page.tsx
@@ -153,7 +140,7 @@ components/
 
 ### ui/
 
-Generic primitives and shared helpers live here. Domain-specific code should not be added to `components/ui/`.
+Generic shadcn/Radix primitives and shared helpers live here. Domain-specific code should not be added to `components/ui/`.
 
 | File | Purpose |
 |---|---|
@@ -170,10 +157,12 @@ Generic primitives and shared helpers live here. Domain-specific code should not
 lib/
 ├── actions/
 ├── constants/
+├── queries/
 ├── types/
 ├── validations/
 ├── database.types.ts
 ├── supabase-browser.ts
+├── supabase-config.ts
 ├── supabase-server.ts
 └── utils.ts
 ```
@@ -182,10 +171,16 @@ lib/
 
 | File | Main exports |
 |---|---|
-| `proyek.ts` | Project queries/mutations, payload builder, override log, delete. |
+| `proyek.ts` | Project queries/mutations, form reference loaders, payload builder, override log, delete. |
 | `perusahaan.ts` | Company list and projects by company. |
 | `ahsp.ts` | AHSP, AHSP detail, master harga, satuan, and kategori read/write actions. |
 | `rab.ts` | RAB Maker snapshots, project RAB access checks, and available AHSP reads. |
+
+### queries/
+
+| File | Purpose |
+|---|---|
+| `proyek-selects.ts` | Shared exact Supabase select strings for project detail, mutation returns, and override logs. |
 
 ### constants/
 
@@ -217,8 +212,9 @@ lib/
 | `auth.ts`, `auth-types.ts` | Current-user profile helpers and role checks. |
 | `rab-maker.ts` | RAB Maker parsing and override normalization helpers. |
 | `supabase-browser.ts` | Browser client for Client Components. |
-| `supabase-server.ts` | Server client and current user helper. |
-| `utils.ts` | `cn`, `formatRupiah`, `formatTanggal`. |
+| `supabase-config.ts` | Shared Supabase environment config helpers. |
+| `supabase-server.ts` | Server client, authenticated API client helper, and current user helper. |
+| `utils.ts` | `cn`, number/currency/date formatting helpers. |
 
 ---
 
@@ -253,7 +249,10 @@ docs/
 ├── project_status.md
 ├── project_structure.md
 ├── ui_conventions.md
+├── DB_Add_Dinas_SKPD.sql
 ├── DB_Audit.sql
+├── DB_Production_Core_Fix.sql
+├── DB_SUPABASE_DEPLOY.sql
 ├── DB_Simplification_Audit.sql
 ├── DB_Simplification_Cleanup.sql
 └── RLS_Policies.sql
@@ -275,18 +274,6 @@ supabase/
 
 ---
 
-## public/
-
-```text
-public/
-└── templates/
-    └── [optional local reference assets]
-```
-
-`public/templates/` is intentionally ignored by git because it may contain local/static business reference files. Keep optional assets here, but do not use `public/` as a staging folder for copied source code.
-
----
-
 ## Naming Conventions
 
 | Pattern | Use |
@@ -300,27 +287,3 @@ public/
 | `lib/actions/*` | Server-side data access and mutations. |
 | `lib/types/*` | Shared TypeScript domain types. |
 | `lib/validations/*` | Zod schemas. |
-
----
-
-## Cleanup Rules
-
-Safe to delete when present:
-
-- `.next/`
-- `tsconfig.tsbuildinfo`
-- `.DS_Store`
-- `.claude/`
-- `.vscode/` when empty or only local preferences
-- `supabase/.temp/`
-- Empty `supabase/` folders with no migrations/config
-- Empty staging folders such as `public/external/`
-
-Do not delete without checking references:
-
-- `.env.example`
-- `public/templates/`
-- `lib/database.types.ts`
-- `proxy.ts`
-- Route files under `app/api/`
-- Config files used by Next, Tailwind, ESLint, shadcn, Vitest, or TypeScript.

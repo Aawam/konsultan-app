@@ -1,7 +1,5 @@
-import { NextRequest } from 'next/server'
-import { apiData, apiError, readJsonBody } from '@/lib/api-response'
-import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { NextRequest, NextResponse } from 'next/server'
+import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function POST(req: NextRequest) {
   const { profile } = await getCurrentUserProfile()
@@ -18,7 +16,8 @@ export async function POST(req: NextRequest) {
     return apiError('VALIDATION_ERROR', 'Nama dinas minimal 2 karakter', 400)
   }
 
-  const supabase = await createSupabaseServerClient()
+  const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
+  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { data, error } = await supabase
     .from('dinas_skpd')
     .insert({ nama_dinas: dinas })

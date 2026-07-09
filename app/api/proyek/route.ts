@@ -1,22 +1,16 @@
-import { NextRequest } from 'next/server'
-import { apiData, apiError, readJsonBody } from '@/lib/api-response'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { NextRequest, NextResponse } from 'next/server'
+import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import { buildProyekPayload } from '@/lib/actions/proyek'
+import { PROYEK_MUTATION_RETURN_SELECT } from '@/lib/queries/proyek-selects'
 import { proyekSchema } from '@/lib/validations/proyek'
 import type { ProyekFormData } from '@/lib/types/proyek'
 import { parseNumberInput } from '@/lib/utils'
 import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
-  const { profile } = await getCurrentUserProfile()
-  if (!isOwnerAdmin(profile)) {
-    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh membuat proyek.', 403)
-  }
-
-  const { data: form, error: bodyError } = await readJsonBody<ProyekFormData>(req)
-  if (bodyError) return bodyError
-
-  const supabase = await createSupabaseServerClient()
+  const form = await req.json() as ProyekFormData
+  const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
+  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const parsed = proyekSchema.safeParse({
     ...form,
@@ -34,7 +28,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('proyek')
     .insert(buildProyekPayload(form))
-    .select()
+    .select(PROYEK_MUTATION_RETURN_SELECT)
     .single()
 
   if (error) return apiError('INTERNAL_ERROR', error.message, 500)

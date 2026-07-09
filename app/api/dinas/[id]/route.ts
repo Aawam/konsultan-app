@@ -1,7 +1,5 @@
-import { NextRequest } from 'next/server'
-import { apiData, apiError, apiOk, readJsonBody } from '@/lib/api-response'
-import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { NextRequest, NextResponse } from 'next/server'
+import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function PATCH(
   req: NextRequest,
@@ -22,7 +20,8 @@ export async function PATCH(
     return apiError('VALIDATION_ERROR', 'Nama dinas minimal 2 karakter', 400)
   }
 
-  const supabase = await createSupabaseServerClient()
+  const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
+  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { data: existing, error: existingError } = await supabase
     .from('dinas_skpd')
     .select('id, nama_dinas')
@@ -58,12 +57,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const { profile } = await getCurrentUserProfile()
-  if (!isOwnerAdmin(profile)) {
-    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh menghapus dinas.', 403)
-  }
-
-  const supabase = await createSupabaseServerClient()
+  const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
+  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { data: existing, error: existingError } = await supabase
     .from('dinas_skpd')
     .select('id, nama_dinas')

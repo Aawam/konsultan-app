@@ -1,88 +1,33 @@
 -- RLS policies for Konsulindo internal app.
--- Model: every authenticated Supabase user can manage internal app data.
--- Run this after the app has been deployed with authenticated SSR/browser clients.
+-- Model: every authenticated Supabase user can manage active app data.
+-- Active monitoring schema: perusahaan, proyek, override_log, dinas_skpd.
+-- Run this after the schema in docs/DB_SUPABASE_DEPLOY.sql exists.
 
 BEGIN;
 
-ALTER TABLE public.proyek ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.perusahaan ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.personil ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.personil_proyek ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.pengalaman_perusahaan ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.nomor_surat ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.override_log ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.template_metodologi ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.termin_pembayaran ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.checklist_proyek ENABLE ROW LEVEL SECURITY;
+DO $$
+DECLARE
+  tbl text;
+BEGIN
+  FOREACH tbl IN ARRAY ARRAY[
+    'perusahaan',
+    'proyek',
+    'override_log',
+    'dinas_skpd'
+  ]
+  LOOP
+    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', tbl);
 
-CREATE POLICY "authenticated read proyek" ON public.proyek
-FOR SELECT TO authenticated USING (true);
-CREATE POLICY "authenticated insert proyek" ON public.proyek
-FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "authenticated update proyek" ON public.proyek
-FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+    EXECUTE format('DROP POLICY IF EXISTS "authenticated read %1$s" ON public.%1$I', tbl);
+    EXECUTE format('DROP POLICY IF EXISTS "authenticated insert %1$s" ON public.%1$I', tbl);
+    EXECUTE format('DROP POLICY IF EXISTS "authenticated update %1$s" ON public.%1$I', tbl);
+    EXECUTE format('DROP POLICY IF EXISTS "authenticated delete %1$s" ON public.%1$I', tbl);
 
-CREATE POLICY "authenticated read perusahaan" ON public.perusahaan
-FOR SELECT TO authenticated USING (true);
-CREATE POLICY "authenticated insert perusahaan" ON public.perusahaan
-FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "authenticated update perusahaan" ON public.perusahaan
-FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
-
-CREATE POLICY "authenticated read personil" ON public.personil
-FOR SELECT TO authenticated USING (true);
-CREATE POLICY "authenticated insert personil" ON public.personil
-FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "authenticated update personil" ON public.personil
-FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
-
-CREATE POLICY "authenticated read personil_proyek" ON public.personil_proyek
-FOR SELECT TO authenticated USING (true);
-CREATE POLICY "authenticated insert personil_proyek" ON public.personil_proyek
-FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "authenticated update personil_proyek" ON public.personil_proyek
-FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
-
-CREATE POLICY "authenticated read pengalaman_perusahaan" ON public.pengalaman_perusahaan
-FOR SELECT TO authenticated USING (true);
-CREATE POLICY "authenticated insert pengalaman_perusahaan" ON public.pengalaman_perusahaan
-FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "authenticated update pengalaman_perusahaan" ON public.pengalaman_perusahaan
-FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
-
-CREATE POLICY "authenticated read nomor_surat" ON public.nomor_surat
-FOR SELECT TO authenticated USING (true);
-CREATE POLICY "authenticated insert nomor_surat" ON public.nomor_surat
-FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "authenticated update nomor_surat" ON public.nomor_surat
-FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
-
-CREATE POLICY "authenticated read override_log" ON public.override_log
-FOR SELECT TO authenticated USING (true);
-CREATE POLICY "authenticated insert override_log" ON public.override_log
-FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "authenticated update override_log" ON public.override_log
-FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
-
-CREATE POLICY "authenticated read template_metodologi" ON public.template_metodologi
-FOR SELECT TO authenticated USING (true);
-CREATE POLICY "authenticated insert template_metodologi" ON public.template_metodologi
-FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "authenticated update template_metodologi" ON public.template_metodologi
-FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
-
-CREATE POLICY "authenticated read termin_pembayaran" ON public.termin_pembayaran
-FOR SELECT TO authenticated USING (true);
-CREATE POLICY "authenticated insert termin_pembayaran" ON public.termin_pembayaran
-FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "authenticated update termin_pembayaran" ON public.termin_pembayaran
-FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
-
-CREATE POLICY "authenticated read checklist_proyek" ON public.checklist_proyek
-FOR SELECT TO authenticated USING (true);
-CREATE POLICY "authenticated insert checklist_proyek" ON public.checklist_proyek
-FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "authenticated update checklist_proyek" ON public.checklist_proyek
-FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+    EXECUTE format('CREATE POLICY "authenticated read %1$s" ON public.%1$I FOR SELECT TO authenticated USING (true)', tbl);
+    EXECUTE format('CREATE POLICY "authenticated insert %1$s" ON public.%1$I FOR INSERT TO authenticated WITH CHECK (true)', tbl);
+    EXECUTE format('CREATE POLICY "authenticated update %1$s" ON public.%1$I FOR UPDATE TO authenticated USING (true) WITH CHECK (true)', tbl);
+    EXECUTE format('CREATE POLICY "authenticated delete %1$s" ON public.%1$I FOR DELETE TO authenticated USING (true)', tbl);
+  END LOOP;
+END $$;
 
 COMMIT;

@@ -3,14 +3,13 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { ComponentType, ReactNode } from 'react'
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import {
   Calculator,
   Database,
   FolderKanban,
   Gauge,
   LogOut,
-  Plus,
   UserRound,
 } from 'lucide-react'
 
@@ -30,9 +29,11 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
+  SidebarSeparator,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { getRoleLabel, isOwnerAdmin, type CurrentUserProfile } from '@/lib/auth-types'
 
@@ -103,14 +104,44 @@ export function SidebarLayout({
 }) {
   const pathname = usePathname()
   const router = useRouter()
+  const isCompactViewport = useMediaQuery('(max-width: 1023px)')
+  const [userEmail, setUserEmail] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window === 'undefined') return true
     return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) !== 'false'
   })
 
   useEffect(() => {
-    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(sidebarOpen))
-  }, [sidebarOpen])
+    let mounted = true
+    const supabase = createSupabaseBrowserClient()
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (mounted) setUserEmail(data.user?.email ?? null)
+    })
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isCompactViewport) {
+      setSidebarOpen(false)
+      return
+    }
+
+    setSidebarOpen(window.localStorage.getItem(SIDEBAR_STORAGE_KEY) !== 'false')
+  }, [isCompactViewport])
+
+  useEffect(() => {
+    if (isCompactViewport) setSidebarOpen(false)
+  }, [isCompactViewport, pathname])
+
+  useEffect(() => {
+    if (!isCompactViewport) {
+      window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(sidebarOpen))
+    }
+  }, [isCompactViewport, sidebarOpen])
 
   const isActive = (href: string | null) => {
     if (!href) return false
@@ -193,22 +224,15 @@ export function SidebarLayout({
                               <span className="truncate group-data-[state=collapsed]/sidebar:hidden">
                                 {item.label}
                               </span>
-                            </Link>
-                          </SidebarMenuButton>
-                        ) : (
-                          <SidebarMenuButton disabled>
-                            <Icon />
-                            <span className="truncate group-data-[state=collapsed]/sidebar:hidden">
-                              {item.label}
-                            </span>
-                          </SidebarMenuButton>
-                        )}
-                      </SidebarMenuItem>
-                    )
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+                            </SidebarMenuButton>
+                          )}
+                        </SidebarMenuItem>
+                      )
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </Fragment>
           ))}
         </SidebarContent>
 

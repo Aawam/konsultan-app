@@ -21,7 +21,8 @@ SELECT needed.table_name AS missing_core_table
 FROM (VALUES
   ('proyek'),
   ('perusahaan'),
-  ('override_log')
+  ('override_log'),
+  ('dinas_skpd')
 ) AS needed(table_name)
 WHERE NOT EXISTS (
   SELECT 1
@@ -45,7 +46,9 @@ WHERE t.table_schema = 'public'
     'personil_proyek',
     'pengalaman_perusahaan',
     'nomor_surat',
-    'template_metodologi'
+    'template_metodologi',
+    'checklist_proyek',
+    'termin_pembayaran'
   )
 ORDER BY t.table_name;
 
@@ -90,14 +93,18 @@ WHERE tc.constraint_type = 'FOREIGN KEY'
       'personil_proyek',
       'pengalaman_perusahaan',
       'nomor_surat',
-      'template_metodologi'
+      'template_metodologi',
+      'checklist_proyek',
+      'termin_pembayaran'
     )
     OR ccu.table_name IN (
       'personil',
       'personil_proyek',
       'pengalaman_perusahaan',
       'nomor_surat',
-      'template_metodologi'
+      'template_metodologi',
+      'checklist_proyek',
+      'termin_pembayaran'
     )
   )
 ORDER BY tc.table_name, tc.constraint_name;
@@ -121,7 +128,9 @@ WHERE schemaname = 'public'
     'personil_proyek',
     'pengalaman_perusahaan',
     'nomor_surat',
-    'template_metodologi'
+    'template_metodologi',
+    'checklist_proyek',
+    'termin_pembayaran'
   )
 ORDER BY tablename, policyname;
 
@@ -143,7 +152,9 @@ FROM (VALUES
   ('personil_proyek'),
   ('pengalaman_perusahaan'),
   ('nomor_surat'),
-  ('template_metodologi')
+  ('template_metodologi'),
+  ('checklist_proyek'),
+  ('termin_pembayaran')
 ) AS needed(table_name)
 LEFT JOIN pg_stat_user_tables s
   ON s.schemaname = 'public'
@@ -163,5 +174,5 @@ SELECT
   is_nullable
 FROM information_schema.columns
 WHERE table_schema = 'public'
-  AND table_name IN ('proyek', 'perusahaan', 'override_log')
+  AND table_name IN ('proyek', 'perusahaan', 'override_log', 'dinas_skpd')
 ORDER BY table_name, ordinal_position;

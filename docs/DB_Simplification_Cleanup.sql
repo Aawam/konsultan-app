@@ -15,29 +15,32 @@
 BEGIN;
 
 -- ────────────────────────────────────────────────────────────
--- BAGIAN 1 — Hapus policy legacy jika masih ada
--- Aman dipanggil berulang karena memakai IF EXISTS
+-- BAGIAN 1 — Hapus policy legacy jika tabelnya masih ada
+-- DROP POLICY ... ON table tetap error jika table sudah tidak ada,
+-- jadi policy dihapus dari daftar pg_policies secara dinamis.
 -- ────────────────────────────────────────────────────────────
 
-DROP POLICY IF EXISTS "authenticated read personil" ON public.personil;
-DROP POLICY IF EXISTS "authenticated insert personil" ON public.personil;
-DROP POLICY IF EXISTS "authenticated update personil" ON public.personil;
-
-DROP POLICY IF EXISTS "authenticated read personil_proyek" ON public.personil_proyek;
-DROP POLICY IF EXISTS "authenticated insert personil_proyek" ON public.personil_proyek;
-DROP POLICY IF EXISTS "authenticated update personil_proyek" ON public.personil_proyek;
-
-DROP POLICY IF EXISTS "authenticated read pengalaman_perusahaan" ON public.pengalaman_perusahaan;
-DROP POLICY IF EXISTS "authenticated insert pengalaman_perusahaan" ON public.pengalaman_perusahaan;
-DROP POLICY IF EXISTS "authenticated update pengalaman_perusahaan" ON public.pengalaman_perusahaan;
-
-DROP POLICY IF EXISTS "authenticated read nomor_surat" ON public.nomor_surat;
-DROP POLICY IF EXISTS "authenticated insert nomor_surat" ON public.nomor_surat;
-DROP POLICY IF EXISTS "authenticated update nomor_surat" ON public.nomor_surat;
-
-DROP POLICY IF EXISTS "authenticated read template_metodologi" ON public.template_metodologi;
-DROP POLICY IF EXISTS "authenticated insert template_metodologi" ON public.template_metodologi;
-DROP POLICY IF EXISTS "authenticated update template_metodologi" ON public.template_metodologi;
+DO $$
+DECLARE
+  pol record;
+BEGIN
+  FOR pol IN
+    SELECT schemaname, tablename, policyname
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename IN (
+        'personil',
+        'personil_proyek',
+        'pengalaman_perusahaan',
+        'nomor_surat',
+        'template_metodologi',
+        'checklist_proyek',
+        'termin_pembayaran'
+      )
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I', pol.policyname, pol.schemaname, pol.tablename);
+  END LOOP;
+END $$;
 
 
 -- ────────────────────────────────────────────────────────────
@@ -54,6 +57,8 @@ DROP FUNCTION IF EXISTS public.next_nomor_penawaran(integer);
 -- ────────────────────────────────────────────────────────────
 
 DROP TABLE IF EXISTS public.personil_proyek CASCADE;
+DROP TABLE IF EXISTS public.checklist_proyek CASCADE;
+DROP TABLE IF EXISTS public.termin_pembayaran CASCADE;
 DROP TABLE IF EXISTS public.nomor_surat CASCADE;
 DROP TABLE IF EXISTS public.pengalaman_perusahaan CASCADE;
 DROP TABLE IF EXISTS public.personil CASCADE;
@@ -76,7 +81,10 @@ WHERE table_schema = 'public'
     'personil_proyek',
     'pengalaman_perusahaan',
     'nomor_surat',
-    'template_metodologi'
+    'template_metodologi',
+    'checklist_proyek',
+    'termin_pembayaran',
+    'dinas_skpd'
   )
 ORDER BY table_name;
 
