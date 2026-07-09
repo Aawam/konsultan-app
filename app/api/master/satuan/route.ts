@@ -2,14 +2,12 @@ import { NextRequest } from 'next/server'
 
 import { apiData, apiError, readJsonBody } from '@/lib/api-response'
 import { createSatuan } from '@/lib/actions/ahsp'
-import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
+import { requireOwnerAdminApi } from '@/lib/api-auth'
 import { validateSatuanPayload } from '@/lib/validations/ahsp'
 
 export async function POST(req: NextRequest) {
-  const { profile } = await getCurrentUserProfile()
-  if (!isOwnerAdmin(profile)) {
-    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh menambah satuan.', 403)
-  }
+  const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh menambah satuan.')
+  if (forbidden) return forbidden
 
   const { data: body, error: bodyError } = await readJsonBody<Record<string, unknown>>(req)
   if (bodyError) return bodyError

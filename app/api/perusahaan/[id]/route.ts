@@ -2,17 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import type { PerusahaanFormData } from '@/lib/types/perusahaan'
 import { apiData, apiError, apiOk, readJsonBody } from '@/lib/api-response'
-import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
+import { requireOwnerAdminApi } from '@/lib/api-auth'
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const { profile } = await getCurrentUserProfile()
-  if (!isOwnerAdmin(profile)) {
-    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh mengubah perusahaan.', 403)
-  }
+  const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh mengubah perusahaan.')
+  if (forbidden) return forbidden
 
   const { data: form, error: bodyError } = await readJsonBody<PerusahaanFormData>(req)
   if (bodyError) return bodyError
@@ -57,10 +55,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const { profile } = await getCurrentUserProfile()
-  if (!isOwnerAdmin(profile)) {
-    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh menghapus perusahaan.', 403)
-  }
+  const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh menghapus perusahaan.')
+  if (forbidden) return forbidden
 
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
   if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

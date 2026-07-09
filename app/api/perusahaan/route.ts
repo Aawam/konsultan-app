@@ -2,13 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import type { PerusahaanFormData } from '@/lib/types/perusahaan'
 import { apiData, apiError, readJsonBody } from '@/lib/api-response'
-import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
+import { requireOwnerAdminApi } from '@/lib/api-auth'
 
 export async function POST(req: NextRequest) {
-  const { profile } = await getCurrentUserProfile()
-  if (!isOwnerAdmin(profile)) {
-    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh menambah perusahaan.', 403)
-  }
+  const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh menambah perusahaan.')
+  if (forbidden) return forbidden
 
   const { data: form, error: bodyError } = await readJsonBody<PerusahaanFormData>(req)
   if (bodyError) return bodyError

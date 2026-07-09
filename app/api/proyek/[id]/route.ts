@@ -10,7 +10,7 @@ import {
 import { proyekSchema } from '@/lib/validations/proyek'
 import type { ProyekFormData } from '@/lib/types/proyek'
 import { parseNumberInput } from '@/lib/utils'
-import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
+import { requireOwnerAdminApi } from '@/lib/api-auth'
 
 export async function GET(
   _req: NextRequest,
@@ -60,10 +60,8 @@ export async function PATCH(
   const form = await req.json() as ProyekFormData
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
   if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { profile } = await getCurrentUserProfile()
-  if (!isOwnerAdmin(profile)) {
-    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh mengubah proyek.', 403)
-  }
+  const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh mengubah proyek.')
+  if (forbidden) return forbidden
 
   const parsed = proyekSchema.safeParse({
     ...form,
@@ -98,10 +96,8 @@ export async function DELETE(
   const { id } = await params
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
   if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { profile } = await getCurrentUserProfile()
-  if (!isOwnerAdmin(profile)) {
-    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh menghapus proyek.', 403)
-  }
+  const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh menghapus proyek.')
+  if (forbidden) return forbidden
 
   const { error } = await supabase
     .from('proyek')

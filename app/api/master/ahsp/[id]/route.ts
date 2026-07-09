@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 
 import { apiData, apiError, readJsonBody } from '@/lib/api-response'
-import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
+import { requireOwnerAdminApi } from '@/lib/api-auth'
 import { updateAhspItem } from '@/lib/actions/ahsp'
 import { validateAhspItemPayload } from '@/lib/validations/ahsp'
 
@@ -10,10 +10,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const { profile } = await getCurrentUserProfile()
-  if (!isOwnerAdmin(profile)) {
-    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh mengelola Masterfile AHSP.', 403)
-  }
+  const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh mengelola Masterfile AHSP.')
+  if (forbidden) return forbidden
 
   const { data: body, error: bodyError } = await readJsonBody<Record<string, unknown>>(req)
   if (bodyError) return bodyError

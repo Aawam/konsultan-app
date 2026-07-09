@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import { apiError, apiOk, readJsonBody } from '@/lib/api-response'
-import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
+import { requireOwnerAdminApi } from '@/lib/api-auth'
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const { profile } = await getCurrentUserProfile()
-  if (!isOwnerAdmin(profile)) {
-    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh menyimpan override proyek.', 403)
-  }
+  const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh menyimpan override proyek.')
+  if (forbidden) return forbidden
 
   const { data: body, error: bodyError } = await readJsonBody<{
     warnings?: string[]

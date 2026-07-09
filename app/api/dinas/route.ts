@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import { apiData, apiError, readJsonBody } from '@/lib/api-response'
-import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
+import { requireOwnerAdminApi } from '@/lib/api-auth'
 
 export async function POST(req: NextRequest) {
-  const { profile } = await getCurrentUserProfile()
-  if (!isOwnerAdmin(profile)) {
-    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh menambah dinas.', 403)
-  }
+  const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh menambah dinas.')
+  if (forbidden) return forbidden
 
   const { data: body, error: bodyError } = await readJsonBody<{ dinas?: string }>(req)
   if (bodyError) return bodyError
