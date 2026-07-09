@@ -3,6 +3,7 @@ import { FormEditProyek } from '@/components/proyek/form-edit-proyek'
 import { notFound } from 'next/navigation'
 import type { ProyekFormData } from '@/lib/types/proyek'
 import Link from 'next/link'
+import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 
 export default async function EditProyekPage({
   params,
@@ -10,6 +11,8 @@ export default async function EditProyekPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const { profile } = await getCurrentUserProfile()
+  if (!isOwnerAdmin(profile)) notFound()
 
   const [{ data: proyek }, { data: perusahaanList }, { data: dinasList }] = await Promise.all([
     getProyekById(id),

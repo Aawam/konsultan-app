@@ -5,6 +5,7 @@ import { BadgeJenis, BadgeTahap, BadgeOverride } from '@/components/proyek/badge
 import { formatRupiah, formatTanggal } from '@/lib/utils'
 import { TAHAP_BAR_COLOR } from '@/lib/constants/proyek'
 import { TombolAksi } from '@/components/proyek/proyek-actions'
+import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -56,9 +57,11 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
 
 export default async function DetailProyekPage({ params }: Props) {
   const { id } = await params
+  const { profile } = await getCurrentUserProfile()
+  const canViewCommercial = isOwnerAdmin(profile)
 
   const [{ data: proyek }, { data: overrideLogs }] = await Promise.all([
-    getProyekById(id),
+    getProyekById(id, { includeSensitive: canViewCommercial }),
     getOverrideLogsByProyekId(id),
   ])
 
@@ -92,7 +95,15 @@ export default async function DetailProyekPage({ params }: Props) {
           >
             ← Kembali
           </Link>
-          <TombolAksi id={id} />
+          {proyek.jenis_pekerjaan === 'Perencanaan' && (
+            <Link
+              href={`/proyek/${id}/rab`}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+            >
+              RAB / EE
+            </Link>
+          )}
+          {canViewCommercial && <TombolAksi id={id} />}
         </div>
       </div>
 
@@ -125,9 +136,13 @@ export default async function DetailProyekPage({ params }: Props) {
       </section>
 
       <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <MetricCard label="Pagu Dana" value={formatRupiah(proyek.pagu_dana)} caption={proyek.sumber_dana} />
-        <MetricCard label="HPS" value={formatRupiah(proyek.hps)} caption="Harga Perkiraan Sendiri" />
-        <MetricCard label="Nilai Kontrak" value={formatRupiah(proyek.nilai_penawaran)} caption="Efisiensi terhadap pagu" accent="text-teal" />
+        {canViewCommercial && (
+          <>
+            <MetricCard label="Pagu Dana" value={formatRupiah(proyek.pagu_dana)} caption={proyek.sumber_dana} />
+            <MetricCard label="HPS" value={formatRupiah(proyek.hps)} caption="Harga Perkiraan Sendiri" />
+            <MetricCard label="Nilai Kontrak" value={formatRupiah(proyek.nilai_penawaran ?? null)} caption="Efisiensi terhadap pagu" accent="text-teal" />
+          </>
+        )}
         <MetricCard label="Tahun Anggaran" value={String(proyek.tahun_anggaran)} caption={isSelesai ? 'Selesai' : 'Berjalan'} />
         <MetricCard label="Sumber Dana" value={proyek.sumber_dana} caption="Pemerintah daerah" accent="text-violet" />
       </div>
@@ -161,13 +176,15 @@ export default async function DetailProyekPage({ params }: Props) {
           <InfoRow label="Jalur Masuk" value={proyek.jalur_masuk} />
         </DetailCard>
 
-        <DetailCard title="Catatan Kerja" className="min-h-52">
-          <div className="min-h-36 rounded-xl border border-border p-4">
-            <p className="text-sm font-medium leading-relaxed text-muted-foreground whitespace-pre-wrap">
-              {proyek.catatan || 'Belum ada catatan untuk proyek ini.'}
-            </p>
-          </div>
-        </DetailCard>
+        {canViewCommercial && (
+          <DetailCard title="Catatan Kerja" className="min-h-52">
+            <div className="min-h-36 rounded-xl border border-border p-4">
+              <p className="text-sm font-medium leading-relaxed text-muted-foreground whitespace-pre-wrap">
+                {proyek.catatan || 'Belum ada catatan untuk proyek ini.'}
+              </p>
+            </div>
+          </DetailCard>
+        )}
 
         {(overrideLogs ?? []).length > 0 && (
           <DetailCard title="Riwayat Override" className="xl:col-span-2">

@@ -5,11 +5,14 @@ import { SectionCard } from '@/components/ui/section-card'
 import { BadgeJenis } from '@/components/proyek/badges'
 import { formatRupiah } from '@/lib/utils'
 import { getPerusahaanById, getProyekByPerusahaan } from '@/lib/actions/perusahaan'
+import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 
 type Props = { params: Promise<{ id: string }> }
 
 export default async function DetailPerusahaanPage({ params }: Props) {
   const { id } = await params
+  const { profile } = await getCurrentUserProfile()
+  if (!isOwnerAdmin(profile)) notFound()
 
   const [{ data: perusahaan }, { data: proyek }] = await Promise.all([
     getPerusahaanById(id),

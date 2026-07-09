@@ -16,10 +16,11 @@ export type ProyekDisplay = {
   id: string
   nama_proyek: string
   jenis_pekerjaan: string
+  kategori_pekerjaan?: string | null
   tahun_anggaran: number
   dinas: string
   lokasi_kecamatan: string | null
-  pagu_dana: number
+  pagu_dana: number | null
   nilai_penawaran: number | null
   tahap_progress: string | null
   persentase_progress: number | null
@@ -44,7 +45,7 @@ export type ProyekDetail = {
   dinas: string
   lokasi_kecamatan: string | null
   nama_ppk: string | null
-  pagu_dana: number
+  pagu_dana: number | null
   hps: number | null
   nilai_penawaran: number | null
   perusahaan_id: string | null

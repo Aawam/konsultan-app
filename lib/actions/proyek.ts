@@ -6,20 +6,136 @@ import { parseNumberInput } from '@/lib/utils'
 
 // ── Queries ──────────────────────────────────────────────────────────────────
 
+type ProyekTeknisRow = {
+  id: string
+  nama_proyek: string
+  paket_pekerjaan_induk: string | null
+  nomor_kontrak: string | null
+  jenis_pekerjaan: string
+  kategori_pekerjaan: string
+  tahun_anggaran: number
+  sumber_dana: string
+  dinas: string
+  lokasi_kecamatan: string | null
+  nama_ppk: string | null
+  perusahaan_id: string | null
+  perusahaan_nama: string | null
+  perusahaan_adalah_perusahaan_sendiri: boolean | null
+  tanggal_mulai: string | null
+  tanggal_selesai: string | null
+  durasi_hari: number | null
+  tahap_progress: string | null
+  persentase_progress: number | null
+  pernah_dioverride: boolean | null
+  status_proyek: 'Work' | 'Borrowed' | 'Get Borrowed' | null
+  jalur_masuk: string | null
+  created_at: string
+  updated_at: string
+  is_deleted: boolean | null
+}
 
-export async function getDaftarProyek() {
+type ProyekTeknisRpcClient = {
+  rpc: (
+    fn: 'get_assigned_proyek_teknis',
+    args?: { target_proyek_id?: string | null }
+  ) => Promise<{
+    data: ProyekTeknisRow[] | null
+    error: { message: string; code?: string } | null
+  }>
+}
+
+function toProyekDisplayFromTeknis(row: ProyekTeknisRow): ProyekDisplay {
+  return {
+    id: row.id,
+    nama_proyek: row.nama_proyek,
+    jenis_pekerjaan: row.jenis_pekerjaan,
+    kategori_pekerjaan: row.kategori_pekerjaan,
+    tahun_anggaran: row.tahun_anggaran,
+    dinas: row.dinas,
+    lokasi_kecamatan: row.lokasi_kecamatan,
+    pagu_dana: null,
+    nilai_penawaran: null,
+    tahap_progress: row.tahap_progress,
+    persentase_progress: row.persentase_progress,
+    pernah_dioverride: row.pernah_dioverride ?? false,
+    status_proyek: row.status_proyek,
+    perusahaan_id: row.perusahaan_id,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    is_deleted: row.is_deleted ?? false,
+    perusahaan: row.perusahaan_nama ? { nama_perusahaan: row.perusahaan_nama } : null,
+  }
+}
+
+function toProyekDetailFromTeknis(row: ProyekTeknisRow): ProyekDetail {
+  return {
+    id: row.id,
+    nama_proyek: row.nama_proyek,
+    paket_pekerjaan_induk: row.paket_pekerjaan_induk,
+    nomor_kontrak: row.nomor_kontrak,
+    jenis_pekerjaan: row.jenis_pekerjaan,
+    kategori_pekerjaan: row.kategori_pekerjaan,
+    tahun_anggaran: row.tahun_anggaran,
+    sumber_dana: row.sumber_dana,
+    dinas: row.dinas,
+    lokasi_kecamatan: row.lokasi_kecamatan,
+    nama_ppk: row.nama_ppk,
+    pagu_dana: null,
+    hps: null,
+    nilai_penawaran: null,
+    perusahaan_id: row.perusahaan_id,
+    tanggal_mulai: row.tanggal_mulai,
+    tanggal_selesai: row.tanggal_selesai,
+    durasi_hari: row.durasi_hari,
+    tahap_progress: row.tahap_progress,
+    persentase_progress: row.persentase_progress,
+    pernah_dioverride: row.pernah_dioverride,
+    status_proyek: row.status_proyek,
+    jalur_masuk: row.jalur_masuk,
+    catatan: null,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    is_deleted: row.is_deleted,
+    perusahaan: row.perusahaan_nama
+      ? {
+          nama_perusahaan: row.perusahaan_nama,
+          adalah_perusahaan_sendiri: row.perusahaan_adalah_perusahaan_sendiri ?? false,
+        }
+      : null,
+  }
+}
+
+async function getProyekTeknisRows(targetProyekId?: string) {
   const supabase = await createSupabaseServerClient()
+  const rpcClient = supabase as unknown as ProyekTeknisRpcClient
+  return rpcClient.rpc('get_assigned_proyek_teknis', {
+    target_proyek_id: targetProyekId ?? null,
+  })
+}
+
+export async function getDaftarProyek({ includeSensitive = true }: { includeSensitive?: boolean } = {}) {
+  const supabase = await createSupabaseServerClient()
+  if (!includeSensitive) {
+    const { data, error } = await getProyekTeknisRows()
+    return {
+      data: (data ?? []).map(toProyekDisplayFromTeknis),
+      error,
+    }
+  }
+
+  const sensitiveColumns = includeSensitive ? 'nilai_penawaran,' : ''
   const { data, error } = await supabase
     .from('proyek')
     .select(`
       id,
       nama_proyek,
       jenis_pekerjaan,
+      kategori_pekerjaan,
       tahun_anggaran,
       dinas,
       lokasi_kecamatan,
       pagu_dana,
-      nilai_penawaran,
+      ${sensitiveColumns}
       tahap_progress,
       persentase_progress,
       pernah_dioverride,
@@ -37,7 +153,15 @@ export async function getDaftarProyek() {
 
     
 
-  return { data: data as ProyekDisplay[] | null, error }
+  const rows = (data ?? []) as unknown as Record<string, unknown>[]
+
+  return {
+    data: rows.map((row) => ({
+      ...row,
+      nilai_penawaran: includeSensitive ? row.nilai_penawaran : null,
+    })) as ProyekDisplay[],
+    error,
+  }
 }
 
 export async function getPerusahaanList() {
@@ -98,16 +222,64 @@ export async function getDinasList() {
   }
 }
 
-export async function getProyekById(id: string) {
+export async function getProyekById(id: string, { includeSensitive = true }: { includeSensitive?: boolean } = {}) {
   const supabase = await createSupabaseServerClient()
+  if (!includeSensitive) {
+    const { data, error } = await getProyekTeknisRows(id)
+    return {
+      data: data?.[0] ? toProyekDetailFromTeknis(data[0]) : null,
+      error,
+    }
+  }
+
+  const selectColumns = includeSensitive
+    ? `*, perusahaan:perusahaan_id (nama_perusahaan, adalah_perusahaan_sendiri)`
+    : `
+      id,
+      nama_proyek,
+      paket_pekerjaan_induk,
+      nomor_kontrak,
+      jenis_pekerjaan,
+      kategori_pekerjaan,
+      tahun_anggaran,
+      sumber_dana,
+      dinas,
+      lokasi_kecamatan,
+      nama_ppk,
+      pagu_dana,
+      hps,
+      perusahaan_id,
+      tanggal_mulai,
+      tanggal_selesai,
+      durasi_hari,
+      tahap_progress,
+      persentase_progress,
+      pernah_dioverride,
+      status_proyek,
+      jalur_masuk,
+      created_at,
+      updated_at,
+      is_deleted,
+      perusahaan:perusahaan_id (nama_perusahaan, adalah_perusahaan_sendiri)
+    `
   const { data, error } = await supabase
     .from('proyek')
-    .select(`*, perusahaan:perusahaan_id (nama_perusahaan, adalah_perusahaan_sendiri)`)
+    .select(selectColumns)
     .eq('id', id)
     .eq('is_deleted', false)
     .single()
+  const row = data as unknown as Record<string, unknown> | null
 
-  return { data: data as ProyekDetail | null, error }
+  return {
+    data: row
+      ? ({
+          ...row,
+          nilai_penawaran: includeSensitive ? row.nilai_penawaran : null,
+          catatan: includeSensitive ? row.catatan : null,
+        } as ProyekDetail)
+      : null,
+    error,
+  }
 }
 
 export async function getOverrideLogsByProyekId(proyekId: string) {

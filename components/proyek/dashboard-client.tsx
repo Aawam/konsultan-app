@@ -189,7 +189,13 @@ function ValueBar({
 
 // ── main ─────────────────────────────────────────────────────────────────────
 
-export function DashboardClient({ proyek }: { proyek: ProyekDisplay[] }) {
+export function DashboardClient({
+  proyek,
+  canViewCommercial = true,
+}: {
+  proyek: ProyekDisplay[]
+  canViewCommercial?: boolean
+}) {
   const [yearFilter, setYearFilter] = useState<YearFilter>('semua')
   const [jenisFilter, setJenisFilter] = useState<JenisFilter>('Semua')
   const [perusahaanFilter, setPerusahaanFilter] = useState<string>('Semua')
@@ -254,10 +260,12 @@ export function DashboardClient({ proyek }: { proyek: ProyekDisplay[] }) {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Owner Overview</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            {canViewCommercial ? 'Owner Overview' : 'Project Overview'}
+          </p>
           <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">Dashboard Proyek</h1>
           <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
-            Ringkasan nilai, progress, dan distribusi proyek untuk keputusan harian.
+            Ringkasan progress dan distribusi proyek untuk keputusan harian.
           </p>
         </div>
         <Link
@@ -322,18 +330,22 @@ export function DashboardClient({ proyek }: { proyek: ProyekDisplay[] }) {
         <MetricLinkCard label="Belum Mulai" value={stats.belumMulai} color="text-muted-foreground" sub="Belum ada tahap" href={worklistHref({ progress: 'belum_mulai' })} />
         <MetricLinkCard label="Perlu Update" value={stats.perluUpdate} color="text-amber" sub="Data penting kosong" href={worklistHref({ progress: 'perlu_update' })} />
         <StatCard label="Avg Progress"    value={`${stats.avgProgress}%`} color="text-violet" />
-        <div className="stat-card col-span-2 sm:col-span-3 xl:col-span-6">
-          <p className="stat-label">Total Kontrak</p>
-          <p className="text-2xl font-bold font-mono leading-tight text-amber truncate">{formatRupiah(stats.nilaiTotal)}</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">Akumulasi nilai penawaran/kontrak yang tercatat</p>
-        </div>
+        {canViewCommercial && (
+          <div className="stat-card col-span-2 sm:col-span-3 xl:col-span-6">
+            <p className="stat-label">Total Kontrak</p>
+            <p className="text-2xl font-bold font-mono leading-tight text-amber truncate">{formatRupiah(stats.nilaiTotal)}</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">Akumulasi nilai penawaran/kontrak yang tercatat</p>
+          </div>
+        )}
       </div>
 
       {/* ── Charts grid ── */}
       <div className="grid gap-4 xl:grid-cols-3">
 
         {/* Jenis komposisi — top-left */}
-        <JenisPieCard filtered={filtered} jenisFilter={jenisFilter} onToggle={(j) => setJenisFilter((prev) => prev === j ? 'Semua' : j)} />
+        {canViewCommercial && (
+          <JenisPieCard filtered={filtered} jenisFilter={jenisFilter} onToggle={(j) => setJenisFilter((prev) => prev === j ? 'Semua' : j)} />
+        )}
 
         {/* Tahap breakdown */}
         <div className="section-card">
@@ -364,18 +376,20 @@ export function DashboardClient({ proyek }: { proyek: ProyekDisplay[] }) {
         </div>
 
         {/* Nilai per tahun */}
-        <div className="section-card">
-          <div className="section-header"><p className="section-title">Nilai per Tahun</p></div>
-          <div className="section-body">
-            {yearValueGroups.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Tidak ada data</p>
-            ) : (
-              yearValueGroups.map(([year, data]) => (
-                <ValueBar key={year} label={year} count={data.count} value={data.value} total={stats.nilaiTotal} />
-              ))
-            )}
+        {canViewCommercial && (
+          <div className="section-card">
+            <div className="section-header"><p className="section-title">Nilai per Tahun</p></div>
+            <div className="section-body">
+              {yearValueGroups.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Tidak ada data</p>
+              ) : (
+                yearValueGroups.map(([year, data]) => (
+                  <ValueBar key={year} label={year} count={data.count} value={data.value} total={stats.nilaiTotal} />
+                ))
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Perusahaan */}
         <div className="section-card">
@@ -419,14 +433,16 @@ export function DashboardClient({ proyek }: { proyek: ProyekDisplay[] }) {
                 <td className="px-4 py-3 whitespace-nowrap"><BadgeJenis jenis={p.jenis_pekerjaan} /></td>
                 <td className="px-4 py-3 whitespace-nowrap"><BadgeTahap tahap={p.tahap_progress} /></td>
                 <td className="px-4 py-3 text-xs text-muted-foreground truncate max-w-[140px]">{p.dinas}</td>
-                <td className="px-4 py-3 text-right font-mono text-xs font-semibold whitespace-nowrap">
-                  {p.nilai_penawaran ? formatRupiah(p.nilai_penawaran) : <span className="text-muted-foreground">—</span>}
-                </td>
+                {canViewCommercial && (
+                  <td className="px-4 py-3 text-right font-mono text-xs font-semibold whitespace-nowrap">
+                    {p.nilai_penawaran ? formatRupiah(p.nilai_penawaran) : <span className="text-muted-foreground">—</span>}
+                  </td>
+                )}
               </tr>
             ))}
             {recent.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                <td colSpan={canViewCommercial ? 5 : 4} className="px-5 py-10 text-center text-sm text-muted-foreground">
                   Tidak ada proyek
                 </td>
               </tr>

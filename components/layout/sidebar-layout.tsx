@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import type { ComponentType, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import {
+  Calculator,
   Database,
   FolderKanban,
   Gauge,
@@ -33,6 +34,7 @@ import {
 } from '@/components/ui/sidebar'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { getRoleLabel, isOwnerAdmin, type CurrentUserProfile } from '@/lib/auth-types'
 
 type NavGroup = {
   group: string
@@ -40,6 +42,7 @@ type NavGroup = {
     label: string
     href: string | null
     icon: ComponentType<{ className?: string }>
+    ownerOnly?: boolean
   }[]
 }
 
@@ -50,6 +53,10 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Daftar Proyek', href: '/proyek', icon: FolderKanban },
       { label: 'Dashboard', href: '/proyek/dashboard', icon: Gauge },
     ],
+  },
+  {
+    group: 'Estimasi',
+    items: [{ label: 'Pembuatan RAB', href: '/proyek/rab', icon: Calculator }],
   },
   {
     group: 'Referensi',
@@ -87,27 +94,19 @@ function Clock() {
   )
 }
 
-export function SidebarLayout({ children }: { children: ReactNode }) {
+export function SidebarLayout({
+  children,
+  profile,
+}: {
+  children: ReactNode
+  profile: CurrentUserProfile | null
+}) {
   const pathname = usePathname()
   const router = useRouter()
-  const [userEmail, setUserEmail] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window === 'undefined') return true
     return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) !== 'false'
   })
-
-  useEffect(() => {
-    let mounted = true
-    const supabase = createSupabaseBrowserClient()
-
-    supabase.auth.getUser().then(({ data }) => {
-      if (mounted) setUserEmail(data.user?.email ?? null)
-    })
-
-    return () => {
-      mounted = false
-    }
-  }, [])
 
   useEffect(() => {
     window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(sidebarOpen))
@@ -116,9 +115,11 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
   const isActive = (href: string | null) => {
     if (!href) return false
     if (href === '/proyek/dashboard') return pathname.startsWith('/proyek/dashboard')
+    if (href === '/proyek/rab') return pathname.startsWith('/proyek/rab') || pathname.endsWith('/rab')
     if (href === '/proyek') {
-      return pathname === '/proyek' || (pathname.startsWith('/proyek/') && !pathname.startsWith('/proyek/dashboard'))
+      return pathname === '/proyek' || (pathname.startsWith('/proyek/') && !pathname.startsWith('/proyek/dashboard') && !pathname.startsWith('/proyek/rab') && !pathname.endsWith('/rab'))
     }
+    if (href === '/database') return pathname.startsWith('/database')
     return pathname.startsWith(href)
   }
 
@@ -129,8 +130,10 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
     router.refresh()
   }
 
-  const displayName = userEmail?.split('@')[0] ?? 'User'
+  const displayName = profile?.nama || profile?.email.split('@')[0] || 'User'
   const initial = displayName.slice(0, 1).toUpperCase()
+  const roleLabel = getRoleLabel(profile?.role)
+  const canManageProjects = isOwnerAdmin(profile)
 
   return (
     <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
@@ -155,27 +158,29 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
         </SidebarHeader>
 
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/proyek/baru'}>
-                    <Link href="/proyek/baru">
-                      <Plus />
-                      <span className="group-data-[state=collapsed]/sidebar:hidden">Tambah Proyek</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {canManageProjects && (
+            <SidebarGroup>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/proyek/baru'}>
+                      <Link href="/proyek/baru">
+                        <Plus />
+                        <span className="group-data-[state=collapsed]/sidebar:hidden">Tambah Proyek</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
 
           {NAV_GROUPS.map((group) => (
             <SidebarGroup key={group.group}>
               <SidebarGroupLabel>{group.group}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {group.items.map((item) => {
+                  {group.items.filter((item) => !item.ownerOnly || canManageProjects).map((item) => {
                     const Icon = item.icon
                     const active = isActive(item.href)
 
@@ -215,7 +220,7 @@ export function SidebarLayout({ children }: { children: ReactNode }) {
             <div className="min-w-0 flex-1 group-data-[state=collapsed]/sidebar:hidden">
               <p className="truncate text-xs font-semibold leading-none text-sidebar-foreground">{displayName}</p>
               <p className="mt-1 truncate text-[10px] leading-none text-sidebar-foreground/55">
-                {userEmail ?? 'Supabase user'}
+                {roleLabel}
               </p>
             </div>
             <Button

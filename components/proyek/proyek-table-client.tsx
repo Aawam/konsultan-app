@@ -25,6 +25,7 @@ import { formatRupiah, formatTanggal } from '@/lib/utils'
 import { toast } from 'sonner'
 import { ProyekDisplay, getNamaPerusahaan } from '@/lib/types/proyek'
 import { ProyekSlideover } from '@/components/proyek/proyek-slideover'
+import { PageHeader } from '@/components/ui/page-header'
 
 type JenisFilter = 'Semua' | 'Perencanaan' | 'Pengawasan'
 type ExportRow = {
@@ -53,7 +54,32 @@ type ExportRow = {
   updated_at: string | null
 }
 
+type CsvValue = string | number | boolean | null | undefined
+type CsvRow = Record<string, CsvValue>
+
 const INLINE_YEAR_LIMIT = 3
+
+function escapeCsvValue(value: CsvValue) {
+  const text = value === null || value === undefined ? '' : String(value)
+  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text
+}
+
+function downloadCsv(rows: CsvRow[], filename: string) {
+  if (rows.length === 0) return
+
+  const headers = Object.keys(rows[0])
+  const csv = [
+    headers.map(escapeCsvValue).join(','),
+    ...rows.map((row) => headers.map((header) => escapeCsvValue(row[header])).join(',')),
+  ].join('\n')
+  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
 
 function formatCompactRupiah(nilai: number) {
   if (nilai >= 1_000_000_000) {
@@ -115,20 +141,54 @@ function getProgressLabel(value: ProjectProgressFilter) {
   return labels[value]
 }
 
+type SearchParamReader = {
+  get(name: string): string | null
+}
+
+function getInitialYearFilter(searchParams: SearchParamReader): number | 'semua' {
+  const year = searchParams.get('year')
+  if (!year || year === 'semua') return 'semua'
+  const parsed = Number(year)
+  return Number.isFinite(parsed) ? parsed : 'semua'
+}
+
+function getInitialJenisFilter(searchParams: SearchParamReader): JenisFilter {
+  const jenis = searchParams.get('jenis')
+  return jenis === 'Perencanaan' || jenis === 'Pengawasan' || jenis === 'Semua' ? jenis : 'Semua'
+}
+
+function getInitialStatusFilter(searchParams: SearchParamReader): ProjectStatusFilter {
+  const status = searchParams.get('status')
+  return status === 'Work' || status === 'Borrowed' || status === 'Get Borrowed' || status === 'Semua'
+    ? status
+    : 'Semua'
+}
+
+function getInitialProgressFilter(searchParams: SearchParamReader): ProjectProgressFilter {
+  const progress = searchParams.get('progress')
+  return progress === 'berjalan' || progress === 'selesai' || progress === 'belum_mulai' || progress === 'perlu_update'
+    ? progress
+    : 'semua'
+}
+
 export function ProyekTableClient({
   proyek,
   title,
+  canViewCommercial = true,
+  canManageProjects = true,
 }: {
   proyek: ProyekDisplay[]
   title?: string
+  canViewCommercial?: boolean
+  canManageProjects?: boolean
 }) {
   const searchParams = useSearchParams()
-  const [tahunFilter, setTahunFilter] = useState<number | 'semua'>('semua')
-  const [jenisFilter, setJenisFilter] = useState<JenisFilter>('Semua')
-  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>('Semua')
-  const [progressFilter, setProgressFilter] = useState<ProjectProgressFilter>('semua')
-  const [perusahaanFilter, setPerusahaanFilter] = useState('Semua')
-  const [search, setSearch] = useState('')
+  const [tahunFilter, setTahunFilter] = useState<number | 'semua'>(() => getInitialYearFilter(searchParams))
+  const [jenisFilter, setJenisFilter] = useState<JenisFilter>(() => getInitialJenisFilter(searchParams))
+  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>(() => getInitialStatusFilter(searchParams))
+  const [progressFilter, setProgressFilter] = useState<ProjectProgressFilter>(() => getInitialProgressFilter(searchParams))
+  const [perusahaanFilter, setPerusahaanFilter] = useState(() => searchParams.get('perusahaan') ?? 'Semua')
+  const [search, setSearch] = useState(() => searchParams.get('q') ?? '')
   const [exporting, setExporting] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [yearDropdownOpen, setYearDropdownOpen] = useState(false)
@@ -143,32 +203,6 @@ export function ProyekTableClient({
   const dropdownYears = tahunList.slice(INLINE_YEAR_LIMIT)
   const selectedYearIsInDropdown = typeof tahunFilter === 'number' && !inlineYears.includes(tahunFilter)
   const perusahaanList = useMemo(() => getProjectCompanyNames(proyek), [proyek])
-
-  useEffect(() => {
-    const year = searchParams.get('year')
-    const jenis = searchParams.get('jenis')
-    const status = searchParams.get('status')
-    const progress = searchParams.get('progress')
-    const perusahaan = searchParams.get('perusahaan')
-    const q = searchParams.get('q')
-
-    if (year) setTahunFilter(year === 'semua' ? 'semua' : Number(year))
-    if (jenis === 'Perencanaan' || jenis === 'Pengawasan' || jenis === 'Semua') setJenisFilter(jenis)
-    if (status === 'Work' || status === 'Borrowed' || status === 'Get Borrowed' || status === 'Semua') {
-      setStatusFilter(status)
-    }
-    if (
-      progress === 'semua' ||
-      progress === 'berjalan' ||
-      progress === 'selesai' ||
-      progress === 'belum_mulai' ||
-      progress === 'perlu_update'
-    ) {
-      setProgressFilter(progress)
-    }
-    if (perusahaan) setPerusahaanFilter(perusahaan)
-    if (q) setSearch(q)
-  }, [searchParams])
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -212,6 +246,10 @@ export function ProyekTableClient({
   }
 
   async function handleExport() {
+    if (!canViewCommercial) {
+      toast.error('Export data komersial hanya untuk Owner/Admin.')
+      return
+    }
     setExporting(true)
     const res = await fetch('/api/proyek/export')
     const json = await res.json() as { data?: ExportRow[]; error?: string }
@@ -244,23 +282,19 @@ export function ProyekTableClient({
           'Status Bendera': p.status_proyek ?? '',
           'Pagu Dana': p.pagu_dana,
           'HPS': p.hps ?? '',
-          'Nilai Kontrak': p.nilai_penawaran ?? '',
+          ...(canViewCommercial ? { 'Nilai Kontrak': p.nilai_penawaran ?? '' } : {}),
           'Tanggal Mulai': p.tanggal_mulai ?? '',
           'Tanggal Selesai': p.tanggal_selesai ?? '',
           'Durasi (Hari)': p.durasi_hari ?? '',
           'Tahap Progress': p.tahap_progress ?? '',
           'Progress (%)': p.persentase_progress ?? 0,
-          'Catatan': p.catatan ?? '',
+          ...(canViewCommercial ? { 'Catatan': p.catatan ?? '' } : {}),
           'Dibuat': p.created_at,
           'Diperbarui': p.updated_at,
         }
       })
 
-    const XLSX = await import('xlsx')
-    const ws = XLSX.utils.json_to_sheet(rows)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Proyek')
-    XLSX.writeFile(wb, tahunFilter === 'semua' ? 'proyek-semua.xlsx' : `proyek-${tahunFilter}.xlsx`)
+    downloadCsv(rows, tahunFilter === 'semua' ? 'proyek-semua.csv' : `proyek-${tahunFilter}.csv`)
     setExporting(false)
   }
 
@@ -274,30 +308,32 @@ export function ProyekTableClient({
 
       {/* ── Page header ── */}
       {title && (
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Monitoring</p>
-            <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">{title}</h1>
-            <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
-              Pantau status proyek, progres, nilai kontrak, dan PIC dari satu halaman yang mudah discan.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleExport}
-              disabled={exporting}
-              className="h-10 rounded-lg border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-            >
-              {exporting ? 'Mengekspor…' : 'Export Excel'}
-            </button>
-            <Link
-              href="/proyek/baru"
-              className="inline-flex h-10 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand/90"
-            >
-              + Tambah Proyek
-            </Link>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="Monitoring"
+          title={title}
+          description="Pantau status proyek, progres, dan PIC dari satu halaman yang mudah discan."
+          actions={
+            <>
+            {canViewCommercial && (
+              <button
+                onClick={handleExport}
+                disabled={exporting}
+                className="h-10 rounded-lg border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              >
+                {exporting ? 'Mengekspor…' : 'Export CSV'}
+              </button>
+            )}
+            {canManageProjects && (
+              <Link
+                href="/proyek/baru"
+                className="inline-flex h-10 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand/90"
+              >
+                + Tambah Proyek
+              </Link>
+            )}
+            </>
+          }
+        />
       )}
 
       {/* ── Stat strip ── */}
@@ -335,12 +371,14 @@ export function ProyekTableClient({
           active={jenisFilter === 'Pengawasan'}
         />
         <StatCard label="Total Proyek" value={stats.total} caption="Semua tahun" />
-        <StatCard
-          label="Total Kontrak"
-          value={formatCompactRupiah(filteredStats.nilaiTotal)}
-          caption="Sesuai filter aktif"
-          colorClass="text-amber"
-        />
+        {canViewCommercial && (
+          <StatCard
+            label="Total Kontrak"
+            value={formatCompactRupiah(filteredStats.nilaiTotal)}
+            caption="Sesuai filter aktif"
+            colorClass="text-amber"
+          />
+        )}
       </div>
 
       {/* ── Toolbar ── */}
@@ -515,7 +553,7 @@ export function ProyekTableClient({
             <col style={{ width: '14%' }} />
             <col style={{ width: '10%' }} />
             <col style={{ width: '7%' }} />
-            <col style={{ width: '11%' }} />
+            {canViewCommercial && <col style={{ width: '11%' }} />}
             <col style={{ width: '13%' }} />
             <col style={{ width: '11%' }} />
           </colgroup>
@@ -527,7 +565,9 @@ export function ProyekTableClient({
               <TableHead className="table-head px-4 py-3.5 normal-case tracking-normal">Tahun</TableHead>
               <TableHead className="table-head px-4 py-3.5 normal-case tracking-normal">Kecamatan</TableHead>
               <TableHead className="table-head px-4 py-3.5 normal-case tracking-normal">Progress</TableHead>
-              <TableHead className="table-head px-4 py-3.5 text-right normal-case tracking-normal">Nilai Kontrak</TableHead>
+              {canViewCommercial && (
+                <TableHead className="table-head px-4 py-3.5 text-right normal-case tracking-normal">Nilai Kontrak</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -578,18 +618,20 @@ export function ProyekTableClient({
                       persen={p.persentase_progress ?? null}
                     />
                   </TableCell>
-                  <TableCell className="px-4 py-4 text-sm font-mono text-right">
-                    {p.nilai_penawaran ? (
-                      <span className="text-foreground font-semibold">{formatRupiah(p.nilai_penawaran)}</span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
+                  {canViewCommercial && (
+                    <TableCell className="px-4 py-4 text-sm font-mono text-right">
+                      {p.nilai_penawaran ? (
+                        <span className="text-foreground font-semibold">{formatRupiah(p.nilai_penawaran)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-16 text-sm">
+                <TableCell colSpan={canViewCommercial ? 7 : 6} className="text-center text-muted-foreground py-16 text-sm">
                   <div className="space-y-3">
                     <p>Tidak ada proyek yang sesuai filter</p>
                     {hasActiveFilters && (
@@ -609,7 +651,12 @@ export function ProyekTableClient({
         </Table>
       </div>
 
-      <ProyekSlideover id={selectedId} onClose={() => setSelectedId(null)} />
+      <ProyekSlideover
+        id={selectedId}
+        onClose={() => setSelectedId(null)}
+        canViewCommercial={canViewCommercial}
+        canManageProjects={canManageProjects}
+      />
     </div>
   )
 }

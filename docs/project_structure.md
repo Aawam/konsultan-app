@@ -1,6 +1,6 @@
 # Project Structure - Konsulindo Project Suite
 
-**Tanggal:** 2026-06-16
+**Tanggal:** 2026-07-09
 
 Dokumen ini mengikuti struktur aktual aplikasi. Next.js 16 memakai App Router berbasis folder di `app/`; file khusus seperti `page.tsx`, `layout.tsx`, `route.ts`, dan `proxy.ts` mengikuti dokumentasi lokal di `node_modules/next/dist/docs/`.
 
@@ -16,6 +16,7 @@ konsultan-app/
 ├── docs/                   # Project docs, SQL notes, audit scripts
 ├── lib/                    # Data access, Supabase clients, types, validation
 ├── public/                 # Static assets served by Next.js
+├── supabase/migrations/    # Ordered runnable database migrations
 ├── .env.example            # Safe env template
 ├── AGENTS.md               # Agent instructions
 ├── .nvmrc                  # Node version for local/CI
@@ -30,7 +31,7 @@ konsultan-app/
 └── vitest.setup.ts         # Test setup
 ```
 
-Generated and machine-local folders such as `.next/`, `node_modules/`, `.claude/`, `.vscode/`, `supabase/.temp/`, and `.DS_Store` files are not part of the project structure.
+Generated and machine-local folders such as `.next/`, `node_modules/`, `.claude/`, `.vscode/`, `supabase/.temp/`, `.vercel/`, `tsconfig.tsbuildinfo`, and `.DS_Store` files are not part of the project structure.
 
 ---
 
@@ -65,19 +66,34 @@ app/
 │   ├── page.tsx
 │   ├── baru/page.tsx
 │   ├── dashboard/page.tsx
+│   ├── rab/page.tsx
 │   └── [id]/
 │       ├── page.tsx
-│       └── edit/page.tsx
+│       ├── edit/page.tsx
+│       └── rab/page.tsx
 ├── database/
 │   ├── layout.tsx
-│   └── page.tsx
+│   ├── page.tsx
+│   └── perusahaan/[id]/page.tsx
 └── api/
+    ├── dinas/
+    │   ├── route.ts
+    │   └── [id]/route.ts
+    ├── perusahaan/
+    │   ├── route.ts
+    │   └── [id]/route.ts
+    ├── master/
+    │   ├── ahsp/
+    │   ├── harga/
+    │   ├── kategori/route.ts
+    │   └── satuan/route.ts
     ├── proyek/
     │   ├── route.ts
     │   ├── export/route.ts
     │   └── [id]/
     │       ├── route.ts
-    │       └── override/route.ts
+    │       ├── override/route.ts
+    │       └── rab/
 ```
 
 Key responsibilities:
@@ -89,8 +105,9 @@ Key responsibilities:
 | `app/globals.css` | Tailwind v4 imports, theme variables, shared component classes. |
 | `app/login/page.tsx` | Supabase login screen. |
 | `app/proyek/*` | Main project management routes. |
-| `app/database/*` | Company/database dashboard. |
-| `app/api/**/route.ts` | Route Handlers for CRUD, export, and override workflows. |
+| `app/proyek/rab/*` | RAB Maker project entry and per-project maker route. |
+| `app/database/*` | Company, Dinas/SKPD, AHSP, master harga, satuan, and kategori database surface. |
+| `app/api/**/route.ts` | Thin Route Handlers for CRUD, export, RAB Maker RPC calls, and override workflows. |
 
 ---
 
@@ -115,21 +132,24 @@ components/
 
 | File | Purpose |
 |---|---|
-| `form-proyek.tsx` | Client create/edit wizard with validation warnings and override flow. |
+| `form-create-proyek.tsx` | Create project form wrapper. |
+| `form-edit-proyek.tsx` | Edit project form wrapper. |
+| `proyek-form-shell.tsx` | Shared project form UI with validation warnings and override flow. |
 | `proyek-table-client.tsx` | Filterable/searchable table, export entry point, slide-over launcher. |
 | `dashboard-client.tsx` | Stats, charts, phase distribution, top dinas/company summaries. |
 | `proyek-slideover.tsx` | Right-side project detail panel. |
 | `proyek-actions.tsx` | Edit/delete actions. |
 | `badges.tsx` | Domain badges for jenis, tahap, override state. |
 | `progress-cell.tsx` | Table progress display. |
-| `form-field.tsx` | Form label/required wrapper. |
-| `section.tsx` | Domain section wrapper. |
+| `rab-maker-client.tsx` | Client RAB Maker surface for AHSP item selection and draft item editing. |
 
 ### database/
 
 | File | Purpose |
 |---|---|
 | `database-client.tsx` | Tabs for perusahaan, all projects, and Dinas/SKPD aggregation. |
+| `reference-database-client.tsx` | AHSP, master harga, satuan, and kategori reference database management. |
+| `master-reference-page.tsx` | Shared server wrapper for filtered master reference pages. |
 
 ### ui/
 
@@ -137,10 +157,10 @@ Generic primitives and shared helpers live here. Domain-specific code should not
 
 | File | Purpose |
 |---|---|
-| `button.tsx`, `input.tsx`, `label.tsx`, `select.tsx`, `textarea.tsx`, `table.tsx`, `badge.tsx`, `card.tsx` | shadcn-style primitives. |
+| `button.tsx`, `input.tsx`, `label.tsx`, `select.tsx`, `textarea.tsx`, `table.tsx` | shadcn-style primitives. |
 | `alert-dialog.tsx`, `confirm-dialog.tsx` | Dialog primitives and confirmation wrapper. |
-| `back-button.tsx`, `theme-toggle.tsx`, `tooltip.tsx`, `sonner.tsx` | Shared app utilities. |
-| `section-card.tsx`, `kv-field.tsx`, `stat-card.tsx`, `tab-group.tsx`, `step-wizard.tsx`, `page-error.tsx` | Reusable display/workflow helpers. |
+| `back-button.tsx`, `theme-toggle.tsx`, `sonner.tsx` | Shared app utilities. |
+| `section-card.tsx`, `kv-field.tsx`, `stat-card.tsx`, `tab-group.tsx`, `page-error.tsx` | Reusable display/workflow helpers. |
 
 ---
 
@@ -153,7 +173,6 @@ lib/
 ├── types/
 ├── validations/
 ├── database.types.ts
-├── supabase.ts
 ├── supabase-browser.ts
 ├── supabase-server.ts
 └── utils.ts
@@ -165,6 +184,8 @@ lib/
 |---|---|
 | `proyek.ts` | Project queries/mutations, payload builder, override log, delete. |
 | `perusahaan.ts` | Company list and projects by company. |
+| `ahsp.ts` | AHSP, AHSP detail, master harga, satuan, and kategori read/write actions. |
+| `rab.ts` | RAB Maker snapshots, project RAB access checks, and available AHSP reads. |
 
 ### constants/
 
@@ -178,19 +199,23 @@ lib/
 |---|---|
 | `proyek.ts` | Project display/detail/form/payload types. |
 | `perusahaan.ts` | Company detail type. |
+| `ahsp.ts` | AHSP, master harga, and RAB Maker snapshot types. |
 
 ### validations/
 
 | File | Purpose |
 |---|---|
 | `proyek.ts` | Zod schema for project form/API validation. |
+| `ahsp.ts` | AHSP/master data payload validation and normalization. |
 
 ### Root lib files
 
 | File | Purpose |
 |---|---|
 | `database.types.ts` | Generated Supabase database types. |
-| `supabase.ts` | General singleton client. |
+| `api-response.ts` | Shared API response helpers for Route Handlers. |
+| `auth.ts`, `auth-types.ts` | Current-user profile helpers and role checks. |
+| `rab-maker.ts` | RAB Maker parsing and override normalization helpers. |
 | `supabase-browser.ts` | Browser client for Client Components. |
 | `supabase-server.ts` | Server client and current user helper. |
 | `utils.ts` | `cn`, `formatRupiah`, `formatTanggal`. |
@@ -204,7 +229,9 @@ Tests are colocated with the logic they cover:
 ```text
 lib/actions/proyek.test.ts
 lib/constants/proyek.test.ts
+lib/rab-maker.test.ts
 lib/utils.test.ts
+lib/validations/ahsp.test.ts
 lib/validations/proyek.test.ts
 ```
 
@@ -220,6 +247,9 @@ npm test
 
 ```text
 docs/
+├── decisions/
+├── PRD_Gap_Audit.md
+├── domain_boundaries.md
 ├── project_status.md
 ├── project_structure.md
 ├── ui_conventions.md
@@ -229,7 +259,19 @@ docs/
 └── RLS_Policies.sql
 ```
 
-Markdown docs use lowercase snake_case. SQL files remain uppercase because they are standalone admin/reference scripts.
+Markdown docs use lowercase snake_case except PRD/audit documents that retain their established title. SQL files remain uppercase because they are standalone admin/reference, seed, deployment, or verification scripts unless promoted into `supabase/migrations/`.
+
+---
+
+## supabase/
+
+```text
+supabase/
+└── migrations/
+    └── README.md
+```
+
+`supabase/migrations/` is reserved for ordered runnable migrations. Existing `docs/DB_*.sql` files are not automatically migrations.
 
 ---
 

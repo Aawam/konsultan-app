@@ -104,7 +104,6 @@ describe('filterProjects', () => {
       'Perusahaan',
       'Status',
       'Kecamatan',
-      'Nilai kontrak',
       'Progress',
     ])
   })

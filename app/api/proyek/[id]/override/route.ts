@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { apiError, apiOk, readJsonBody } from '@/lib/api-response'
+import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function POST(
@@ -6,13 +8,21 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const { warnings, alasan } = await req.json() as {
-    warnings?: string[]
-    alasan?: string
+  const { profile } = await getCurrentUserProfile()
+  if (!isOwnerAdmin(profile)) {
+    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh menyimpan override proyek.', 403)
   }
 
+  const { data: body, error: bodyError } = await readJsonBody<{
+    warnings?: string[]
+    alasan?: string
+  }>(req)
+  if (bodyError) return bodyError
+
+  const { warnings, alasan } = body
+
   if (!warnings?.length || !alasan?.trim()) {
-    return NextResponse.json({ error: 'warnings and alasan are required' }, { status: 400 })
+    return apiError('VALIDATION_ERROR', 'warnings and alasan are required', 400)
   }
 
   const supabase = await createSupabaseServerClient()
@@ -35,6 +45,6 @@ export async function POST(
   ])
 
   const error = proyekError ?? logError
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  return apiOk()
 }

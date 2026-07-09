@@ -36,7 +36,6 @@ export function getMissingProjectFields(project: ProyekDisplay) {
   if (!project.perusahaan_id && getNamaPerusahaan(project.perusahaan) === '-') missing.push('Perusahaan')
   if (!project.status_proyek) missing.push('Status')
   if (!project.lokasi_kecamatan) missing.push('Kecamatan')
-  if (!project.nilai_penawaran) missing.push('Nilai kontrak')
   if (getProjectProgressState(project) === 'belum_mulai') missing.push('Progress')
 
   return missing

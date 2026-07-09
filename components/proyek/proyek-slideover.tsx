@@ -24,7 +24,17 @@ function formatCompactRupiah(nilai: number | null) {
   return formatRupiah(nilai)
 }
 
-export function ProyekSlideover({ id, onClose }: { id: string | null; onClose: () => void }) {
+export function ProyekSlideover({
+  id,
+  onClose,
+  canViewCommercial = true,
+  canManageProjects = true,
+}: {
+  id: string | null
+  onClose: () => void
+  canViewCommercial?: boolean
+  canManageProjects?: boolean
+}) {
   const router = useRouter()
   const [proyek, setProyek] = useState<ProyekDetail | null>(null)
   const [loading, setLoading] = useState(false)
@@ -107,7 +117,7 @@ export function ProyekSlideover({ id, onClose }: { id: string | null; onClose: (
         <SheetContent side="right" className="w-[340px] max-w-[96vw] border-l border-border bg-card p-0 shadow-xl">
           <SheetHeader className="sr-only">
             <SheetTitle>Preview Proyek</SheetTitle>
-            <SheetDescription>Ringkasan cepat proyek, nilai kontrak, progress, dan aksi terkait.</SheetDescription>
+            <SheetDescription>Ringkasan cepat proyek, progress, dan aksi terkait.</SheetDescription>
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto px-5 py-5">
@@ -195,10 +205,12 @@ export function ProyekSlideover({ id, onClose }: { id: string | null; onClose: (
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-6">
-                <div className="rounded-xl border border-border bg-card p-4">
-                  <p className="text-xs font-medium text-muted-foreground">Nilai Kontrak</p>
-                  <p className="mt-2 text-2xl font-bold text-foreground">{formatCompactRupiah(proyek.nilai_penawaran)}</p>
-                </div>
+                {canViewCommercial && (
+                  <div className="rounded-xl border border-border bg-card p-4">
+                    <p className="text-xs font-medium text-muted-foreground">Nilai Kontrak</p>
+                    <p className="mt-2 text-2xl font-bold text-foreground">{formatCompactRupiah(proyek.nilai_penawaran ?? null)}</p>
+                  </div>
+                )}
                 <div className="rounded-xl border border-border bg-card p-4">
                   <p className="text-xs font-medium text-muted-foreground">Tahun</p>
                   <p className="mt-2 text-2xl font-bold font-mono text-foreground">{proyek.tahun_anggaran}</p>
@@ -214,13 +226,15 @@ export function ProyekSlideover({ id, onClose }: { id: string | null; onClose: (
                 >
                   Buka Detail
                 </Link>
-                <button
-                  onClick={() => setDeleteOpen(true)}
-                  disabled={deleting}
-                  className="inline-flex h-10 items-center justify-center rounded-lg border border-rose bg-rose/10 px-5 text-sm font-semibold text-rose transition-colors hover:bg-rose/15 disabled:opacity-50"
-                >
-                  {deleting ? '...' : 'Hapus'}
-                </button>
+                {canManageProjects && (
+                  <button
+                    onClick={() => setDeleteOpen(true)}
+                    disabled={deleting}
+                    className="inline-flex h-10 items-center justify-center rounded-lg border border-rose bg-rose/10 px-5 text-sm font-semibold text-rose transition-colors hover:bg-rose/15 disabled:opacity-50"
+                  >
+                    {deleting ? '...' : 'Hapus'}
+                  </button>
+                )}
               </div>
             </div>
           )}

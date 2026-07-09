@@ -17,7 +17,7 @@
 | Bahasa | TypeScript 5 |
 | Validasi | Zod |
 | Toast | Sonner |
-| Export | xlsx |
+| Export | Native CSV; RAB Excel export planned server-side |
 | Charts | Recharts |
 | Test | Vitest, Testing Library, jsdom |
 | Runtime | Node.js >=20.19.0 (`.nvmrc` uses 22) |
@@ -96,7 +96,6 @@ Tabel legacy yang sebelumnya dipakai modul dokumen dan sekarang bisa ditinjau un
 
 Types Supabase berada di `lib/database.types.ts`. Client Supabase dipisah menjadi:
 
-- `lib/supabase.ts` untuk client singleton lama/umum.
 - `lib/supabase-browser.ts` untuk Client Components.
 - `lib/supabase-server.ts` untuk Server Components, Server Actions, dan Route Handlers.
 

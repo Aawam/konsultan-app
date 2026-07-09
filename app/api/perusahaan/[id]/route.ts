@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { apiData, apiError, apiOk, readJsonBody } from '@/lib/api-response'
+import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import type { PerusahaanFormData } from '@/lib/types/perusahaan'
 
@@ -7,11 +9,18 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const form = await req.json() as PerusahaanFormData
+  const { profile } = await getCurrentUserProfile()
+  if (!isOwnerAdmin(profile)) {
+    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh mengubah perusahaan.', 403)
+  }
+
+  const { data: form, error: bodyError } = await readJsonBody<PerusahaanFormData>(req)
+  if (bodyError) return bodyError
+
   const nama = form.nama_perusahaan?.trim()
 
   if (!nama || nama.length < 3) {
-    return NextResponse.json({ error: 'Nama perusahaan minimal 3 karakter' }, { status: 400 })
+    return apiError('VALIDATION_ERROR', 'Nama perusahaan minimal 3 karakter', 400)
   }
 
   const supabase = await createSupabaseServerClient()
@@ -38,8 +47,8 @@ export async function PATCH(
     `)
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ data })
+  if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  return apiData(data)
 }
 
 export async function DELETE(
@@ -47,6 +56,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
+  const { profile } = await getCurrentUserProfile()
+  if (!isOwnerAdmin(profile)) {
+    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh menghapus perusahaan.', 403)
+  }
+
   const supabase = await createSupabaseServerClient()
 
   const { count, error: countError } = await supabase
@@ -54,9 +68,9 @@ export async function DELETE(
     .select('*', { count: 'exact', head: true })
     .eq('perusahaan_id', id)
 
-  if (countError) return NextResponse.json({ error: countError.message }, { status: 500 })
+  if (countError) return apiError('INTERNAL_ERROR', countError.message, 500)
   if ((count ?? 0) > 0) {
-    return NextResponse.json({ error: 'Perusahaan masih dipakai oleh proyek dan tidak bisa dihapus.' }, { status: 400 })
+    return apiError('CONFLICT', 'Perusahaan masih dipakai oleh proyek dan tidak bisa dihapus.', 409)
   }
 
   const { error } = await supabase
@@ -64,6 +78,6 @@ export async function DELETE(
     .delete()
     .eq('id', id)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  return apiOk()
 }

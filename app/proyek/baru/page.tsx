@@ -2,8 +2,13 @@ import { getDinasList, getPerusahaanList } from '@/lib/actions/proyek'
 import { FormCreateProyek } from '@/components/proyek/form-create-proyek'
 import { BackButton } from '@/components/ui/back-button'
 import { PageError } from '@/components/ui/page-error'
+import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
+import { notFound } from 'next/navigation'
 
 export default async function TambahProyekPage() {
+  const { profile } = await getCurrentUserProfile()
+  if (!isOwnerAdmin(profile)) notFound()
+
   const [{ data: perusahaan, error }, { data: dinasList }] = await Promise.all([
     getPerusahaanList(),
     getDinasList(),

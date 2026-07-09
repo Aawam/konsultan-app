@@ -1,13 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { apiData, apiError, readJsonBody } from '@/lib/api-response'
+import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import type { PerusahaanFormData } from '@/lib/types/perusahaan'
 
 export async function POST(req: NextRequest) {
-  const form = await req.json() as PerusahaanFormData
+  const { profile } = await getCurrentUserProfile()
+  if (!isOwnerAdmin(profile)) {
+    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh menambah perusahaan.', 403)
+  }
+
+  const { data: form, error: bodyError } = await readJsonBody<PerusahaanFormData>(req)
+  if (bodyError) return bodyError
+
   const nama = form.nama_perusahaan?.trim()
 
   if (!nama || nama.length < 3) {
-    return NextResponse.json({ error: 'Nama perusahaan minimal 3 karakter' }, { status: 400 })
+    return apiError('VALIDATION_ERROR', 'Nama perusahaan minimal 3 karakter', 400)
   }
 
   const supabase = await createSupabaseServerClient()
@@ -33,6 +42,6 @@ export async function POST(req: NextRequest) {
     `)
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ data }, { status: 201 })
+  if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  return apiData(data, 201)
 }

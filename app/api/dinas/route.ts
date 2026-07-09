@@ -1,12 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { apiData, apiError, readJsonBody } from '@/lib/api-response'
+import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function POST(req: NextRequest) {
-  const body = await req.json() as { dinas?: string }
+  const { profile } = await getCurrentUserProfile()
+  if (!isOwnerAdmin(profile)) {
+    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh menambah dinas.', 403)
+  }
+
+  const { data: body, error: bodyError } = await readJsonBody<{ dinas?: string }>(req)
+  if (bodyError) return bodyError
+
   const dinas = body.dinas?.trim()
 
   if (!dinas || dinas.length < 2) {
-    return NextResponse.json({ error: 'Nama dinas minimal 2 karakter' }, { status: 400 })
+    return apiError('VALIDATION_ERROR', 'Nama dinas minimal 2 karakter', 400)
   }
 
   const supabase = await createSupabaseServerClient()
@@ -16,6 +25,6 @@ export async function POST(req: NextRequest) {
     .select('id, nama_dinas')
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ data: { id: data.id as string, dinas: data.nama_dinas as string } }, { status: 201 })
+  if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  return apiData({ id: data.id as string, dinas: data.nama_dinas as string }, 201)
 }

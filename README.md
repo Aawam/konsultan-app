@@ -11,7 +11,7 @@ Internal management tool for a construction consulting firm. Focused on project 
 | Database | Supabase (PostgreSQL) |
 | Language | TypeScript 5 |
 | Notifications | Sonner (toast) |
-| Export | xlsx |
+| Export | Native CSV; RAB Excel export planned server-side |
 
 ## Getting Started
 
@@ -58,15 +58,15 @@ konsultan-app/
 │   │   ├── sidebar-layout.tsx    # Shared sidebar + topbar shell
 │   │   └── topbar-title.tsx      # Dynamic breadcrumb title
 │   ├── proyek/
-│   │   ├── form-proyek.tsx       # Create/edit project form (client)
+│   │   ├── form-create-proyek.tsx # Create project form wrapper
+│   │   ├── form-edit-proyek.tsx  # Edit project form wrapper
+│   │   ├── proyek-form-shell.tsx # Shared project form UI
 │   │   ├── proyek-table-client.tsx  # Filterable project table (client)
 │   │   ├── proyek-slideover.tsx  # Quick-view side panel (client)
 │   │   ├── dashboard-client.tsx  # Analytics dashboard (client)
 │   │   ├── proyek-actions.tsx    # Edit + Delete action buttons (client)
 │   │   ├── badges.tsx            # BadgeJenis, BadgeTahap, BadgeOverride
-│   │   ├── progress-cell.tsx     # Progress bar + label for tables
-│   │   ├── form-field.tsx        # Label + required marker for forms
-│   │   └── section.tsx           # Section card wrapper for project forms
+│   │   └── progress-cell.tsx     # Progress bar + label for tables
 │   ├── database/
 │   │   └── database-client.tsx   # Company database viewer (client)
 │   └── ui/                       # Generic UI primitives
@@ -79,7 +79,8 @@ konsultan-app/
 │       └── [shadcn primitives]   # button, input, select, table, etc.
 │
 ├── lib/
-│   ├── supabase.ts               # Supabase client singleton
+│   ├── supabase-browser.ts       # Browser Supabase client
+│   ├── supabase-server.ts        # Server Supabase client
 │   ├── utils.ts                  # cn(), formatRupiah(), formatTanggal()
 │   ├── constants/
 │   │   └── proyek.ts             # FASE_*, TAHAP_BAR_COLOR, getPersentaseFromFase()

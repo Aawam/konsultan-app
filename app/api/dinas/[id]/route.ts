@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { apiData, apiError, apiOk, readJsonBody } from '@/lib/api-response'
+import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function PATCH(
@@ -6,11 +8,18 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const body = await req.json() as { dinas?: string }
+  const { profile } = await getCurrentUserProfile()
+  if (!isOwnerAdmin(profile)) {
+    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh mengubah dinas.', 403)
+  }
+
+  const { data: body, error: bodyError } = await readJsonBody<{ dinas?: string }>(req)
+  if (bodyError) return bodyError
+
   const dinasBaru = body.dinas?.trim()
 
   if (!dinasBaru || dinasBaru.length < 2) {
-    return NextResponse.json({ error: 'Nama dinas minimal 2 karakter' }, { status: 400 })
+    return apiError('VALIDATION_ERROR', 'Nama dinas minimal 2 karakter', 400)
   }
 
   const supabase = await createSupabaseServerClient()
@@ -21,7 +30,7 @@ export async function PATCH(
     .single()
 
   if (existingError || !existing) {
-    return NextResponse.json({ error: existingError?.message ?? 'Dinas tidak ditemukan' }, { status: 404 })
+    return apiError('NOT_FOUND', existingError?.message ?? 'Dinas tidak ditemukan', 404)
   }
 
   const namaLama = (existing.nama_dinas as string).trim()
@@ -31,7 +40,7 @@ export async function PATCH(
     .update({ dinas: dinasBaru })
     .eq('dinas', namaLama)
 
-  if (proyekError) return NextResponse.json({ error: proyekError.message }, { status: 500 })
+  if (proyekError) return apiError('INTERNAL_ERROR', proyekError.message, 500)
 
   const { data, error } = await supabase
     .from('dinas_skpd')
@@ -40,8 +49,8 @@ export async function PATCH(
     .select('id, nama_dinas')
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ data: { id: data.id as string, dinas: data.nama_dinas as string } })
+  if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  return apiData({ id: data.id as string, dinas: data.nama_dinas as string })
 }
 
 export async function DELETE(
@@ -49,6 +58,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
+  const { profile } = await getCurrentUserProfile()
+  if (!isOwnerAdmin(profile)) {
+    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh menghapus dinas.', 403)
+  }
+
   const supabase = await createSupabaseServerClient()
   const { data: existing, error: existingError } = await supabase
     .from('dinas_skpd')
@@ -57,7 +71,7 @@ export async function DELETE(
     .single()
 
   if (existingError || !existing) {
-    return NextResponse.json({ error: existingError?.message ?? 'Dinas tidak ditemukan' }, { status: 404 })
+    return apiError('NOT_FOUND', existingError?.message ?? 'Dinas tidak ditemukan', 404)
   }
 
   const { count, error: countError } = await supabase
@@ -66,9 +80,9 @@ export async function DELETE(
     .eq('dinas', existing.nama_dinas as string)
     .eq('is_deleted', false)
 
-  if (countError) return NextResponse.json({ error: countError.message }, { status: 500 })
+  if (countError) return apiError('INTERNAL_ERROR', countError.message, 500)
   if ((count ?? 0) > 0) {
-    return NextResponse.json({ error: 'Dinas masih dipakai oleh proyek aktif dan tidak bisa dihapus.' }, { status: 400 })
+    return apiError('CONFLICT', 'Dinas masih dipakai oleh proyek aktif dan tidak bisa dihapus.', 409)
   }
 
   const { error } = await supabase
@@ -76,6 +90,6 @@ export async function DELETE(
     .delete()
     .eq('id', id)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  return apiOk()
 }

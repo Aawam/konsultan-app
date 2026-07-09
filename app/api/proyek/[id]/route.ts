@@ -1,39 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { apiData, apiError, apiOk, readJsonBody } from '@/lib/api-response'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-import { buildProyekPayload } from '@/lib/actions/proyek'
+import { buildProyekPayload, getOverrideLogsByProyekId, getProyekById } from '@/lib/actions/proyek'
 import { proyekSchema } from '@/lib/validations/proyek'
 import type { ProyekFormData } from '@/lib/types/proyek'
 import { parseNumberInput } from '@/lib/utils'
+import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const supabase = await createSupabaseServerClient()
+  const { profile } = await getCurrentUserProfile()
+  const canViewCommercial = isOwnerAdmin(profile)
 
-  const { data: proyek, error } = await supabase
-    .from('proyek')
-    .select(`*, perusahaan:perusahaan_id (nama_perusahaan, adalah_perusahaan_sendiri)`)
-    .eq('id', id)
-    .eq('is_deleted', false)
-    .single()
+  const [{ data: proyek, error }, { data: overrideLogs }] = await Promise.all([
+    getProyekById(id, { includeSensitive: canViewCommercial }),
+    getOverrideLogsByProyekId(id),
+  ])
 
   if (error || !proyek) {
     if (error && error.code !== 'PGRST116') {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return apiError('INTERNAL_ERROR', error.message, 500)
     }
 
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    return apiError('NOT_FOUND', 'Proyek tidak ditemukan.', 404)
   }
 
-  const { data: overrideLogs } = await supabase
-    .from('override_log')
-    .select('*')
-    .eq('proyek_id', id)
-    .order('dilakukan_pada', { ascending: false })
-
-  return NextResponse.json({ proyek, overrideLogs: overrideLogs ?? [] })
+  return NextResponse.json({
+    proyek,
+    overrideLogs: overrideLogs ?? [],
+  })
 }
 
 export async function PATCH(
@@ -41,7 +39,14 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const form = await req.json() as ProyekFormData
+  const { profile } = await getCurrentUserProfile()
+  if (!isOwnerAdmin(profile)) {
+    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh mengubah proyek.', 403)
+  }
+
+  const { data: form, error: bodyError } = await readJsonBody<ProyekFormData>(req)
+  if (bodyError) return bodyError
+
   const supabase = await createSupabaseServerClient()
 
   const parsed = proyekSchema.safeParse({
@@ -55,7 +60,7 @@ export async function PATCH(
 
   if (!parsed.success) {
     const message = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')
-    return NextResponse.json({ error: message }, { status: 400 })
+    return apiError('VALIDATION_ERROR', message, 400, parsed.error.flatten())
   }
 
   const { data, error } = await supabase
@@ -66,8 +71,8 @@ export async function PATCH(
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ data })
+  if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  return apiData(data)
 }
 
 export async function DELETE(
@@ -75,6 +80,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
+  const { profile } = await getCurrentUserProfile()
+  if (!isOwnerAdmin(profile)) {
+    return apiError('FORBIDDEN', 'Hanya Owner/Admin yang boleh menghapus proyek.', 403)
+  }
+
   const supabase = await createSupabaseServerClient()
 
   const { error } = await supabase
@@ -82,6 +92,6 @@ export async function DELETE(
     .update({ is_deleted: true })
     .eq('id', id)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  return apiOk()
 }

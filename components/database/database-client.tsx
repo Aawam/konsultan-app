@@ -430,10 +430,12 @@ export function DatabaseClient({
   perusahaanList,
   proyekList,
   dinasList,
+  showHeading = true,
 }: {
   perusahaanList: PerusahaanDetail[]
   proyekList: ProyekDisplay[]
   dinasList: DinasOption[]
+  showHeading?: boolean
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>('proyek')
@@ -645,16 +647,49 @@ export function DatabaseClient({
 
   return (
     <div className="space-y-6">
-      <SectionHeading
-        title="Database"
-        description="Kelola proyek, dinas/SKPD, dan perusahaan dalam satu halaman dengan layout yang lebih ringkas dan fokus."
-        action={
-          <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:items-center">
-            <SearchBox value={search} onChange={setSearch} placeholder={searchPlaceholder} />
+      {showHeading && (
+        <SectionHeading
+          title="Database"
+          description="Kelola proyek, dinas/SKPD, dan perusahaan dalam satu halaman dengan layout yang lebih ringkas dan fokus."
+          action={
+            <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:items-center">
+              <SearchBox value={search} onChange={setSearch} placeholder={searchPlaceholder} />
+              {tab === 'dinas' && (
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={() => {
+                    resetDinasForm()
+                    setShowDinasForm(true)
+                  }}
+                >
+                  + Tambah Dinas
+                </Button>
+              )}
+              {tab === 'perusahaan' && (
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={() => {
+                    resetPerusahaanForm()
+                    setShowPerusahaanForm(true)
+                  }}
+                >
+                  + Tambah Perusahaan
+                </Button>
+              )}
+            </div>
+          }
+        />
+      )}
+
+      {!showHeading && (
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <SearchBox value={search} onChange={setSearch} placeholder={searchPlaceholder} />
+          <div className="flex gap-2">
             {tab === 'dinas' && (
               <Button
                 type="button"
-                size="lg"
                 onClick={() => {
                   resetDinasForm()
                   setShowDinasForm(true)
@@ -666,7 +701,6 @@ export function DatabaseClient({
             {tab === 'perusahaan' && (
               <Button
                 type="button"
-                size="lg"
                 onClick={() => {
                   resetPerusahaanForm()
                   setShowPerusahaanForm(true)
@@ -676,8 +710,8 @@ export function DatabaseClient({
               </Button>
             )}
           </div>
-        }
-      />
+        </div>
+      )}
 
       <div className="rounded-2xl border border-border bg-muted/15 p-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
