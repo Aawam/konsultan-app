@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { AhspDetailRow, AhspItemRow, MasterHargaRow } from '@/lib/types/ahsp'
-import { formatRupiah, formatTanggal } from '@/lib/utils'
+import { formatRupiah } from '@/lib/utils'
 
 export function formatPercent(value: number) {
   return `${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(value)}%`
@@ -18,6 +18,21 @@ export function formatPercent(value: number) {
 
 function formatDecimal(value: number) {
   return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 6 }).format(value)
+}
+
+function formatShortDate(value: string | null | undefined) {
+  if (!value) return '-'
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+
+  return new Intl.DateTimeFormat('id-ID', {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+  })
+    .format(date)
+    .replaceAll('/', ' ')
 }
 
 function EmptyRow({ colSpan, label }: { colSpan: number; label: string }) {
@@ -45,17 +60,17 @@ export function AhspTable({
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-card">
-      <Table className="min-w-[1040px] table-fixed">
+      <Table className="min-w-[960px] table-fixed">
         <TableHeader>
           <TableRow className="border-border bg-muted/40 hover:bg-transparent">
             <TableHead className="table-head w-32">Kode</TableHead>
             <TableHead className="table-head">Uraian Pekerjaan</TableHead>
             <TableHead className="table-head w-24">Bidang</TableHead>
             <TableHead className="table-head w-52">Kategori</TableHead>
-            <TableHead className="table-head w-28">Satuan</TableHead>
+            <TableHead className="table-head w-20">Satuan</TableHead>
             <TableHead className="table-head w-24 text-right">Detail</TableHead>
             <TableHead className="table-head w-32 text-right">Profit Default</TableHead>
-            <TableHead className="table-head w-40">Dibuat</TableHead>
+            <TableHead className="table-head w-24">Dibuat</TableHead>
             <TableHead className="table-head w-44 text-right">Aksi</TableHead>
           </TableRow>
         </TableHeader>
@@ -76,7 +91,9 @@ export function AhspTable({
                 <TableCell className="text-right font-mono text-xs font-semibold">
                   {formatPercent(row.profit_persen_default)}
                 </TableCell>
-                <TableCell className="text-muted-foreground">{formatTanggal(row.created_at)}</TableCell>
+                <TableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground">
+                  {formatShortDate(row.created_at)}
+                </TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-2">
                     <Button
@@ -126,13 +143,13 @@ export function HargaTable({
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-card">
-      <Table className="min-w-[760px] table-fixed">
+      <Table className="min-w-[680px] table-fixed">
         <TableHeader>
           <TableRow className="border-border bg-muted/40 hover:bg-transparent">
             <TableHead className="table-head">Nama Item</TableHead>
-            <TableHead className="table-head w-28">Satuan</TableHead>
+            <TableHead className="table-head w-20">Satuan</TableHead>
             <TableHead className="table-head w-44 text-right">Harga Dasar</TableHead>
-            <TableHead className="table-head w-40">Update</TableHead>
+            <TableHead className="table-head w-24">Update</TableHead>
             {canManage && <TableHead className="table-head w-24 text-right">Aksi</TableHead>}
           </TableRow>
         </TableHeader>
@@ -143,7 +160,9 @@ export function HargaTable({
                 <TableCell className="font-semibold text-foreground">{row.nama}</TableCell>
                 <TableCell className="font-mono text-xs">{row.satuan}</TableCell>
                 <TableCell className="text-right font-mono font-semibold">{formatRupiah(row.harga_dasar)}</TableCell>
-                <TableCell className="text-muted-foreground">{formatTanggal(row.updated_at)}</TableCell>
+                <TableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground">
+                  {formatShortDate(row.updated_at)}
+                </TableCell>
                 {canManage && (
                   <TableCell className="text-right">
                     <Button
@@ -183,12 +202,12 @@ export function AhspDetailTable({
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-card">
-      <Table className="min-w-[760px] table-fixed">
+      <Table className="min-w-[720px] table-fixed">
         <TableHeader>
           <TableRow className="border-border bg-muted/40 hover:bg-transparent">
             <TableHead className="table-head w-24">Tipe</TableHead>
             <TableHead className="table-head">Komponen</TableHead>
-            <TableHead className="table-head w-24">Satuan</TableHead>
+            <TableHead className="table-head w-20">Satuan</TableHead>
             <TableHead className="table-head w-32 text-right">Koefisien</TableHead>
             <TableHead className="table-head w-40 text-right">Harga Dasar</TableHead>
             <TableHead className="table-head w-44 text-right">Jumlah</TableHead>

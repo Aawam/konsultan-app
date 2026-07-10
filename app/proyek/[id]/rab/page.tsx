@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { BadgeJenis, BadgeTahap } from '@/components/proyek/badges'
+import { RabAccessDeniedDialog } from '@/components/proyek/rab-access-denied-dialog'
 import { RabMakerClient } from '@/components/proyek/rab-maker-client'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
@@ -30,7 +31,15 @@ export default async function RabProjectPage({ params }: Props) {
     getProyekById(id, { includeSensitive: false }),
   ])
 
-  if (!access || !proyekResult.data || proyekResult.data.jenis_pekerjaan !== 'Perencanaan') notFound()
+  if (!proyekResult.data) notFound()
+
+  if (proyekResult.data.jenis_pekerjaan !== 'Perencanaan') {
+    return <RabAccessDeniedDialog reason="not-planning" />
+  }
+
+  if (!access) {
+    return <RabAccessDeniedDialog reason="forbidden" />
+  }
 
   const [{ data: snapshot, error: snapshotError }, { data: ahspOptions, error: ahspError }] = await Promise.all([
     getRabMakerSnapshotByProyekId(id),
