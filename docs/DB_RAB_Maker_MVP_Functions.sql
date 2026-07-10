@@ -7,13 +7,11 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT public.is_owner_admin()
-    OR EXISTS (
+  SELECT public.current_app_role() IS NOT NULL
+    AND EXISTS (
       SELECT 1
-      FROM public.project_assignments pa
-      JOIN public.proyek p ON p.id = pa.proyek_id
-      WHERE pa.proyek_id = target_proyek_id
-        AND pa.user_id = auth.uid()
+      FROM public.proyek p
+      WHERE p.id = target_proyek_id
         AND p.jenis_pekerjaan = 'Perencanaan'
         AND COALESCE(p.is_deleted, false) = false
     )

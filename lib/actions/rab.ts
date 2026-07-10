@@ -68,19 +68,8 @@ export async function getRabProjectList(profile: CurrentUserProfile | null) {
 
 export async function canAccessRabProject(projectId: string, profile: CurrentUserProfile | null) {
   if (!profile) return false
-  if (isOwnerAdmin(profile)) return true
 
-  const supabase = await createSupabaseServerClient()
-  const { data: assignment, error: assignmentError } = await supabase
-    .from('project_assignments')
-    .select('proyek_id')
-    .eq('proyek_id', projectId)
-    .eq('user_id', profile.id)
-    .maybeSingle()
-
-  if (assignmentError || !assignment) return false
-
-  const { data, error } = await getProyekById(projectId, { includeSensitive: false })
+  const { data, error } = await getProyekById(projectId, { includeSensitive: isOwnerAdmin(profile) })
   if (error) return false
   return Boolean(data && data.jenis_pekerjaan === 'Perencanaan')
 }
