@@ -1,4 +1,9 @@
 import { getNamaPerusahaan, type ProyekDisplay } from '@/lib/types/proyek'
+import {
+  evaluateProjectCompleteness,
+  getMissingProjectFieldLabels,
+  type ProjectCompletenessInput,
+} from '@/lib/project-completeness'
 
 export type ProjectYearFilter = number | 'semua'
 export type ProjectJenisFilter = 'Semua' | 'Perencanaan' | 'Pengawasan'
@@ -30,19 +35,18 @@ export function getProjectProgressState(project: ProyekDisplay): Exclude<Project
   return 'berjalan'
 }
 
-export function getMissingProjectFields(project: ProyekDisplay) {
-  const missing: string[] = []
-
-  if (!project.perusahaan_id && getNamaPerusahaan(project.perusahaan) === '-') missing.push('Perusahaan')
-  if (!project.status_proyek) missing.push('Status')
-  if (!project.lokasi_kecamatan) missing.push('Kecamatan')
-  if (getProjectProgressState(project) === 'belum_mulai') missing.push('Progress')
-
-  return missing
+export function getMissingProjectFields(
+  project: ProyekDisplay,
+  options: { includeCommercial?: boolean } = { includeCommercial: false }
+) {
+  return getMissingProjectFieldLabels(toCompletenessInput(project), options)
 }
 
-export function needsProjectUpdate(project: ProyekDisplay) {
-  return getMissingProjectFields(project).length > 0
+export function needsProjectUpdate(
+  project: ProyekDisplay,
+  options: { includeCommercial?: boolean } = { includeCommercial: false }
+) {
+  return evaluateProjectCompleteness(toCompletenessInput(project), options).missingFields.length > 0
 }
 
 export function filterProjects(projects: ProyekDisplay[], filters: Partial<ProjectFilters>) {
@@ -55,7 +59,7 @@ export function filterProjects(projects: ProyekDisplay[], filters: Partial<Proje
     if (normalized.status !== 'Semua' && project.status_proyek !== normalized.status) return false
     if (normalized.perusahaan !== 'Semua' && getNamaPerusahaan(project.perusahaan) !== normalized.perusahaan) return false
 
-    if (normalized.progress === 'perlu_update' && !needsProjectUpdate(project)) return false
+    if (normalized.progress === 'perlu_update' && !needsProjectUpdate(project, { includeCommercial: false })) return false
     if (
       normalized.progress !== 'semua' &&
       normalized.progress !== 'perlu_update' &&
@@ -79,12 +83,12 @@ export function filterProjects(projects: ProyekDisplay[], filters: Partial<Proje
   })
 }
 
-export function getProjectStats(projects: ProyekDisplay[]) {
+export function getProjectStats(projects: ProyekDisplay[], options: { includeCommercial?: boolean } = {}) {
   const total = projects.length
   const selesai = projects.filter((project) => getProjectProgressState(project) === 'selesai').length
   const belumMulai = projects.filter((project) => getProjectProgressState(project) === 'belum_mulai').length
   const berjalan = projects.filter((project) => getProjectProgressState(project) === 'berjalan').length
-  const perluUpdate = projects.filter(needsProjectUpdate).length
+  const perluUpdate = projects.filter((project) => needsProjectUpdate(project, options)).length
   const override = projects.filter((project) => project.pernah_dioverride).length
   const perencanaan = projects.filter((project) => project.jenis_pekerjaan === 'Perencanaan').length
   const pengawasan = projects.filter((project) => project.jenis_pekerjaan === 'Pengawasan').length
@@ -104,6 +108,28 @@ export function getProjectStats(projects: ProyekDisplay[]) {
     pengawasan,
     nilaiTotal,
     avgProgress,
+  }
+}
+
+function toCompletenessInput(project: ProyekDisplay): ProjectCompletenessInput {
+  return {
+    nama_proyek: project.nama_proyek,
+    jenis_pekerjaan: project.jenis_pekerjaan,
+    kategori_pekerjaan: project.kategori_pekerjaan,
+    tahun_anggaran: project.tahun_anggaran,
+    sumber_dana: project.sumber_dana,
+    dinas: project.dinas,
+    lokasi_kecamatan: project.lokasi_kecamatan,
+    nama_ppk: project.nama_ppk,
+    perusahaan_id: project.perusahaan_id,
+    tanggal_mulai: project.tanggal_mulai,
+    tanggal_selesai: project.tanggal_selesai,
+    status_proyek: project.status_proyek,
+    tahap_progress: project.tahap_progress,
+    persentase_progress: project.persentase_progress,
+    pagu_dana: project.pagu_dana,
+    hps: project.hps,
+    nilai_penawaran: project.nilai_penawaran,
   }
 }
 

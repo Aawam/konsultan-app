@@ -54,3 +54,31 @@ export function BadgeOverride() {
     </span>
   )
 }
+
+export function BadgeWorkflow({
+  status,
+  gate,
+}: {
+  status: 'complete' | 'incomplete' | 'needs_review'
+  gate: string
+}) {
+  const style = status === 'incomplete'
+    ? 'bg-amber/10 text-amber border-amber/25'
+    : status === 'needs_review'
+      ? 'bg-violet/10 text-violet border-violet/25'
+      : gate === 'Siap RAB'
+        ? 'bg-emerald/10 text-emerald border-emerald/25'
+        : 'bg-brand/10 text-brand border-brand/25'
+
+  const label = status === 'incomplete'
+    ? 'Kurang data'
+    : status === 'needs_review'
+      ? 'Butuh review'
+      : gate
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold border whitespace-nowrap ${style}`}>
+      {label}
+    </span>
+  )
+}

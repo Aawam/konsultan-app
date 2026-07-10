@@ -18,10 +18,15 @@ export type ProyekDisplay = {
   jenis_pekerjaan: string
   kategori_pekerjaan?: string | null
   tahun_anggaran: number
+  sumber_dana?: string | null
   dinas: string
   lokasi_kecamatan: string | null
+  nama_ppk?: string | null
   pagu_dana: number | null
+  hps?: number | null
   nilai_penawaran: number | null
+  tanggal_mulai?: string | null
+  tanggal_selesai?: string | null
   tahap_progress: string | null
   persentase_progress: number | null
   pernah_dioverride: boolean

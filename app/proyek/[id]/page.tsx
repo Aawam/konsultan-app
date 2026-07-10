@@ -1,11 +1,12 @@
 import { getProyekById, getOverrideLogsByProyekId } from '@/lib/actions/proyek'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { BadgeJenis, BadgeTahap, BadgeOverride } from '@/components/proyek/badges'
+import { BadgeJenis, BadgeTahap, BadgeOverride, BadgeWorkflow } from '@/components/proyek/badges'
 import { formatRupiah, formatTanggal } from '@/lib/utils'
 import { TAHAP_BAR_COLOR } from '@/lib/constants/proyek'
 import { TombolAksi } from '@/components/proyek/proyek-actions'
 import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
+import { evaluateProjectCompleteness, getProjectWorkflowGate } from '@/lib/project-completeness'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -80,6 +81,8 @@ export default async function DetailProyekPage({ params }: Props) {
   const namaPerusahaan = perusahaan
     ? `${perusahaan.nama_perusahaan}${perusahaan.adalah_perusahaan_sendiri ? ' ★' : ''}`
     : undefined
+  const completeness = evaluateProjectCompleteness(proyek, { includeCommercial: canViewCommercial })
+  const workflowGate = getProjectWorkflowGate(completeness)
 
   return (
     <div className="pb-10">
@@ -111,6 +114,7 @@ export default async function DetailProyekPage({ params }: Props) {
         <div className="flex flex-wrap items-center gap-2">
           <BadgeJenis jenis={proyek.jenis_pekerjaan} />
           <BadgeTahap tahap={proyek.tahap_progress} />
+          <BadgeWorkflow status={completeness.status} gate={workflowGate} />
           {proyek.pernah_dioverride && <BadgeOverride />}
         </div>
         <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_120px] lg:items-end">
@@ -154,6 +158,38 @@ export default async function DetailProyekPage({ params }: Props) {
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <DetailCard title="Kesiapan Workflow" className="xl:col-span-2">
+          <InfoRow label="Gate Saat Ini" value={workflowGate} />
+          <InfoRow label="Aksi Berikutnya" value={completeness.nextAction} />
+          {completeness.missingFields.length > 0 && (
+            <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
+              <p className="text-xs font-bold text-muted-foreground">Data Kurang</p>
+              <div className="flex flex-wrap gap-1.5">
+                {completeness.missingFields.map((field) => (
+                  <span
+                    key={field.key}
+                    className="rounded-full border border-amber/30 bg-amber/10 px-2 py-0.5 text-[11px] font-semibold text-amber"
+                  >
+                    {field.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {completeness.blockingReasons.length > 0 && (
+            <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
+              <p className="text-xs font-bold text-muted-foreground">Butuh Review</p>
+              <div className="space-y-1">
+                {completeness.blockingReasons.map((reason) => (
+                  <p key={reason} className="text-sm font-semibold text-violet">
+                    {reason}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </DetailCard>
+
         <DetailCard title="Identitas Proyek">
           <InfoRow label="Jenis Pekerjaan" value={proyek.jenis_pekerjaan} />
           <InfoRow label="Kategori" value={proyek.kategori_pekerjaan} />

@@ -8,6 +8,7 @@ import {
 } from '@/lib/queries/proyek-selects'
 import type { DinasOption, ProyekDetail, ProyekDisplay, ProyekFormData, ProyekPayload } from '@/lib/types/proyek'
 import type { ProjectJenisFilter, ProjectProgressFilter, ProjectStatusFilter, ProjectYearFilter } from '@/lib/proyek-analytics'
+import { evaluateProjectCompleteness } from '@/lib/project-completeness'
 import { proyekSchema } from '@/lib/validations/proyek'
 import { parseNumberInput } from '@/lib/utils'
 
@@ -82,10 +83,15 @@ function toProyekDisplayFromTeknis(row: ProyekTeknisRow): ProyekDisplay {
     jenis_pekerjaan: row.jenis_pekerjaan,
     kategori_pekerjaan: row.kategori_pekerjaan,
     tahun_anggaran: row.tahun_anggaran,
+    sumber_dana: row.sumber_dana,
     dinas: row.dinas,
     lokasi_kecamatan: row.lokasi_kecamatan,
+    nama_ppk: row.nama_ppk,
     pagu_dana: null,
+    hps: null,
     nilai_penawaran: null,
+    tanggal_mulai: row.tanggal_mulai,
+    tanggal_selesai: row.tanggal_selesai,
     tahap_progress: row.tahap_progress,
     persentase_progress: row.persentase_progress,
     pernah_dioverride: row.pernah_dioverride ?? false,
@@ -152,11 +158,7 @@ function filterProyekListRows(rows: ProyekDisplay[], filters: ProyekListFilters)
     const isBelumMulai = !project.tahap_progress && progress === 0
     const isSelesai = progress === 100
     const isBerjalan = !isBelumMulai && !isSelesai
-    const perluUpdate =
-      !project.perusahaan_id ||
-      !project.status_proyek ||
-      !project.lokasi_kecamatan ||
-      progress === 0
+    const perluUpdate = evaluateProjectCompleteness(project, { includeCommercial: false }).missingFields.length > 0
 
     if (filters.year !== 'semua' && project.tahun_anggaran !== filters.year) return false
     if (filters.jenis !== 'Semua' && project.jenis_pekerjaan !== filters.jenis) return false
@@ -189,35 +191,12 @@ export async function getDaftarProyek({ includeSensitive = true }: { includeSens
     }
   }
 
-  const sensitiveColumns = includeSensitive ? 'nilai_penawaran,' : ''
   const { data, error } = await supabase
     .from('proyek')
-    .select(`
-      id,
-      nama_proyek,
-      jenis_pekerjaan,
-      kategori_pekerjaan,
-      tahun_anggaran,
-      dinas,
-      lokasi_kecamatan,
-      pagu_dana,
-      ${sensitiveColumns}
-      tahap_progress,
-      persentase_progress,
-      pernah_dioverride,
-      status_proyek,
-      perusahaan_id,
-      created_at,
-      updated_at,
-      perusahaan:perusahaan_id (
-        nama_perusahaan
-      )
-    `)
+    .select(PROYEK_LIST_SELECT)
     .eq('is_deleted', false)
     .order('tahun_anggaran', { ascending: false })
     .order('nama_proyek', { ascending: true })
-
-    
 
   const rows = (data ?? []) as unknown as Record<string, unknown>[]
 
@@ -297,9 +276,20 @@ export async function getDaftarProyekPage(
     query = query.or('tahap_progress.not.is.null,persentase_progress.gt.0').lt('persentase_progress', 100)
   } else if (filters.progress === 'perlu_update') {
     query = query.or([
+      'nama_proyek.is.null',
+      'jenis_pekerjaan.is.null',
+      'kategori_pekerjaan.is.null',
+      'tahun_anggaran.is.null',
+      'sumber_dana.is.null',
+      'dinas.is.null',
       'perusahaan_id.is.null',
+      'nama_ppk.is.null',
       'status_proyek.is.null',
       'lokasi_kecamatan.is.null',
+      'tanggal_mulai.is.null',
+      'tanggal_selesai.is.null',
+      'pagu_dana.is.null',
+      'hps.is.null',
       'nilai_penawaran.is.null',
       'persentase_progress.is.null',
       'persentase_progress.eq.0',
@@ -316,7 +306,7 @@ export async function getDaftarProyekPage(
 
   return {
     data: {
-        rows: (data ?? []) as unknown as ProyekDisplay[],
+      rows: (data ?? []) as unknown as ProyekDisplay[],
       total,
       page: Math.min(page, pageCount),
       pageSize,

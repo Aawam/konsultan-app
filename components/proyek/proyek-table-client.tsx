@@ -10,11 +10,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Search } from 'lucide-react'
-import { BadgeJenis, BadgeOverride } from '@/components/proyek/badges'
+import { BadgeJenis, BadgeOverride, BadgeWorkflow } from '@/components/proyek/badges'
 import { ProgressCell } from '@/components/proyek/progress-cell'
 import {
   DEFAULT_PROJECT_FILTERS,
-  getMissingProjectFields,
   getProjectStats,
   type ProjectProgressFilter,
   type ProjectStatusFilter,
@@ -25,6 +24,7 @@ import { getNamaPerusahaan, type ProyekDisplay } from '@/lib/types/proyek'
 import { ProyekSlideover } from '@/components/proyek/proyek-slideover'
 import type { ProyekListFilters } from '@/lib/actions/proyek'
 import { PageHeader } from '@/components/ui/page-header'
+import { evaluateProjectCompleteness, getProjectWorkflowGate } from '@/lib/project-completeness'
 
 type JenisFilter = 'Semua' | 'Perencanaan' | 'Pengawasan'
 type CsvValue = string | number | boolean | null | undefined
@@ -240,7 +240,7 @@ export function ProyekTableClient({
     return () => window.clearTimeout(timeout)
   }, [filters.search, replaceQuery, search])
 
-  const stats = useMemo(() => getProjectStats(proyek), [proyek])
+  const stats = useMemo(() => getProjectStats(proyek, { includeCommercial: canViewCommercial }), [canViewCommercial, proyek])
   const hasActiveFilters =
     tahunFilter !== DEFAULT_PROJECT_FILTERS.year ||
     jenisFilter !== DEFAULT_PROJECT_FILTERS.jenis ||
@@ -632,7 +632,12 @@ export function ProyekTableClient({
           </TableHeader>
           <TableBody>
             {proyek.length > 0 ? (
-              proyek.map((p) => (
+              proyek.map((p) => {
+                const completeness = evaluateProjectCompleteness(p, { includeCommercial: canViewCommercial })
+                const workflowGate = getProjectWorkflowGate(completeness)
+                const missingFields = completeness.missingFields.slice(0, 2)
+
+                return (
                 <TableRow
                   key={p.id}
                   className="cursor-pointer border-border transition-colors hover:bg-brand/5"
@@ -650,14 +655,20 @@ export function ProyekTableClient({
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">{p.dinas}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <BadgeWorkflow status={completeness.status} gate={workflowGate} />
                       <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
                         Update: {formatTanggal(p.updated_at ?? p.created_at ?? null)}
                       </span>
-                      {getMissingProjectFields(p).slice(0, 2).map((field) => (
-                        <span key={field} className="rounded-full border border-amber/30 bg-amber/10 px-2 py-0.5 text-[11px] font-medium text-amber">
-                          Butuh {field}
+                      {missingFields.map((field) => (
+                        <span key={field.key} className="rounded-full border border-amber/30 bg-amber/10 px-2 py-0.5 text-[11px] font-medium text-amber">
+                          Butuh {field.label}
                         </span>
                       ))}
+                      {completeness.missingFields.length > missingFields.length && (
+                        <span className="rounded-full border border-amber/30 bg-amber/10 px-2 py-0.5 text-[11px] font-medium text-amber">
+                          +{completeness.missingFields.length - missingFields.length}
+                        </span>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-4 text-sm leading-tight text-muted-foreground whitespace-normal">
@@ -688,7 +699,8 @@ export function ProyekTableClient({
                     </TableCell>
                   )}
                 </TableRow>
-              ))
+                )
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={canViewCommercial ? 7 : 6} className="text-center text-muted-foreground py-16 text-sm">
@@ -750,7 +762,12 @@ export function ProyekTableClient({
         </div>
       </div>
 
-      <ProyekSlideover id={selectedId} onClose={() => setSelectedId(null)} />
+      <ProyekSlideover
+        id={selectedId}
+        onClose={() => setSelectedId(null)}
+        canViewCommercial={canViewCommercial}
+        canManageProjects={canManageProjects}
+      />
     </div>
   )
 }
