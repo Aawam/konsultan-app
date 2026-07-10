@@ -135,7 +135,10 @@ components/
 | File | Purpose |
 |---|---|
 | `database-client.tsx` | Tabs for perusahaan, all projects, and Dinas/SKPD aggregation. |
+| `database-display.tsx` | Presentational heading, search, stats, and Dinas/SKPD slide-over pieces for `database-client`. |
+| `database-forms.tsx` | Responsive form shell plus Dinas/SKPD and Perusahaan forms. |
 | `reference-database-client.tsx` | AHSP, master harga, satuan, and kategori reference database management. |
+| `reference-database-tables.tsx` | AHSP, harga dasar, and AHSP detail table components. |
 | `master-reference-page.tsx` | Shared server wrapper for filtered master reference pages. |
 
 ### ui/
