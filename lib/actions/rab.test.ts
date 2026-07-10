@@ -5,7 +5,8 @@ import { getProyekById } from '@/lib/actions/proyek'
 import { canAccessRabProject } from '@/lib/actions/rab'
 
 vi.mock('@/lib/actions/proyek', () => ({
-  getDaftarProyek: vi.fn(),
+  DEFAULT_PROYEK_LIST_PAGE_SIZE: 25,
+  getDaftarProyekPage: vi.fn(),
   getProyekById: vi.fn(),
 }))
 

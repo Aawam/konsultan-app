@@ -15,7 +15,6 @@ GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 
 -- App profile and role checks.
 GRANT SELECT ON TABLE public.users TO authenticated;
-GRANT SELECT ON TABLE public.project_assignments TO authenticated;
 
 -- Read-only reference data for Tenaga Ahli and Owner/Admin.
 GRANT SELECT ON TABLE public.satuan TO authenticated;
@@ -35,7 +34,7 @@ GRANT INSERT, UPDATE, DELETE ON TABLE public.master_alat TO authenticated;
 GRANT INSERT, UPDATE, DELETE ON TABLE public.ahsp_items TO authenticated;
 GRANT INSERT, UPDATE, DELETE ON TABLE public.ahsp_details TO authenticated;
 
--- RAB tables: assigned project team/Owner access is constrained by RLS.
+-- RAB tables: authenticated project role access is constrained by RLS.
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.rab_draft TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.rab_rekap TO authenticated;
 GRANT SELECT, INSERT ON TABLE public.rab_audit_log TO authenticated;
@@ -73,8 +72,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.override_log TO authenticat
 
 DO $$
 BEGIN
-  IF to_regprocedure('public.get_assigned_proyek_teknis(uuid)') IS NOT NULL THEN
-    GRANT EXECUTE ON FUNCTION public.get_assigned_proyek_teknis(uuid) TO authenticated;
+  IF to_regprocedure('public.get_proyek_teknis(uuid)') IS NOT NULL THEN
+    GRANT EXECUTE ON FUNCTION public.get_proyek_teknis(uuid) TO authenticated;
   END IF;
 END $$;
 

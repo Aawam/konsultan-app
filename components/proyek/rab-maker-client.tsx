@@ -1,10 +1,11 @@
-"use client"
+'use client'
 
-import { Fragment, type KeyboardEvent, useMemo, useState } from 'react'
+import { Fragment, type KeyboardEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckIcon, Loader2Icon, PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from 'lucide-react'
+import { CheckIcon, Loader2Icon, PencilIcon, Trash2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { RabAhspPicker } from '@/components/proyek/rab-ahsp-picker'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -16,13 +17,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Table,
   TableBody,
   TableCell,
@@ -31,12 +25,14 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
-import type { AhspItemRow, RabMakerSnapshot } from '@/lib/types/ahsp'
+import type { AhspItemRow, KategoriPekerjaanMasterRow, RabMakerSnapshot } from '@/lib/types/ahsp'
 import { formatRupiah } from '@/lib/utils'
 
 type RabMakerClientProps = {
   projectId: string
   ahspOptions: AhspItemRow[]
+  ahspTotal: number
+  kategoriOptions: KategoriPekerjaanMasterRow[]
   snapshot: RabMakerSnapshot
   canManage: boolean
 }
@@ -71,45 +67,20 @@ async function parseApiResponse(response: Response): Promise<ApiResult> {
   return payload
 }
 
-export function RabMakerClient({ projectId, ahspOptions, snapshot, canManage }: RabMakerClientProps) {
+export function RabMakerClient({
+  projectId,
+  ahspOptions,
+  ahspTotal,
+  kategoriOptions,
+  snapshot,
+  canManage,
+}: RabMakerClientProps) {
   const router = useRouter()
-  const [selectedAhspId, setSelectedAhspId] = useState(ahspOptions[0]?.id ?? '')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [bidangFilter, setBidangFilter] = useState<'all' | 'CK' | 'SDA'>('all')
-  const [kategoriFilter, setKategoriFilter] = useState('all')
   const [volumeDrafts, setVolumeDrafts] = useState<Record<string, string>>({})
   const [profitDraft, setProfitDraft] = useState<ProfitOverrideDraft | null>(null)
   const [hargaDraft, setHargaDraft] = useState<HargaOverrideDraft | null>(null)
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
   const [busyAction, setBusyAction] = useState<string | null>(null)
-
-  const kategoriOptions = useMemo(
-    () => Array.from(new Set(ahspOptions.map((item) => item.kategori))).sort((a, b) => a.localeCompare(b)),
-    [ahspOptions]
-  )
-
-  const filteredAhspOptions = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase()
-    return ahspOptions.filter((item) => {
-      const matchesBidang = bidangFilter === 'all' || item.bidang === bidangFilter
-      const matchesKategori = kategoriFilter === 'all' || item.kategori === kategoriFilter
-      const matchesSearch =
-        !query ||
-        item.kode_analisa.toLowerCase().includes(query) ||
-        item.uraian_pekerjaan.toLowerCase().includes(query)
-
-      return matchesBidang && matchesKategori && matchesSearch
-    })
-  }, [ahspOptions, bidangFilter, kategoriFilter, searchQuery])
-
-  const effectiveSelectedAhspId = filteredAhspOptions.some((item) => item.id === selectedAhspId)
-    ? selectedAhspId
-    : (filteredAhspOptions[0]?.id ?? '')
-
-  const selectedAhsp = useMemo(
-    () => filteredAhspOptions.find((item) => item.id === effectiveSelectedAhspId) ?? null,
-    [filteredAhspOptions, effectiveSelectedAhspId]
-  )
 
   function toggleDetails(itemId: string) {
     setExpandedItemId((current) => current === itemId ? null : itemId)
@@ -121,13 +92,13 @@ export function RabMakerClient({ projectId, ahspOptions, snapshot, canManage }: 
     toggleDetails(itemId)
   }
 
-  async function addSelectedAhsp() {
-    if (!effectiveSelectedAhspId) return
+  async function addSelectedAhsp(ahspItemId: string) {
+    if (!ahspItemId) return
     setBusyAction('add')
     const response = await fetch(`/api/proyek/${projectId}/rab`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ahsp_item_id: effectiveSelectedAhspId }),
+      body: JSON.stringify({ ahsp_item_id: ahspItemId }),
     })
     const result = await parseApiResponse(response)
     setBusyAction(null)
@@ -230,98 +201,16 @@ export function RabMakerClient({ projectId, ahspOptions, snapshot, canManage }: 
 
   return (
     <div className="space-y-5">
-      <section className="rounded-xl border border-border bg-card p-5">
-        <div className="flex flex-col gap-4">
-          <div>
-            <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-muted-foreground">Struktur Dokumen RAB</p>
-            <h2 className="mt-1 text-lg font-semibold text-foreground">Hubungkan uraian pekerjaan dengan analisa AHSP</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Susun item sebagai dokumen RAB proyek. AHSP hanya menjadi referensi analisa yang disalin ke snapshot.
-            </p>
-          </div>
-
-          <div className="grid gap-2 lg:grid-cols-[150px_220px_1fr_auto]">
-            <Select value={bidangFilter} onValueChange={(value) => setBidangFilter(value as 'all' | 'CK' | 'SDA')} disabled={!canManage}>
-              <SelectTrigger className="h-9 bg-muted/40">
-                <SelectValue placeholder="Bidang" />
-              </SelectTrigger>
-              <SelectContent className="select-content">
-                <SelectItem value="all" className="select-item">Semua Bidang</SelectItem>
-                <SelectItem value="CK" className="select-item">CK</SelectItem>
-                <SelectItem value="SDA" className="select-item">SDA</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={kategoriFilter} onValueChange={setKategoriFilter} disabled={!canManage || kategoriOptions.length === 0}>
-              <SelectTrigger className="h-9 bg-muted/40">
-                <SelectValue placeholder="Kategori" />
-              </SelectTrigger>
-              <SelectContent className="select-content">
-                <SelectItem value="all" className="select-item">Semua Kategori</SelectItem>
-                {kategoriOptions.map((kategori) => (
-                  <SelectItem key={kategori} value={kategori} className="select-item">
-                    {kategori}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <div className="relative">
-              <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                disabled={!canManage}
-                className="h-9 bg-muted/40 pl-8"
-                placeholder="Cari kode atau uraian AHSP"
-              />
-            </div>
-
-            <Button onClick={addSelectedAhsp} disabled={!canManage || !effectiveSelectedAhspId || busyAction !== null}>
-              {busyAction === 'add' ? <Loader2Icon className="animate-spin" /> : <PlusIcon />}
-              Hubungkan
-            </Button>
-          </div>
-
-          <div className="grid gap-2 lg:grid-cols-[1fr_auto]">
-            <Select value={effectiveSelectedAhspId} onValueChange={setSelectedAhspId} disabled={!canManage || filteredAhspOptions.length === 0}>
-              <SelectTrigger className="h-9 bg-muted/40">
-                <SelectValue placeholder={filteredAhspOptions.length > 0 ? 'Pilih analisa AHSP untuk uraian RAB' : 'Tidak ada AHSP sesuai filter'} />
-              </SelectTrigger>
-              <SelectContent className="select-content">
-                {filteredAhspOptions.map((item) => (
-                  <SelectItem key={item.id} value={item.id} className="select-item">
-                    {item.bidang} / {item.kode_analisa} - {item.uraian_pekerjaan}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <span className="self-center text-right text-xs text-muted-foreground">
-              {filteredAhspOptions.length} analisa tersedia
-            </span>
-          </div>
-        </div>
-
-        {selectedAhsp && (
-          <div className="mt-4 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-            <span className="font-semibold text-foreground">{selectedAhsp.bidang}</span>
-            <span className="mx-2">/</span>
-            <span className="font-mono text-foreground">{selectedAhsp.kode_analisa}</span>
-            <span className="mx-2">/</span>
-            {selectedAhsp.kategori}
-            {selectedAhsp.sub_bidang && (
-              <>
-                <span className="mx-2">/</span>
-                {selectedAhsp.sub_bidang}
-              </>
-            )}
-            <span className="mx-2">/</span>
-            Output: {selectedAhsp.satuan}
-            <span className="mx-2">/</span>
-            Profit default: {formatNumber(selectedAhsp.profit_persen_default)}%
-          </div>
-        )}
-      </section>
+      <RabAhspPicker
+        key={`${snapshot.items.length}:${ahspTotal}`}
+        projectId={projectId}
+        initialOptions={ahspOptions}
+        initialTotal={ahspTotal}
+        kategoriOptions={kategoriOptions}
+        canManage={canManage}
+        busy={busyAction !== null}
+        onAdd={addSelectedAhsp}
+      />
 
       <div className="rounded-xl border border-border bg-card">
         <Table className="min-w-[1320px] table-fixed">

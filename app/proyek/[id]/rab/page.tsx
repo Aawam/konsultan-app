@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
 import { PageError } from '@/components/ui/page-error'
 import { getCurrentUserProfile } from '@/lib/auth'
+import { getKategoriPekerjaanMasterList } from '@/lib/actions/ahsp'
 import { getProyekById } from '@/lib/actions/proyek'
 import { canAccessRabProject, getAvailableAhspForRab, getRabMakerSnapshotByProyekId } from '@/lib/actions/rab'
 import { formatRupiah } from '@/lib/utils'
@@ -41,13 +42,19 @@ export default async function RabProjectPage({ params }: Props) {
     return <RabAccessDeniedDialog reason="forbidden" />
   }
 
-  const [{ data: snapshot, error: snapshotError }, { data: ahspOptions, error: ahspError }] = await Promise.all([
+  const [
+    { data: snapshot, error: snapshotError },
+    { data: ahspOptions, error: ahspError },
+    { data: kategoriOptions, error: kategoriError },
+  ] = await Promise.all([
     getRabMakerSnapshotByProyekId(id),
-    getAvailableAhspForRab(id),
+    getAvailableAhspForRab(id, { limit: 25 }),
+    getKategoriPekerjaanMasterList(),
   ])
 
   if (snapshotError) return <PageError error={snapshotError} />
   if (ahspError) return <PageError error={ahspError} />
+  if (kategoriError) return <PageError error={kategoriError} />
 
   const proyek = proyekResult.data
 
@@ -88,7 +95,14 @@ export default async function RabProjectPage({ params }: Props) {
         <RekapCard label="Total Final" value={formatRupiah(snapshot.maker?.total_final ?? 0)} />
       </div>
 
-      <RabMakerClient projectId={id} ahspOptions={ahspOptions} snapshot={snapshot} canManage={access} />
+      <RabMakerClient
+        projectId={id}
+        ahspOptions={ahspOptions.rows}
+        ahspTotal={ahspOptions.total}
+        kategoriOptions={kategoriOptions}
+        snapshot={snapshot}
+        canManage={access}
+      />
     </div>
   )
 }

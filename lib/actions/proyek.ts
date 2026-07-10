@@ -67,7 +67,7 @@ type ProyekTeknisRow = {
 
 type ProyekTeknisRpcClient = {
   rpc: (
-    fn: 'get_assigned_proyek_teknis',
+    fn: 'get_proyek_teknis',
     args?: { target_proyek_id?: string | null }
   ) => Promise<{
     data: ProyekTeknisRow[] | null
@@ -139,7 +139,7 @@ function toProyekDetailFromTeknis(row: ProyekTeknisRow): ProyekDetail {
 async function getProyekTeknisRows(targetProyekId?: string) {
   const supabase = await createSupabaseServerClient()
   const rpcClient = supabase as unknown as ProyekTeknisRpcClient
-  return rpcClient.rpc('get_assigned_proyek_teknis', {
+  return rpcClient.rpc('get_proyek_teknis', {
     target_proyek_id: targetProyekId ?? null,
   })
 }

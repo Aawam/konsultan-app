@@ -63,6 +63,14 @@ export type RabProjectListItem = {
   persentase_progress: number | null
 }
 
+export type RabProjectListPage = {
+  rows: RabProjectListItem[]
+  total: number
+  page: number
+  pageSize: number
+  pageCount: number
+}
+
 export type RabDraftRow = {
   id: string
   kode_analisa: string
@@ -137,4 +145,10 @@ export type RabMakerSnapshot = {
   maker: RabMakerHeader | null
   items: RabMakerItemRow[]
   detailsByItem: Record<string, RabMakerItemDetailRow[]>
+}
+
+export type AvailableAhspForRabResult = {
+  rows: AhspItemRow[]
+  total: number
+  limit: number
 }

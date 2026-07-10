@@ -1,18 +1,6 @@
--- ============================================================
--- KONSULTAN APP - TECHNICAL PROJECT READ RPC
--- Purpose:
--- Allow Tenaga Ahli to read all available project technical fields without granting
--- direct SELECT access to sensitive columns in public.proyek.
---
--- Safe to re-run. Target: staging first.
--- ============================================================
-
 BEGIN;
 
-DROP FUNCTION IF EXISTS public.get_assigned_proyek_teknis(uuid);
-DROP FUNCTION IF EXISTS public.get_proyek_teknis(uuid);
-
-CREATE FUNCTION public.get_proyek_teknis(target_proyek_id uuid DEFAULT NULL)
+CREATE OR REPLACE FUNCTION public.get_proyek_teknis(target_proyek_id uuid DEFAULT NULL)
 RETURNS TABLE (
   id uuid,
   nama_proyek text,
@@ -80,5 +68,16 @@ $$;
 
 REVOKE ALL ON FUNCTION public.get_proyek_teknis(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_proyek_teknis(uuid) TO authenticated;
+
+DROP FUNCTION IF EXISTS public.get_assigned_proyek_teknis(uuid);
+
+DO $$
+BEGIN
+  IF to_regclass('public.project_assignments') IS NOT NULL THEN
+    DROP POLICY IF EXISTS "project_assignments owner write" ON public.project_assignments;
+    DROP POLICY IF EXISTS "project_assignments read own or owner" ON public.project_assignments;
+    DROP TABLE public.project_assignments;
+  END IF;
+END $$;
 
 COMMIT;

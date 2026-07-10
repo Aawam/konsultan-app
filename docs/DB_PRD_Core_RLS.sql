@@ -32,19 +32,9 @@ FOR ALL TO authenticated
 USING (public.is_owner_admin())
 WITH CHECK (public.is_owner_admin());
 
--- Add a Tenaga Ahli SELECT policy only after commercial fields are removed
--- from public.proyek or replaced by a technical-only view.
--- CREATE POLICY "assigned technical read proyek" ON public.proyek
--- FOR SELECT TO authenticated
--- USING (
---   public.is_owner_admin()
---   OR EXISTS (
---     SELECT 1
---     FROM public.project_assignments pa
---     WHERE pa.proyek_id = proyek.id
---       AND pa.user_id = auth.uid()
---   )
--- );
+-- Tenaga Ahli reads technical project fields through public.get_proyek_teknis().
+-- Keep direct public.proyek SELECT owner-only while commercial fields remain
+-- in the table.
 
 DROP POLICY IF EXISTS "authenticated read perusahaan" ON public.perusahaan;
 DROP POLICY IF EXISTS "authenticated insert perusahaan" ON public.perusahaan;

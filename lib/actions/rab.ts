@@ -3,16 +3,23 @@ import type { CurrentUserProfile } from '@/lib/auth-types'
 import { isOwnerAdmin } from '@/lib/auth-types'
 import type {
   AhspItemRow,
+  AvailableAhspForRabResult,
   RabDraftRow,
   RabMakerHeader,
   RabMakerItemDetailRow,
   RabMakerItemRow,
   RabMakerSnapshot,
+  RabProjectListPage,
   RabProjectListItem,
   RabRekapRow,
   RelationValue,
 } from '@/lib/types/ahsp'
-import { getDaftarProyek, getProyekById } from '@/lib/actions/proyek'
+import {
+  DEFAULT_PROYEK_LIST_PAGE_SIZE,
+  getDaftarProyekPage,
+  getProyekById,
+  type ProyekListFilters,
+} from '@/lib/actions/proyek'
 
 function firstRelation<T>(value: RelationValue<T>): T | null {
   if (Array.isArray(value)) return value[0] ?? null
@@ -31,39 +38,143 @@ const RAB_PROJECT_SELECT = `
   persentase_progress
 `
 
-export async function getRabProjectList(profile: CurrentUserProfile | null) {
+export const RAB_PROJECT_LIST_PAGE_SIZES = [10, 25, 50] as const
+export const DEFAULT_RAB_PROJECT_LIST_PAGE_SIZE = DEFAULT_PROYEK_LIST_PAGE_SIZE
+
+export type RabProjectListFilters = {
+  page: number
+  pageSize: number
+  search: string
+}
+
+function normalizeRabProjectListFilters(filters: RabProjectListFilters) {
+  const pageSize = RAB_PROJECT_LIST_PAGE_SIZES.includes(filters.pageSize as (typeof RAB_PROJECT_LIST_PAGE_SIZES)[number])
+    ? filters.pageSize
+    : DEFAULT_RAB_PROJECT_LIST_PAGE_SIZE
+  const page = Number.isFinite(filters.page) && filters.page > 0 ? Math.floor(filters.page) : 1
+
+  return {
+    page,
+    pageSize,
+    from: (page - 1) * pageSize,
+    to: page * pageSize - 1,
+    search: filters.search.trim(),
+  }
+}
+
+function toRabProjectListItem(project: {
+  id: string
+  nama_proyek: string
+  jenis_pekerjaan: string
+  kategori_pekerjaan?: string | null
+  tahun_anggaran: number
+  dinas: string
+  lokasi_kecamatan: string | null
+  tahap_progress: string | null
+  persentase_progress: number | null
+}): RabProjectListItem {
+  return {
+    id: project.id,
+    nama_proyek: project.nama_proyek,
+    jenis_pekerjaan: project.jenis_pekerjaan,
+    kategori_pekerjaan: project.kategori_pekerjaan ?? '',
+    tahun_anggaran: project.tahun_anggaran,
+    dinas: project.dinas,
+    lokasi_kecamatan: project.lokasi_kecamatan,
+    tahap_progress: project.tahap_progress,
+    persentase_progress: project.persentase_progress,
+  }
+}
+
+export async function getRabProjectListPage(
+  profile: CurrentUserProfile | null,
+  filters: RabProjectListFilters
+) {
   const supabase = await createSupabaseServerClient()
-  if (!profile) return { data: [] as RabProjectListItem[], error: null }
+  const normalized = normalizeRabProjectListFilters(filters)
+
+  if (!profile) {
+    return {
+      data: {
+        rows: [],
+        total: 0,
+        page: 1,
+        pageSize: normalized.pageSize,
+        pageCount: 1,
+      } satisfies RabProjectListPage,
+      error: null,
+    }
+  }
 
   if (!isOwnerAdmin(profile)) {
-    const { data, error } = await getDaftarProyek({ includeSensitive: false })
+    const proyekFilters: ProyekListFilters = {
+      page: normalized.page,
+      pageSize: normalized.pageSize,
+      year: 'semua',
+      jenis: 'Perencanaan',
+      status: 'Semua',
+      progress: 'semua',
+      perusahaanId: 'Semua',
+      search: normalized.search,
+    }
+    const { data, error } = await getDaftarProyekPage(proyekFilters, { includeSensitive: false })
+
     return {
-      data: (data ?? [])
-        .filter((project) => project.jenis_pekerjaan === 'Perencanaan')
-        .map((project) => ({
-          id: project.id,
-          nama_proyek: project.nama_proyek,
-          jenis_pekerjaan: project.jenis_pekerjaan,
-          kategori_pekerjaan: project.kategori_pekerjaan ?? '',
-          tahun_anggaran: project.tahun_anggaran,
-          dinas: project.dinas,
-          lokasi_kecamatan: project.lokasi_kecamatan,
-          tahap_progress: project.tahap_progress,
-          persentase_progress: project.persentase_progress,
-        })),
+      data: {
+        rows: (data?.rows ?? []).map(toRabProjectListItem),
+        total: data?.total ?? 0,
+        page: data?.page ?? normalized.page,
+        pageSize: data?.pageSize ?? normalized.pageSize,
+        pageCount: data?.pageCount ?? 1,
+      } satisfies RabProjectListPage,
       error,
     }
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('proyek')
-    .select(RAB_PROJECT_SELECT)
+    .select(RAB_PROJECT_SELECT, { count: 'exact' })
     .eq('is_deleted', false)
     .eq('jenis_pekerjaan', 'Perencanaan')
+
+  if (normalized.search) {
+    const escaped = normalized.search.replaceAll('%', '\\%').replaceAll('_', '\\_')
+    query = query.or([
+      `nama_proyek.ilike.%${escaped}%`,
+      `dinas.ilike.%${escaped}%`,
+      `lokasi_kecamatan.ilike.%${escaped}%`,
+      `kategori_pekerjaan.ilike.%${escaped}%`,
+    ].join(','))
+  }
+
+  const { data, error, count } = await query
     .order('tahun_anggaran', { ascending: false })
     .order('nama_proyek')
+    .range(normalized.from, normalized.to)
 
-  return { data: (data ?? []) as RabProjectListItem[], error }
+  const total = count ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / normalized.pageSize))
+
+  return {
+    data: {
+      rows: ((data ?? []) as RabProjectListItem[]).map(toRabProjectListItem),
+      total,
+      page: Math.min(normalized.page, pageCount),
+      pageSize: normalized.pageSize,
+      pageCount,
+    } satisfies RabProjectListPage,
+    error,
+  }
+}
+
+export async function getRabProjectList(profile: CurrentUserProfile | null) {
+  const { data, error } = await getRabProjectListPage(profile, {
+    page: 1,
+    pageSize: DEFAULT_RAB_PROJECT_LIST_PAGE_SIZE,
+    search: '',
+  })
+
+  return { data: data?.rows ?? [], error }
 }
 
 export async function canAccessRabProject(projectId: string, profile: CurrentUserProfile | null) {
@@ -278,8 +389,53 @@ export async function getRabMakerSnapshotByProyekId(projectId: string) {
   }
 }
 
-export async function getAvailableAhspForRab(projectId: string) {
+export type AvailableAhspForRabFilters = {
+  query?: string
+  bidang?: 'CK' | 'SDA' | 'all'
+  kategoriId?: string
+  limit?: number
+}
+
+function normalizeAhspSearchFilters(filters: AvailableAhspForRabFilters = {}) {
+  const limit = Number.isFinite(filters.limit) ? Number(filters.limit) : 25
+
+  return {
+    query: filters.query?.trim() ?? '',
+    bidang: filters.bidang === 'CK' || filters.bidang === 'SDA' ? filters.bidang : 'all',
+    kategoriId: filters.kategoriId && filters.kategoriId !== 'all' ? filters.kategoriId : 'all',
+    limit: Math.min(Math.max(Math.floor(limit), 1), 50),
+  }
+}
+
+function mapAhspItemRows(
+  rows: Array<
+    Record<string, unknown> & {
+      kategori: RelationValue<{ nama_kategori: string }>
+      satuan: RelationValue<{ nama_satuan: string }>
+    }
+  >
+) {
+  return rows.map((row) => ({
+    id: String(row.id),
+    kode_analisa: String(row.kode_analisa ?? ''),
+    uraian_pekerjaan: String(row.uraian_pekerjaan ?? ''),
+    bidang: row.bidang === 'SDA' ? 'SDA' : 'CK',
+    sub_bidang: row.sub_bidang ? String(row.sub_bidang) : null,
+    kategori_id: String(row.kategori_id ?? ''),
+    kategori: firstRelation(row.kategori)?.nama_kategori ?? '-',
+    satuan_id: String(row.satuan_id ?? ''),
+    satuan: firstRelation(row.satuan)?.nama_satuan ?? '-',
+    profit_persen_default: Number(row.profit_persen_default ?? 0),
+    created_at: String(row.created_at),
+  })) satisfies AhspItemRow[]
+}
+
+export async function getAvailableAhspForRab(
+  projectId: string,
+  filters: AvailableAhspForRabFilters = {}
+) {
   const supabase = await createSupabaseServerClient()
+  const normalized = normalizeAhspSearchFilters(filters)
   const { data: maker } = await supabase
     .from('rab_maker')
     .select('id')
@@ -295,7 +451,7 @@ export async function getAvailableAhspForRab(projectId: string) {
     usedIds = new Set((usedItems ?? []).map((item) => item.source_ahsp_item_id).filter(Boolean) as string[])
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('ahsp_items')
     .select(`
       id,
@@ -309,8 +465,28 @@ export async function getAvailableAhspForRab(projectId: string) {
       created_at,
       kategori:kategori_id (nama_kategori),
       satuan:satuan_id (nama_satuan)
-    `)
+    `, { count: 'exact' })
+
+  if (usedIds.size > 0) {
+    query = query.not('id', 'in', `(${Array.from(usedIds).join(',')})`)
+  }
+
+  if (normalized.bidang !== 'all') {
+    query = query.eq('bidang', normalized.bidang)
+  }
+
+  if (normalized.kategoriId !== 'all') {
+    query = query.eq('kategori_id', normalized.kategoriId)
+  }
+
+  if (normalized.query) {
+    const escaped = normalized.query.replaceAll('%', '\\%').replaceAll('_', '\\_')
+    query = query.or(`kode_analisa.ilike.%${escaped}%,uraian_pekerjaan.ilike.%${escaped}%`)
+  }
+
+  const { data, error, count } = await query
     .order('kode_analisa')
+    .range(0, normalized.limit - 1)
 
   const rows = (data ?? []) as unknown as Array<
     Record<string, unknown> & {
@@ -320,21 +496,11 @@ export async function getAvailableAhspForRab(projectId: string) {
   >
 
   return {
-    data: rows
-      .filter((row) => !usedIds.has(String(row.id)))
-      .map((row) => ({
-        id: String(row.id),
-        kode_analisa: String(row.kode_analisa ?? ''),
-        uraian_pekerjaan: String(row.uraian_pekerjaan ?? ''),
-        bidang: row.bidang === 'SDA' ? 'SDA' : 'CK',
-        sub_bidang: row.sub_bidang ? String(row.sub_bidang) : null,
-        kategori_id: String(row.kategori_id ?? ''),
-        kategori: firstRelation(row.kategori)?.nama_kategori ?? '-',
-        satuan_id: String(row.satuan_id ?? ''),
-        satuan: firstRelation(row.satuan)?.nama_satuan ?? '-',
-        profit_persen_default: Number(row.profit_persen_default ?? 0),
-        created_at: String(row.created_at),
-      })) satisfies AhspItemRow[],
+    data: {
+      rows: mapAhspItemRows(rows),
+      total: count ?? 0,
+      limit: normalized.limit,
+    } satisfies AvailableAhspForRabResult,
     error,
   }
 }

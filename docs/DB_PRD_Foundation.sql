@@ -130,15 +130,6 @@ CREATE TABLE IF NOT EXISTS public.proyek_internal (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Assignment table needed before Tenaga Ahli access can be limited per project.
-CREATE TABLE IF NOT EXISTS public.project_assignments (
-  proyek_id uuid NOT NULL REFERENCES public.proyek(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  role_label text,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (proyek_id, user_id)
-);
-
 CREATE TABLE IF NOT EXISTS public.satuan (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   nama_satuan text NOT NULL UNIQUE,
@@ -243,7 +234,6 @@ CREATE TABLE IF NOT EXISTS public.rab_audit_log (
 );
 
 CREATE INDEX IF NOT EXISTS proyek_internal_updated_at_idx ON public.proyek_internal(updated_at);
-CREATE INDEX IF NOT EXISTS project_assignments_user_id_idx ON public.project_assignments(user_id);
 CREATE INDEX IF NOT EXISTS satuan_nama_satuan_idx ON public.satuan(nama_satuan);
 CREATE INDEX IF NOT EXISTS kategori_pekerjaan_master_nama_idx ON public.kategori_pekerjaan_master(nama_kategori);
 CREATE INDEX IF NOT EXISTS master_upah_satuan_id_idx ON public.master_upah(satuan_id);
@@ -310,7 +300,6 @@ BEGIN
   FOREACH tbl IN ARRAY ARRAY[
     'users',
     'proyek_internal',
-    'project_assignments',
     'satuan',
     'kategori_pekerjaan_master',
     'master_upah',
@@ -330,7 +319,6 @@ END $$;
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 
 GRANT SELECT ON TABLE public.users TO authenticated;
-GRANT SELECT ON TABLE public.project_assignments TO authenticated;
 
 GRANT SELECT ON TABLE public.satuan TO authenticated;
 GRANT SELECT ON TABLE public.kategori_pekerjaan_master TO authenticated;
@@ -375,17 +363,6 @@ CREATE POLICY "proyek_internal owner only" ON public.proyek_internal
 FOR ALL TO authenticated
 USING (public.is_owner_admin())
 WITH CHECK (public.is_owner_admin());
-
-DROP POLICY IF EXISTS "project_assignments owner write" ON public.project_assignments;
-CREATE POLICY "project_assignments owner write" ON public.project_assignments
-FOR ALL TO authenticated
-USING (public.is_owner_admin())
-WITH CHECK (public.is_owner_admin());
-
-DROP POLICY IF EXISTS "project_assignments read own or owner" ON public.project_assignments;
-CREATE POLICY "project_assignments read own or owner" ON public.project_assignments
-FOR SELECT TO authenticated
-USING (user_id = auth.uid() OR public.is_owner_admin());
 
 -- Master data: Tenaga Ahli can read; Owner/Admin can write.
 DO $$
