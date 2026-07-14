@@ -4,7 +4,6 @@ import { requireOwnerAdminApi } from '@/lib/api-auth'
 import { apiData, apiError, readJsonBody } from '@/lib/api-response'
 import { getProyekById } from '@/lib/actions/proyek'
 import { evaluateProjectWorkflowTransition, type ProjectWorkflowTransition } from '@/lib/project-workflow'
-import { PROYEK_MUTATION_RETURN_SELECT } from '@/lib/queries/proyek-selects'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 
 type WorkflowRequestBody = {
@@ -13,6 +12,19 @@ type WorkflowRequestBody = {
 
 function parseTransition(value: unknown): ProjectWorkflowTransition | null {
   return value === 'mark_rab_ready' ? value : null
+}
+
+type TransitionProjectWorkflowRpcClient = {
+  rpc: (
+    fn: 'transition_project_workflow_to_rab_ready',
+    args: {
+      target_proyek_id: string
+      actor_email: string | null
+    }
+  ) => Promise<{
+    data: string | null
+    error: { message: string; code?: string } | null
+  }>
 }
 
 export async function POST(
@@ -60,32 +72,18 @@ export async function POST(
     )
   }
 
-  const { data, error: updateError } = await supabase
-    .from('proyek')
-    .update(transitionResult.update)
-    .eq('id', id)
-    .eq('is_deleted', false)
-    .select(PROYEK_MUTATION_RETURN_SELECT)
-    .single()
+  const { data, error: transitionError } = await (supabase as unknown as TransitionProjectWorkflowRpcClient).rpc(
+    'transition_project_workflow_to_rab_ready',
+    {
+      target_proyek_id: id,
+      actor_email: user?.email ?? null,
+    }
+  )
 
-  if (updateError) return apiError('INTERNAL_ERROR', updateError.message, 500)
-
-  const { error: logError } = await supabase
-    .from('override_log')
-    .insert({
-      proyek_id: id,
-      field_dioverride: 'Workflow RAB',
-      nilai_sebelum: project.tahap_progress ?? '-',
-      nilai_sesudah: transitionResult.update.tahap_progress,
-      alasan: 'Transisi workflow: Tandai siap RAB.',
-      dilakukan_oleh: user?.email ?? 'Authenticated User',
-      dilakukan_pada: new Date().toISOString(),
-    })
-
-  if (logError) return apiError('INTERNAL_ERROR', logError.message, 500)
+  if (transitionError) return apiError('INTERNAL_ERROR', transitionError.message, 500)
 
   return apiData({
-    project: data,
+    project: { id: data ?? id },
     transition,
     readiness: transitionResult,
   })
