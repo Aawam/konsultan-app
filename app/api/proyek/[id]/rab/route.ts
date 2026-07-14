@@ -2,7 +2,12 @@ import { NextRequest } from 'next/server'
 
 import { apiData, apiError, readJsonBody } from '@/lib/api-response'
 import { getCurrentUserProfile } from '@/lib/auth'
-import { canAccessRabProject, getRabMakerSnapshotByProyekId, getRabProjectMutationGate } from '@/lib/actions/rab'
+import {
+  canAccessRabProject,
+  getRabMakerEditGateByProyekId,
+  getRabMakerSnapshotByProyekId,
+  getRabProjectMutationGate,
+} from '@/lib/actions/rab'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 type CreateRabMakerRpcClient = {
@@ -63,6 +68,13 @@ export async function POST(
   }
 
   const supabase = await createSupabaseServerClient()
+  const { data: editGate, error: editGateError } = await getRabMakerEditGateByProyekId(id, supabase)
+
+  if (editGateError) return apiError('INTERNAL_ERROR', editGateError.message, 500)
+  if (editGate.locked) {
+    return apiError('CONFLICT', editGate.message ?? 'RAB terkunci.', 409, editGate)
+  }
+
   const { data, error } = await (supabase as unknown as CreateRabMakerRpcClient).rpc(
     'create_rab_maker_from_ahsp',
     { target_proyek_id: id, source_ahsp_item_id: ahspItemId }

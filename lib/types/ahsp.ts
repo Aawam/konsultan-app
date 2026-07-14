@@ -101,6 +101,10 @@ export type RabMakerHeader = {
   subtotal: number
   ppn_nilai: number
   total_final: number
+  validated_by: string | null
+  validated_at: string | null
+  finalized_by: string | null
+  finalized_at: string | null
   updated_at: string
 }
 

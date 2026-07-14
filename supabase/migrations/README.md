@@ -24,6 +24,7 @@ only reviewed, runnable schema/RLS/function changes into this folder.
 8. `20260710095500_remove_project_assignments_from_rab_access.sql` - patch RAB access away from `project_assignments`.
 9. `20260710103000_remove_project_assignments_and_rename_project_read_rpc.sql` - remove old assignment model and final RPC name.
 10. `20260714104000_project_workflow_transition_rpc.sql` - atomic project workflow transition update plus audit log insert.
+11. `20260714112000_rab_approval_final_lock_model.sql` - RAB approval/finalization RPCs and lock metadata.
 
 Before promoting any additional `docs/DB_*.sql` script into this folder:
 

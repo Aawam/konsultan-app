@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 
 import { apiData, apiError, readJsonBody } from '@/lib/api-response'
-import { getRabProjectMutationGate } from '@/lib/actions/rab'
+import { getRabMakerEditGateByProyekId, getRabProjectMutationGate } from '@/lib/actions/rab'
 import { getCurrentUserProfile } from '@/lib/auth'
 import { normalizeOverrideReason, parseRabDecimalInput } from '@/lib/rab-maker'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
@@ -50,6 +50,13 @@ export async function PATCH(
   }
 
   const supabase = await createSupabaseServerClient()
+  const { data: editGate, error: editGateError } = await getRabMakerEditGateByProyekId(id, supabase)
+
+  if (editGateError) return apiError('INTERNAL_ERROR', editGateError.message, 500)
+  if (editGate.locked) {
+    return apiError('CONFLICT', editGate.message ?? 'RAB terkunci.', 409, editGate)
+  }
+
   const { error } = await (supabase as unknown as UpdateRabMakerDetailHargaRpcClient).rpc(
     'update_rab_maker_detail_harga_dasar',
     { target_detail_id: detailId, new_harga_dasar: hargaDasar, override_reason: reason }

@@ -21,6 +21,7 @@ import {
   type ProyekListFilters,
 } from '@/lib/actions/proyek'
 import { evaluateProjectRabReadiness } from '@/lib/project-completeness'
+import { getRabMakerLockState, type RabMakerLockState } from '@/lib/rab-lock'
 
 function firstRelation<T>(value: RelationValue<T>): T | null {
   if (Array.isArray(value)) return value[0] ?? null
@@ -277,7 +278,7 @@ export async function getRabMakerSnapshotByProyekId(projectId: string) {
   const supabase = await createSupabaseServerClient()
   const { data: maker, error: makerError } = await supabase
     .from('rab_maker')
-    .select('id, proyek_id, status, ppn_persen, subtotal, ppn_nilai, total_final, updated_at')
+    .select('id, proyek_id, status, ppn_persen, subtotal, ppn_nilai, total_final, validated_by, validated_at, finalized_by, finalized_at, updated_at')
     .eq('proyek_id', projectId)
     .maybeSingle()
 
@@ -303,6 +304,10 @@ export async function getRabMakerSnapshotByProyekId(projectId: string) {
     subtotal: Number(maker.subtotal ?? 0),
     ppn_nilai: Number(maker.ppn_nilai ?? 0),
     total_final: Number(maker.total_final ?? 0),
+    validated_by: maker.validated_by,
+    validated_at: maker.validated_at,
+    finalized_by: maker.finalized_by,
+    finalized_at: maker.finalized_at,
     updated_at: maker.updated_at,
   } satisfies RabMakerHeader
 
@@ -415,6 +420,33 @@ export async function getRabMakerSnapshotByProyekId(projectId: string) {
 
   return {
     data: { maker: makerHeader, items, detailsByItem } satisfies RabMakerSnapshot,
+    error: null,
+  }
+}
+
+export async function getRabMakerEditGateByProyekId(
+  projectId: string,
+  client?: Awaited<ReturnType<typeof createSupabaseServerClient>>
+): Promise<{
+  data: RabMakerLockState
+  error: { message: string; code?: string } | null
+}> {
+  const supabase = client ?? await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('rab_maker')
+    .select('status')
+    .eq('proyek_id', projectId)
+    .maybeSingle()
+
+  if (error) {
+    return {
+      data: getRabMakerLockState(null),
+      error,
+    }
+  }
+
+  return {
+    data: getRabMakerLockState(data?.status ?? null),
     error: null,
   }
 }

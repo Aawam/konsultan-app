@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { BadgeJenis, BadgeTahap, BadgeWorkflow } from '@/components/proyek/badges'
 import { RabAccessDeniedDialog } from '@/components/proyek/rab-access-denied-dialog'
 import { RabMakerClient } from '@/components/proyek/rab-maker-client'
+import { RabStatusActions } from '@/components/proyek/rab-status-actions'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
 import { PageError } from '@/components/ui/page-error'
@@ -12,6 +13,7 @@ import { getKategoriPekerjaanMasterList } from '@/lib/actions/ahsp'
 import { getProyekById } from '@/lib/actions/proyek'
 import { canAccessRabProject, getAvailableAhspForRab, getRabMakerSnapshotByProyekId } from '@/lib/actions/rab'
 import { evaluateProjectRabReadiness, getProjectWorkflowGate, type ProjectRabReadinessResult } from '@/lib/project-completeness'
+import { getRabMakerLockState } from '@/lib/rab-lock'
 import type { ProyekDetail } from '@/lib/types/proyek'
 import { formatRupiah } from '@/lib/utils'
 
@@ -168,6 +170,8 @@ export default async function RabProjectPage({ params }: Props) {
   if (kategoriError) return <PageError error={kategoriError} />
 
   const proyek = proyekResult.data
+  const rabLock = getRabMakerLockState(snapshot.maker?.status)
+  const canEditRab = access && !rabLock.locked
 
   return (
     <div className="pb-10">
@@ -184,6 +188,12 @@ export default async function RabProjectPage({ params }: Props) {
               <Button asChild>
                 <Link href={`/api/proyek/${id}/rab/export`}>Export XLSX</Link>
               </Button>
+              <RabStatusActions
+                projectId={id}
+                status={snapshot.maker?.status ?? null}
+                canManage={canManageProject}
+                hasMaker={Boolean(snapshot.maker)}
+              />
             </>
           }
         />
@@ -196,11 +206,21 @@ export default async function RabProjectPage({ params }: Props) {
           <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
             Status RAB: {snapshot.maker?.status ?? 'belum dibuat'}
           </span>
+          {rabLock.locked && (
+            <span className="rounded-full border border-amber/30 bg-amber/10 px-2.5 py-1 text-xs font-semibold text-amber">
+              Terkunci
+            </span>
+          )}
         </div>
         <h2 className="mt-4 max-w-4xl text-xl font-bold leading-tight text-foreground">{proyek.nama_proyek}</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           {proyek.dinas} · {proyek.lokasi_kecamatan ?? '-'} · Tahun {proyek.tahun_anggaran}
         </p>
+        {rabLock.message && (
+          <p className="mt-3 rounded-lg border border-amber/25 bg-amber/10 px-3 py-2 text-sm font-semibold text-amber">
+            {rabLock.message}
+          </p>
+        )}
       </section>
 
       <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -217,7 +237,7 @@ export default async function RabProjectPage({ params }: Props) {
         ahspTotal={ahspOptions.total}
         kategoriOptions={kategoriOptions}
         snapshot={snapshot}
-        canManage={access}
+        canManage={canEditRab}
       />
     </div>
   )

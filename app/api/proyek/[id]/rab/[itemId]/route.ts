@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 
 import { apiData, apiError, readJsonBody } from '@/lib/api-response'
 import { getCurrentUserProfile } from '@/lib/auth'
-import { getRabProjectMutationGate } from '@/lib/actions/rab'
+import { getRabMakerEditGateByProyekId, getRabProjectMutationGate } from '@/lib/actions/rab'
 import { normalizeOverrideReason, parseRabDecimalInput } from '@/lib/rab-maker'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
@@ -58,6 +58,12 @@ export async function PATCH(
   if (bodyError) return bodyError
 
   const supabase = await createSupabaseServerClient()
+  const { data: editGate, error: editGateError } = await getRabMakerEditGateByProyekId(id, supabase)
+
+  if (editGateError) return apiError('INTERNAL_ERROR', editGateError.message, 500)
+  if (editGate.locked) {
+    return apiError('CONFLICT', editGate.message ?? 'RAB terkunci.', 409, editGate)
+  }
 
   if (body?.profit_persen_final !== undefined) {
     const profit = parseRabDecimalInput(body.profit_persen_final)
@@ -117,6 +123,13 @@ export async function DELETE(
   }
 
   const supabase = await createSupabaseServerClient()
+  const { data: editGate, error: editGateError } = await getRabMakerEditGateByProyekId(id, supabase)
+
+  if (editGateError) return apiError('INTERNAL_ERROR', editGateError.message, 500)
+  if (editGate.locked) {
+    return apiError('CONFLICT', editGate.message ?? 'RAB terkunci.', 409, editGate)
+  }
+
   const { error } = await (supabase as unknown as DeleteRabMakerRpcClient).rpc(
     'delete_rab_maker_item',
     { target_item_id: itemId }
