@@ -181,6 +181,7 @@ export default async function RabProjectPage({ params }: Props) {
   const proyek = proyekResult.data
   const rabLock = getRabMakerLockState(snapshot.maker?.status)
   const canEditRab = access && !rabLock.locked
+  const canExportPdf = snapshot.maker?.status === 'validated' || snapshot.maker?.status === 'final'
 
   return (
     <div className="pb-10">
@@ -197,6 +198,15 @@ export default async function RabProjectPage({ params }: Props) {
               <Button asChild>
                 <Link href={`/api/proyek/${id}/rab/export`}>Export XLSX</Link>
               </Button>
+              {canExportPdf ? (
+                <Button asChild variant="outline">
+                  <Link href={`/api/proyek/${id}/rab/export/pdf`}>Export PDF</Link>
+                </Button>
+              ) : (
+                <Button type="button" variant="outline" disabled>
+                  Export PDF
+                </Button>
+              )}
               <RabStatusActions
                 projectId={id}
                 status={snapshot.maker?.status ?? null}
