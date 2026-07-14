@@ -397,7 +397,10 @@ export function ProyekTableClient({
       )}
 
       {/* ── Stat strip ── */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-[repeat(5,minmax(0,1fr))_minmax(220px,1.45fr)]">
+      <div className={canViewCommercial
+        ? 'grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-[repeat(5,minmax(0,1fr))_minmax(220px,1.45fr)]'
+        : 'grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-5'
+      }>
         <StatCard
           label="Sedang Berjalan"
           value={stats.berjalan}
@@ -436,12 +439,14 @@ export function ProyekTableClient({
           active={jenisFilter === 'Pengawasan'}
         />
         <StatCard label="Total Proyek" value={pagination.total} caption="Sesuai filter" />
-        <StatCard
-          label="Total Kontrak"
-          value={formatCompactRupiah(stats.nilaiTotal)}
-          caption="Di halaman ini"
-          colorClass="text-amber"
-        />
+        {canViewCommercial && (
+          <StatCard
+            label="Total Kontrak"
+            value={formatCompactRupiah(stats.nilaiTotal)}
+            caption="Di halaman ini"
+            colorClass="text-amber"
+          />
+        )}
       </div>
 
       {/* ── Toolbar ── */}
