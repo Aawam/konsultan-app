@@ -41,30 +41,6 @@ export type AhspImportPayload = {
   ahspDetails: AhspImportDetailRow[]
 }
 
-export type AhspImportChangeSummary = {
-  newSatuan: number
-  reusedSatuan: number
-  newKategori: number
-  reusedKategori: number
-  newMasterUpah: number
-  updateMasterUpah: number
-  newMasterBahan: number
-  updateMasterBahan: number
-  newMasterAlat: number
-  updateMasterAlat: number
-  newAhspItems: number
-  updateAhspItems: number
-}
-
-export type AhspImportDatabaseSnapshot = {
-  satuan: string[]
-  kategori: string[]
-  masterUpah: string[]
-  masterBahan: string[]
-  masterAlat: string[]
-  ahspCodes: string[]
-}
-
 export type AhspImportResult = {
   satuanInserted: number
   satuanReused: number
@@ -99,9 +75,7 @@ export type AhspImportPreview = {
   }>
   blockers: string[]
   warnings: string[]
-  conflicts: string[]
   canImport: boolean
-  changeSummary: AhspImportChangeSummary
 }
 
 type ZipEntry = {
@@ -344,23 +318,6 @@ function normalizeComponentType(value: unknown): 'upah' | 'bahan' | 'alat' | nul
   return null
 }
 
-function defaultChangeSummary(): AhspImportChangeSummary {
-  return {
-    newSatuan: 0,
-    reusedSatuan: 0,
-    newKategori: 0,
-    reusedKategori: 0,
-    newMasterUpah: 0,
-    updateMasterUpah: 0,
-    newMasterBahan: 0,
-    updateMasterBahan: 0,
-    newMasterAlat: 0,
-    updateMasterAlat: 0,
-    newAhspItems: 0,
-    updateAhspItems: 0,
-  }
-}
-
 function findHeaderRows(rows: unknown[][], requiredLabels: string[]) {
   const normalized = requiredLabels.map((label) => label.toLowerCase())
   return rows.findIndex((row) => {
@@ -538,9 +495,7 @@ export function buildAhspImportPayload(sheets: SpreadsheetRows): { preview: Ahsp
     missingComponentReferences,
     blockers,
     warnings,
-    conflicts: [],
     canImport: blockers.length === 0,
-    changeSummary: defaultChangeSummary(),
   }
 
   return { preview, payload }
@@ -548,75 +503,6 @@ export function buildAhspImportPayload(sheets: SpreadsheetRows): { preview: Ahsp
 
 export function analyzeAhspImportRows(sheets: SpreadsheetRows): AhspImportPreview {
   return buildAhspImportPayload(sheets).preview
-}
-
-function countExisting(values: string[]) {
-  const counts = new Map<string, number>()
-  for (const value of values) {
-    const key = normalizeKey(value)
-    if (!key) continue
-    counts.set(key, (counts.get(key) ?? 0) + 1)
-  }
-  return counts
-}
-
-function countNewAndExisting(values: string[], existingValues: string[]) {
-  const existing = new Set(existingValues.map(normalizeKey))
-  return values.reduce(
-    (summary, value) => {
-      if (existing.has(normalizeKey(value))) summary.existing += 1
-      else summary.new += 1
-      return summary
-    },
-    { new: 0, existing: 0 }
-  )
-}
-
-function existingDuplicateConflicts(label: string, values: string[]) {
-  return [...countExisting(values).entries()]
-    .filter(([, count]) => count > 1)
-    .map(([value]) => `Database punya ${label} duplikat: ${value}. Rapikan dulu sebelum import.`)
-}
-
-export function enrichAhspImportPreview(
-  preview: AhspImportPreview,
-  payload: AhspImportPayload,
-  existing: AhspImportDatabaseSnapshot
-): AhspImportPreview {
-  const satuan = countNewAndExisting(payload.satuan, existing.satuan)
-  const kategori = countNewAndExisting(payload.kategori, existing.kategori)
-  const upah = countNewAndExisting(payload.master.upah.map((row) => row.nama), existing.masterUpah)
-  const bahan = countNewAndExisting(payload.master.bahan.map((row) => row.nama), existing.masterBahan)
-  const alat = countNewAndExisting(payload.master.alat.map((row) => row.nama), existing.masterAlat)
-  const ahsp = countNewAndExisting(payload.ahspItems.map((row) => row.kode_analisa), existing.ahspCodes)
-  const conflicts = [
-    ...existingDuplicateConflicts('satuan', existing.satuan),
-    ...existingDuplicateConflicts('kategori', existing.kategori),
-    ...existingDuplicateConflicts('upah', existing.masterUpah),
-    ...existingDuplicateConflicts('bahan', existing.masterBahan),
-    ...existingDuplicateConflicts('alat', existing.masterAlat),
-    ...existingDuplicateConflicts('kode AHSP', existing.ahspCodes),
-  ]
-
-  return {
-    ...preview,
-    conflicts,
-    canImport: preview.blockers.length === 0 && conflicts.length === 0,
-    changeSummary: {
-      newSatuan: satuan.new,
-      reusedSatuan: satuan.existing,
-      newKategori: kategori.new,
-      reusedKategori: kategori.existing,
-      newMasterUpah: upah.new,
-      updateMasterUpah: upah.existing,
-      newMasterBahan: bahan.new,
-      updateMasterBahan: bahan.existing,
-      newMasterAlat: alat.new,
-      updateMasterAlat: alat.existing,
-      newAhspItems: ahsp.new,
-      updateAhspItems: ahsp.existing,
-    },
-  }
 }
 
 export function previewAhspImportWorkbook(buffer: Buffer) {

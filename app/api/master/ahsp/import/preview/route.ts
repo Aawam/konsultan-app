@@ -2,8 +2,7 @@ import { NextRequest } from 'next/server'
 
 import { requireOwnerAdminApi } from '@/lib/api-auth'
 import { apiData, apiError } from '@/lib/api-response'
-import { getAhspImportDatabaseSnapshot } from '@/lib/actions/ahsp-import'
-import { buildAhspImportWorkbookPayload, enrichAhspImportPreview } from '@/lib/ahsp-import'
+import { previewAhspImportWorkbook } from '@/lib/ahsp-import'
 
 export const runtime = 'nodejs'
 
@@ -29,13 +28,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { preview, payload } = buildAhspImportWorkbookPayload(Buffer.from(await file.arrayBuffer()))
-    const existing = await getAhspImportDatabaseSnapshot()
-
-    if (existing.error || !existing.data) {
-      return apiError('INTERNAL_ERROR', existing.error?.message ?? 'Gagal membaca konflik database AHSP.', 500)
-    }
-    return apiData(enrichAhspImportPreview(preview, payload, existing.data))
+    return apiData(previewAhspImportWorkbook(Buffer.from(await file.arrayBuffer())))
   } catch (error) {
     return apiError(
       'VALIDATION_ERROR',

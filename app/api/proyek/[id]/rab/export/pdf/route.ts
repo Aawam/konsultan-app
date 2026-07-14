@@ -11,14 +11,14 @@ export const runtime = 'nodejs'
 
 type RecordRabExportHistoryRpcClient = {
   rpc: (
-    fn: 'record_rab_export_history',
+    fn: 'record_rab_export_file',
     args: {
       target_rab_maker_id: string
       export_format: string
-      file_name: string
+      base_file_name: string
       file_size_bytes: number
     }
-  ) => Promise<{ data: number | null; error: { message: string } | null }>
+  ) => Promise<{ data: { versionNumber: number; fileName: string } | null; error: { message: string } | null }>
 }
 
 export async function GET(
@@ -50,19 +50,20 @@ export async function GET(
   }
 
   const pdf = createRabPdf(project, snapshot)
-  const filename = buildRabPdfFilename(project)
+  let filename = buildRabPdfFilename(project)
   const supabase = await createSupabaseServerClient()
-  const { data: version, error: historyError } = await (supabase as unknown as RecordRabExportHistoryRpcClient).rpc(
-    'record_rab_export_history',
+  const { data: exportRecord, error: historyError } = await (supabase as unknown as RecordRabExportHistoryRpcClient).rpc(
+    'record_rab_export_file',
     {
       target_rab_maker_id: snapshot.maker.id,
       export_format: 'pdf',
-      file_name: filename,
+      base_file_name: filename,
       file_size_bytes: pdf.byteLength,
     }
   )
 
   if (historyError) return apiError('INTERNAL_ERROR', historyError.message, 500)
+  if (exportRecord) filename = exportRecord.fileName
 
   return new Response(pdf, {
     status: 200,
@@ -70,7 +71,10 @@ export async function GET(
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="${filename}"`,
       'Cache-Control': 'no-store',
-      ...(version ? { 'X-RAB-Export-Version': String(version) } : {}),
+      ...(exportRecord ? {
+        'X-RAB-Export-Version': String(exportRecord.versionNumber),
+        'X-RAB-Export-Filename': filename,
+      } : {}),
     },
   })
 }

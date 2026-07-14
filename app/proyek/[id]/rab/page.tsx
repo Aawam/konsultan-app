@@ -182,6 +182,7 @@ export default async function RabProjectPage({ params }: Props) {
   const rabLock = getRabMakerLockState(snapshot.maker?.status)
   const canEditRab = access && !rabLock.locked
   const canExportPdf = snapshot.maker?.status === 'validated' || snapshot.maker?.status === 'final'
+  const latestExport = timelineEvents.find((event) => event.source === 'export')
 
   return (
     <div className="pb-10">
@@ -228,6 +229,11 @@ export default async function RabProjectPage({ params }: Props) {
           {rabLock.locked && (
             <span className="rounded-full border border-amber/30 bg-amber/10 px-2.5 py-1 text-xs font-semibold text-amber">
               Terkunci
+            </span>
+          )}
+          {latestExport && (
+            <span className="rounded-full border border-emerald/30 bg-emerald/10 px-2.5 py-1 text-xs font-semibold text-emerald">
+              Export terakhir: {latestExport.title.replace('Export ', '')}
             </span>
           )}
         </div>

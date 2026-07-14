@@ -149,15 +149,11 @@ export function AhspImportPreviewPanel() {
           {preview.blockers.length > 0 && (
             <ImportMessage title="Blocker" tone="rose" items={preview.blockers} />
           )}
-          {preview.conflicts.length > 0 && (
-            <ImportMessage title="Konflik Database" tone="rose" items={preview.conflicts} />
-          )}
           {preview.warnings.length > 0 && (
             <ImportMessage title="Catatan" tone="amber" items={preview.warnings} />
           )}
-          <ChangeSummary preview={preview} />
           {preview.canImport && (
-            <ImportMessage title="Siap Import" tone="emerald" items={['Tidak ada blocker atau konflik database.']} />
+            <ImportMessage title="Siap Import" tone="emerald" items={['Tidak ada blocker dari workbook.']} />
           )}
           {preview.duplicateAhspCodes.length > 0 && (
             <ImportMessage title="Kode Duplikat" tone="rose" items={preview.duplicateAhspCodes.slice(0, 12)} />
@@ -177,26 +173,6 @@ export function AhspImportPreviewPanel() {
         </div>
       )}
     </section>
-  )
-}
-
-function ChangeSummary({ preview }: { preview: AhspImportPreview }) {
-  const { changeSummary } = preview
-
-  return (
-    <div className="space-y-2">
-      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rencana Perubahan</p>
-      <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        <MiniStat label="Satuan Baru" value={changeSummary.newSatuan} />
-        <MiniStat label="Kategori Baru" value={changeSummary.newKategori} />
-        <MiniStat label="Master Baru" value={changeSummary.newMasterUpah + changeSummary.newMasterBahan + changeSummary.newMasterAlat} />
-        <MiniStat label="Master Update" value={changeSummary.updateMasterUpah + changeSummary.updateMasterBahan + changeSummary.updateMasterAlat} />
-        <MiniStat label="AHSP Baru" value={changeSummary.newAhspItems} />
-        <MiniStat label="AHSP Update" value={changeSummary.updateAhspItems} />
-        <MiniStat label="Satuan Dipakai" value={changeSummary.reusedSatuan} />
-        <MiniStat label="Kategori Dipakai" value={changeSummary.reusedKategori} />
-      </div>
-    </div>
   )
 }
 

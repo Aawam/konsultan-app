@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest'
 import {
   analyzeAhspImportRows,
   buildAhspImportPayload,
-  enrichAhspImportPreview,
   previewAhspImportWorkbook,
 } from '@/lib/ahsp-import'
 import { createXlsxWorkbook } from '@/lib/simple-xlsx'
@@ -92,48 +91,6 @@ describe('analyzeAhspImportRows', () => {
       nama_komponen: 'Pekerja',
       koefisien: 0.5,
     })
-  })
-
-  it('reports database change summary and duplicate conflicts', () => {
-    const { preview, payload } = buildAhspImportPayload({
-      MASTER_UPAH: [
-        ['No', 'Kode', 'Tenaga Kerja', 'Satuan', 'Harga Per Hari'],
-        [1, 'L.01', 'Pekerja', 'OH', 176000],
-      ],
-      MASTER_BAHAN: [
-        ['No', 'Bahan', 'Satuan', 'Harga Satuan'],
-      ],
-      MASTER_ALAT: [
-        ['No', 'Kode', 'Nama Alat', 'Satuan', 'Harga Satuan'],
-      ],
-      AHSP_ITEMS: [
-        ['No', 'Kode Analisa', 'Uraian Pekerjaan', 'Kategori', 'Satuan'],
-        [1, 'A.1', 'Galian tanah manual', 'Tanah', 'm3'],
-      ],
-      AHSP_DETAILS: [
-        ['No', 'Kode AHSP', 'Jenis', 'Uraian Komponen', 'Kode Komponen', 'Satuan', 'Koefisien'],
-        [1, 'A.1', 'TENAGA', 'Pekerja', 'L.01', 'OH', 0.5],
-      ],
-    })
-
-    const enriched = enrichAhspImportPreview(preview, payload, {
-      satuan: ['OH', 'OH'],
-      kategori: ['Tanah'],
-      masterUpah: ['Pekerja'],
-      masterBahan: [],
-      masterAlat: [],
-      ahspCodes: ['A.1'],
-    })
-
-    expect(enriched.changeSummary).toMatchObject({
-      newSatuan: 1,
-      reusedSatuan: 1,
-      reusedKategori: 1,
-      updateMasterUpah: 1,
-      updateAhspItems: 1,
-    })
-    expect(enriched.conflicts).toEqual(['Database punya satuan duplikat: oh. Rapikan dulu sebelum import.'])
-    expect(enriched.canImport).toBe(false)
   })
 })
 

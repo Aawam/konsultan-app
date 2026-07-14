@@ -2,10 +2,8 @@ import { NextRequest } from 'next/server'
 
 import { requireOwnerAdminApi } from '@/lib/api-auth'
 import { apiData, apiError } from '@/lib/api-response'
-import { getAhspImportDatabaseSnapshot } from '@/lib/actions/ahsp-import'
 import {
   buildAhspImportWorkbookPayload,
-  enrichAhspImportPreview,
   type AhspImportPayload,
   type AhspImportResult,
 } from '@/lib/ahsp-import'
@@ -43,16 +41,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const { preview, payload } = buildAhspImportWorkbookPayload(Buffer.from(await file.arrayBuffer()))
-    const existing = await getAhspImportDatabaseSnapshot()
 
-    if (existing.error || !existing.data) {
-      return apiError('INTERNAL_ERROR', existing.error?.message ?? 'Gagal membaca konflik database AHSP.', 500)
-    }
-
-    const enrichedPreview = enrichAhspImportPreview(preview, payload, existing.data)
-
-    if (!enrichedPreview.canImport) {
-      return apiError('CONFLICT', 'Import AHSP dibatalkan karena masih ada blocker atau konflik.', 409, enrichedPreview)
+    if (!preview.canImport) {
+      return apiError('CONFLICT', 'Import AHSP dibatalkan karena masih ada blocker.', 409, preview)
     }
 
     const supabase = await createSupabaseServerClient()
@@ -62,7 +53,7 @@ export async function POST(req: NextRequest) {
     )
 
     if (error) return apiError('INTERNAL_ERROR', error.message, 500)
-    return apiData({ result: data, preview: enrichedPreview })
+    return apiData({ result: data, preview })
   } catch (error) {
     return apiError(
       'VALIDATION_ERROR',
