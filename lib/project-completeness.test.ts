@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   evaluateProjectCompleteness,
+  evaluateProjectRabReadiness,
   getProjectWorkflowGate,
   type ProjectCompletenessInput,
 } from '@/lib/project-completeness'
@@ -79,5 +80,47 @@ describe('getProjectWorkflowGate', () => {
     })
 
     expect(getProjectWorkflowGate(incomplete)).toBe('Lengkapi data')
+  })
+})
+
+describe('evaluateProjectRabReadiness', () => {
+  it('allows a complete Perencanaan project at the RAB phase', () => {
+    expect(evaluateProjectRabReadiness(completeProject)).toMatchObject({
+      allowed: true,
+      reason: null,
+    })
+  })
+
+  it('blocks non-Perencanaan projects', () => {
+    expect(evaluateProjectRabReadiness({
+      ...completeProject,
+      jenis_pekerjaan: 'Pengawasan',
+      tahap_progress: 'Selesai (BAST)',
+    })).toMatchObject({
+      allowed: false,
+      reason: 'not-planning',
+    })
+  })
+
+  it('blocks projects with missing required data', () => {
+    const readiness = evaluateProjectRabReadiness({
+      ...completeProject,
+      perusahaan_id: null,
+    })
+
+    expect(readiness.allowed).toBe(false)
+    expect(readiness.reason).toBe('missing-data')
+    expect(readiness.completeness.missingFields.map((field) => field.label)).toEqual(['Perusahaan'])
+  })
+
+  it('blocks Perencanaan projects that are not yet at the RAB phase', () => {
+    expect(evaluateProjectRabReadiness({
+      ...completeProject,
+      tahap_progress: 'Konsep Desain',
+      persentase_progress: 40,
+    })).toMatchObject({
+      allowed: false,
+      reason: 'workflow-review',
+    })
   })
 })

@@ -20,6 +20,7 @@ import {
   getProyekById,
   type ProyekListFilters,
 } from '@/lib/actions/proyek'
+import { evaluateProjectRabReadiness } from '@/lib/project-completeness'
 
 function firstRelation<T>(value: RelationValue<T>): T | null {
   if (Array.isArray(value)) return value[0] ?? null
@@ -183,6 +184,35 @@ export async function canAccessRabProject(projectId: string, profile: CurrentUse
   const { data, error } = await getProyekById(projectId, { includeSensitive: isOwnerAdmin(profile) })
   if (error) return false
   return Boolean(data && data.jenis_pekerjaan === 'Perencanaan')
+}
+
+export async function getRabProjectMutationGate(projectId: string, profile: CurrentUserProfile | null) {
+  if (!profile) {
+    return {
+      canAccess: false,
+      readiness: null,
+      error: null,
+    }
+  }
+
+  const { data: project, error } = await getProyekById(projectId, { includeSensitive: false })
+  if (error) {
+    return {
+      canAccess: false,
+      readiness: null,
+      error,
+    }
+  }
+
+  const readiness = project
+    ? evaluateProjectRabReadiness(project, { includeCommercial: false })
+    : null
+
+  return {
+    canAccess: Boolean(project && project.jenis_pekerjaan === 'Perencanaan'),
+    readiness,
+    error: null,
+  }
 }
 
 export async function getRabRekapByProyekId(projectId: string) {

@@ -6,6 +6,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
 import { DatabaseClient } from '@/components/database/database-client'
+import { AhspImportPreviewPanel } from '@/components/database/ahsp-import-preview-panel'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -459,6 +460,7 @@ export function ReferenceDatabaseClient({
 
       {tab === 'ahsp' && (
         <div className="space-y-5">
+          {canManageMaster && <AhspImportPreviewPanel />}
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="stat-card">

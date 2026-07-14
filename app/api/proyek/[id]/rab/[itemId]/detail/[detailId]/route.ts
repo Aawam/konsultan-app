@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 
 import { apiData, apiError, readJsonBody } from '@/lib/api-response'
-import { canAccessRabProject } from '@/lib/actions/rab'
+import { getRabProjectMutationGate } from '@/lib/actions/rab'
 import { getCurrentUserProfile } from '@/lib/auth'
 import { normalizeOverrideReason, parseRabDecimalInput } from '@/lib/rab-maker'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
@@ -19,10 +19,21 @@ export async function PATCH(
 ) {
   const { id, detailId } = await params
   const { profile } = await getCurrentUserProfile()
-  const canAccess = await canAccessRabProject(id, profile)
+  const { canAccess, readiness, error: gateError } = await getRabProjectMutationGate(id, profile)
+
+  if (gateError) return apiError('INTERNAL_ERROR', gateError.message, 500)
 
   if (!canAccess) {
     return apiError('FORBIDDEN', 'Tidak punya akses RAB proyek ini.', 403)
+  }
+
+  if (!readiness?.allowed) {
+    return apiError(
+      'CONFLICT',
+      'Proyek belum siap untuk perubahan RAB/EE.',
+      409,
+      readiness
+    )
   }
 
   const { data: body, error: bodyError } = await readJsonBody<{

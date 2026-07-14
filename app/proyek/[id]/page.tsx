@@ -5,8 +5,10 @@ import { BadgeJenis, BadgeTahap, BadgeOverride, BadgeWorkflow } from '@/componen
 import { formatRupiah, formatTanggal } from '@/lib/utils'
 import { TAHAP_BAR_COLOR } from '@/lib/constants/proyek'
 import { TombolAksi } from '@/components/proyek/proyek-actions'
+import { WorkflowTransitionAction } from '@/components/proyek/workflow-transition-action'
 import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 import { evaluateProjectCompleteness, getProjectWorkflowGate } from '@/lib/project-completeness'
+import { evaluateProjectWorkflowTransition } from '@/lib/project-workflow'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -81,8 +83,9 @@ export default async function DetailProyekPage({ params }: Props) {
   const namaPerusahaan = perusahaan
     ? `${perusahaan.nama_perusahaan}${perusahaan.adalah_perusahaan_sendiri ? ' ★' : ''}`
     : undefined
-  const completeness = evaluateProjectCompleteness(proyek, { includeCommercial: canViewCommercial })
+  const completeness = evaluateProjectCompleteness(proyek, { includeCommercial: false })
   const workflowGate = getProjectWorkflowGate(completeness)
+  const rabTransition = evaluateProjectWorkflowTransition(proyek, 'mark_rab_ready', { includeCommercial: false })
 
   return (
     <div className="pb-10">
@@ -161,6 +164,14 @@ export default async function DetailProyekPage({ params }: Props) {
         <DetailCard title="Kesiapan Workflow" className="xl:col-span-2">
           <InfoRow label="Gate Saat Ini" value={workflowGate} />
           <InfoRow label="Aksi Berikutnya" value={completeness.nextAction} />
+          {canViewCommercial && rabTransition.allowed && (
+            <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
+              <p className="text-xs font-bold text-muted-foreground">Transisi</p>
+              <div>
+                <WorkflowTransitionAction projectId={id} />
+              </div>
+            </div>
+          )}
           {completeness.missingFields.length > 0 && (
             <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
               <p className="text-xs font-bold text-muted-foreground">Data Kurang</p>
