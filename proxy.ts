@@ -62,6 +62,11 @@ export async function proxy(request: NextRequest) {
   const rateLimitResponse = checkMutationRateLimit(request)
   if (rateLimitResponse) return rateLimitResponse
 
+  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
+  if (isApiRoute) {
+    return NextResponse.next()
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -95,7 +100,6 @@ export async function proxy(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
 
   // Aturan Satpam:
   // Jika user belum login DAN mencoba masuk ke halaman selain /login, 
@@ -121,10 +125,11 @@ export async function proxy(request: NextRequest) {
   return response
 }
 
-// Protect app pages only. API routes authenticate inside each handler so
-// ordinary API/static requests do not pay the global proxy auth round trip.
+// Protect app pages and rate-limit API mutations. API route handlers still own
+// authentication, so API requests return before the Supabase auth round trip.
 export const config = {
   matcher: [
+    '/api/:path*',
     '/login',
     '/proyek/:path*',
     '/database/:path*',
