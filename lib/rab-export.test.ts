@@ -45,6 +45,10 @@ const snapshot = {
     subtotal: 100000,
     ppn_nilai: 11000,
     total_final: 111000,
+    validated_by: null,
+    validated_at: null,
+    finalized_by: null,
+    finalized_at: null,
     updated_at: '2026-01-01',
   },
   items: [
@@ -217,6 +221,36 @@ describe('buildRabExportFilename', () => {
 })
 
 describe('buildRabExportSheets', () => {
+  it('keeps generated AHSP sheet names unique after sanitizing duplicate category names', () => {
+    const duplicateCategorySnapshot = {
+      ...snapshot,
+      items: [
+        { ...snapshot.items[0], kategori_snapshot: 'A/B' },
+        { ...snapshot.items[2], kategori_snapshot: 'A:B' },
+      ],
+      detailsByItem: {
+        'item-1': snapshot.detailsByItem['item-1'],
+        'item-3': snapshot.detailsByItem['item-3'],
+      },
+    } satisfies RabMakerSnapshot
+
+    const sheets = buildRabExportSheets(project, duplicateCategorySnapshot)
+    const sheetNames = sheets.map((sheet) => sheet.name)
+
+    expect(new Set(sheetNames).size).toBe(sheetNames.length)
+    expect(sheetNames.every((name) => name.length <= 31)).toBe(true)
+    expect(sheetNames).toContain('A B')
+    expect(sheetNames).toContain('A B (2)')
+
+    const firstRabItemRow = sheets[1].rows.find((row) => rowValues(row)[1] === '1.1')
+    const secondRabItemRow = sheets[1].rows.find((row) => rowValues(row)[1] === '2.1')
+
+    expect(firstRabItemRow).toBeDefined()
+    expect(secondRabItemRow).toBeDefined()
+    expect(cellFormula(firstRabItemRow!, 7)).toMatch(/^'A B'!\$G\$\d+$/)
+    expect(cellFormula(secondRabItemRow!, 7)).toMatch(/^'A B \(2\)'!\$G\$\d+$/)
+  })
+
   it('builds rekap, RAB, and detail sheets from a snapshot', () => {
     const sheets = buildRabExportSheets(project, snapshot)
 

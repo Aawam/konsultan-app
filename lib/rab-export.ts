@@ -30,6 +30,21 @@ function safeSheetName(value: string, fallback: string) {
   return cleaned.slice(0, 31)
 }
 
+function uniqueSheetName(value: string, fallback: string, usedNames: Set<string>) {
+  const base = safeSheetName(value, fallback)
+  let candidate = base
+  let suffixNumber = 2
+
+  while (usedNames.has(candidate.toLowerCase())) {
+    const suffix = ` (${suffixNumber})`
+    candidate = `${base.slice(0, 31 - suffix.length)}${suffix}`
+    suffixNumber += 1
+  }
+
+  usedNames.add(candidate.toLowerCase())
+  return candidate
+}
+
 function cell(value: XlsxCellValue, style: XlsxCellStyle): XlsxCell {
   return { value, style }
 }
@@ -308,8 +323,9 @@ export function buildRabExportSheets(project: ProyekDetail, snapshot: RabMakerSn
   const ppnNilai = snapshot.maker?.ppn_nilai ?? subtotal * ppnPersen / 100
   const totalFinal = snapshot.maker?.total_final ?? subtotal + ppnNilai
   const ahspRefsByItem = new Map<string, AhspItemFormulaRefs>()
+  const usedSheetNames = new Set(['rekap', 'rab', 'rekap ahsp', 'harga'])
   const categoryAhspSheets = groupItemsByCategory(snapshot).map(([kategori, value]) => {
-    const sheetName = safeSheetName(kategori, 'AHSP View')
+    const sheetName = uniqueSheetName(kategori, 'AHSP View', usedSheetNames)
     const { rows, itemRefs } = buildAhspViewRows(value.items, snapshot, kategori, sheetName)
     for (const [itemId, refs] of itemRefs) {
       ahspRefsByItem.set(itemId, refs)
