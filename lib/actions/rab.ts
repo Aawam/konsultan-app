@@ -458,6 +458,77 @@ export type AvailableAhspForRabFilters = {
   limit?: number
 }
 
+export type RabAuditTimelineEvent = {
+  id: string
+  source: 'workflow' | 'rab' | 'export'
+  title: string
+  description: string
+  actor: string | null
+  occurred_at: string
+}
+
+export async function getRabAuditTimelineByProyekId(projectId: string) {
+  const supabase = await createSupabaseServerClient()
+  const [overrideResult, rabAuditResult, exportResult] = await Promise.all([
+    supabase
+      .from('override_log')
+      .select('id, field_dioverride, nilai_sebelum, nilai_sesudah, alasan, dilakukan_oleh, dilakukan_pada')
+      .eq('proyek_id', projectId)
+      .order('dilakukan_pada', { ascending: false })
+      .limit(20),
+    supabase
+      .from('rab_audit_log')
+      .select('id, aksi, metadata, user_id, created_at')
+      .eq('proyek_id', projectId)
+      .order('created_at', { ascending: false })
+      .limit(30),
+    supabase
+      .from('rab_export_history')
+      .select('id, version_number, export_format, file_name, file_size_bytes, exported_at, exported_by')
+      .eq('proyek_id', projectId)
+      .order('exported_at', { ascending: false })
+      .limit(20),
+  ])
+
+  const error = overrideResult.error ?? rabAuditResult.error ?? exportResult.error
+  if (error) return { data: [], error }
+
+  const overrideEvents = (overrideResult.data ?? []).map((row) => ({
+    id: `workflow:${row.id}`,
+    source: 'workflow' as const,
+    title: row.field_dioverride,
+    description: `${row.nilai_sebelum ?? '-'} -> ${row.nilai_sesudah ?? '-'} · ${row.alasan}`,
+    actor: row.dilakukan_oleh,
+    occurred_at: row.dilakukan_pada,
+  }))
+
+  const rabEvents = (rabAuditResult.data ?? []).map((row) => ({
+    id: `rab:${row.id}`,
+    source: 'rab' as const,
+    title: row.aksi,
+    description: typeof row.metadata === 'object' && row.metadata !== null
+      ? JSON.stringify(row.metadata)
+      : '-',
+    actor: row.user_id,
+    occurred_at: row.created_at,
+  }))
+
+  const exportEvents = (exportResult.data ?? []).map((row) => ({
+    id: `export:${row.id}`,
+    source: 'export' as const,
+    title: `Export ${String(row.export_format).toUpperCase()} v${row.version_number}`,
+    description: `${row.file_name} · ${Number(row.file_size_bytes ?? 0).toLocaleString('id-ID')} byte`,
+    actor: row.exported_by,
+    occurred_at: row.exported_at,
+  }))
+
+  const events = [...overrideEvents, ...rabEvents, ...exportEvents]
+    .sort((left, right) => new Date(right.occurred_at).getTime() - new Date(left.occurred_at).getTime())
+    .slice(0, 40) satisfies RabAuditTimelineEvent[]
+
+  return { data: events, error: null }
+}
+
 function normalizeAhspSearchFilters(filters: AvailableAhspForRabFilters = {}) {
   const limit = Number.isFinite(filters.limit) ? Number(filters.limit) : 25
 

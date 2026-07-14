@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { AuditTimeline } from '@/components/proyek/audit-timeline'
 import { BadgeJenis, BadgeTahap, BadgeWorkflow } from '@/components/proyek/badges'
 import { RabAccessDeniedDialog } from '@/components/proyek/rab-access-denied-dialog'
 import { RabMakerClient } from '@/components/proyek/rab-maker-client'
@@ -11,7 +12,12 @@ import { PageError } from '@/components/ui/page-error'
 import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 import { getKategoriPekerjaanMasterList } from '@/lib/actions/ahsp'
 import { getProyekById } from '@/lib/actions/proyek'
-import { canAccessRabProject, getAvailableAhspForRab, getRabMakerSnapshotByProyekId } from '@/lib/actions/rab'
+import {
+  canAccessRabProject,
+  getAvailableAhspForRab,
+  getRabAuditTimelineByProyekId,
+  getRabMakerSnapshotByProyekId,
+} from '@/lib/actions/rab'
 import { evaluateProjectRabReadiness, getProjectWorkflowGate, type ProjectRabReadinessResult } from '@/lib/project-completeness'
 import { getRabMakerLockState } from '@/lib/rab-lock'
 import type { ProyekDetail } from '@/lib/types/proyek'
@@ -159,15 +165,18 @@ export default async function RabProjectPage({ params }: Props) {
     { data: snapshot, error: snapshotError },
     { data: ahspOptions, error: ahspError },
     { data: kategoriOptions, error: kategoriError },
+    { data: timelineEvents, error: timelineError },
   ] = await Promise.all([
     getRabMakerSnapshotByProyekId(id),
     getAvailableAhspForRab(id, { limit: 25 }),
     getKategoriPekerjaanMasterList(),
+    getRabAuditTimelineByProyekId(id),
   ])
 
   if (snapshotError) return <PageError error={snapshotError} />
   if (ahspError) return <PageError error={ahspError} />
   if (kategoriError) return <PageError error={kategoriError} />
+  if (timelineError) return <PageError error={timelineError} />
 
   const proyek = proyekResult.data
   const rabLock = getRabMakerLockState(snapshot.maker?.status)
@@ -239,6 +248,10 @@ export default async function RabProjectPage({ params }: Props) {
         snapshot={snapshot}
         canManage={canEditRab}
       />
+
+      <div className="mt-5">
+        <AuditTimeline events={timelineEvents} />
+      </div>
     </div>
   )
 }
