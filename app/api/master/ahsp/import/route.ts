@@ -3,11 +3,24 @@ import { NextRequest } from 'next/server'
 import { requireOwnerAdminApi } from '@/lib/api-auth'
 import { apiData, apiError } from '@/lib/api-response'
 import { getAhspImportDatabaseSnapshot } from '@/lib/actions/ahsp-import'
-import { buildAhspImportWorkbookPayload, enrichAhspImportPreview } from '@/lib/ahsp-import'
+import {
+  buildAhspImportWorkbookPayload,
+  enrichAhspImportPreview,
+  type AhspImportPayload,
+  type AhspImportResult,
+} from '@/lib/ahsp-import'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
 
 const MAX_IMPORT_BYTES = 15 * 1024 * 1024
+
+type ImportAhspRpcClient = {
+  rpc: (
+    fn: 'import_ahsp_masterfile',
+    args: { import_payload: AhspImportPayload }
+  ) => Promise<{ data: AhspImportResult | null; error: { message: string } | null }>
+}
 
 export async function POST(req: NextRequest) {
   const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh import AHSP.')
@@ -35,7 +48,21 @@ export async function POST(req: NextRequest) {
     if (existing.error || !existing.data) {
       return apiError('INTERNAL_ERROR', existing.error?.message ?? 'Gagal membaca konflik database AHSP.', 500)
     }
-    return apiData(enrichAhspImportPreview(preview, payload, existing.data))
+
+    const enrichedPreview = enrichAhspImportPreview(preview, payload, existing.data)
+
+    if (!enrichedPreview.canImport) {
+      return apiError('CONFLICT', 'Import AHSP dibatalkan karena masih ada blocker atau konflik.', 409, enrichedPreview)
+    }
+
+    const supabase = await createSupabaseServerClient()
+    const { data, error } = await (supabase as unknown as ImportAhspRpcClient).rpc(
+      'import_ahsp_masterfile',
+      { import_payload: payload }
+    )
+
+    if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+    return apiData({ result: data, preview: enrichedPreview })
   } catch (error) {
     return apiError(
       'VALIDATION_ERROR',

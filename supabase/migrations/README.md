@@ -26,6 +26,7 @@ only reviewed, runnable schema/RLS/function changes into this folder.
 10. `20260714104000_project_workflow_transition_rpc.sql` - atomic project workflow transition update plus audit log insert.
 11. `20260714112000_rab_approval_final_lock_model.sql` - RAB approval/finalization RPCs and lock metadata.
 12. `20260714115000_rab_export_history.sql` - versioned RAB export history table and recording RPC.
+13. `20260714123000_ahsp_controlled_import_rpc.sql` - transactional AHSP masterfile import RPC.
 
 Before promoting any additional `docs/DB_*.sql` script into this folder:
 

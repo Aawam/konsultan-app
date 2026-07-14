@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { analyzeAhspImportRows, previewAhspImportWorkbook } from '@/lib/ahsp-import'
+import {
+  analyzeAhspImportRows,
+  buildAhspImportPayload,
+  enrichAhspImportPreview,
+  previewAhspImportWorkbook,
+} from '@/lib/ahsp-import'
 import { createXlsxWorkbook } from '@/lib/simple-xlsx'
 
 describe('analyzeAhspImportRows', () => {
@@ -19,10 +24,10 @@ describe('analyzeAhspImportRows', () => {
         [1, 'AL.001', 'Dump Truck', 'jam', 300000],
       ],
       AHSP_ITEMS: [
-        ['No', 'Kode Analisa', 'Uraian Pekerjaan'],
-        [1, 'A.1', 'Galian tanah manual'],
-        [2, 'A.1', 'Galian tanah duplikat'],
-        [3, 'A.2', 'Urugan pasir'],
+        ['No', 'Kode Analisa', 'Uraian Pekerjaan', 'Kategori', 'Satuan'],
+        [1, 'A.1', 'Galian tanah manual', 'Tanah', 'm3'],
+        [2, 'A.1', 'Galian tanah duplikat', 'Tanah', 'm3'],
+        [3, 'A.2', 'Urugan pasir', 'Tanah', 'm3'],
       ],
       AHSP_DETAILS: [
         ['No', 'Kode AHSP', 'Jenis', 'Uraian Komponen', 'Kode Komponen', 'Satuan', 'Koefisien'],
@@ -45,7 +50,90 @@ describe('analyzeAhspImportRows', () => {
       { kodeAhsp: 'A.3', jenis: 'BAHAN', komponen: 'Semen' },
     ])
     expect(result.blockers).toContain('Ada Kode Analisa duplikat.')
-    expect(result.warnings).toContain('Workbook belum punya kolom eksplisit untuk kategori output dan satuan output AHSP.')
+    expect(result.canImport).toBe(false)
+  })
+
+  it('builds normalized payload rows for transactional import', () => {
+    const { preview, payload } = buildAhspImportPayload({
+      MASTER_UPAH: [
+        ['No', 'Kode', 'Tenaga Kerja', 'Satuan', 'Harga Per Hari'],
+        [1, 'L.01', 'Pekerja', 'OH', 176000],
+      ],
+      MASTER_BAHAN: [
+        ['No', 'Bahan', 'Satuan', 'Harga Satuan'],
+        [1, 'Pasir', 'm3', 250000],
+      ],
+      MASTER_ALAT: [
+        ['No', 'Kode', 'Nama Alat', 'Satuan', 'Harga Satuan'],
+        [1, 'AL.001', 'Dump Truck', 'jam', 300000],
+      ],
+      AHSP_ITEMS: [
+        ['No', 'Kode Analisa', 'Uraian Pekerjaan', 'Kategori', 'Satuan', 'Bidang', 'Profit Default (%)'],
+        [1, 'A.1', 'Galian tanah manual', 'Tanah', 'm3', 'CK', '10,5'],
+      ],
+      AHSP_DETAILS: [
+        ['No', 'Kode AHSP', 'Jenis', 'Uraian Komponen', 'Kode Komponen', 'Satuan', 'Koefisien'],
+        [1, 'A.1', 'TENAGA', 'Pekerja', 'L.01', 'OH', '0,5'],
+      ],
+    })
+
+    expect(preview.blockers).toEqual([])
+    expect(payload.satuan).toEqual(['jam', 'm3', 'OH'])
+    expect(payload.kategori).toEqual(['Tanah'])
+    expect(payload.ahspItems[0]).toMatchObject({
+      kode_analisa: 'A.1',
+      kategori: 'Tanah',
+      satuan: 'm3',
+      profit_persen_default: 10.5,
+    })
+    expect(payload.ahspDetails[0]).toMatchObject({
+      kode_ahsp: 'A.1',
+      komponen_tipe: 'upah',
+      nama_komponen: 'Pekerja',
+      koefisien: 0.5,
+    })
+  })
+
+  it('reports database change summary and duplicate conflicts', () => {
+    const { preview, payload } = buildAhspImportPayload({
+      MASTER_UPAH: [
+        ['No', 'Kode', 'Tenaga Kerja', 'Satuan', 'Harga Per Hari'],
+        [1, 'L.01', 'Pekerja', 'OH', 176000],
+      ],
+      MASTER_BAHAN: [
+        ['No', 'Bahan', 'Satuan', 'Harga Satuan'],
+      ],
+      MASTER_ALAT: [
+        ['No', 'Kode', 'Nama Alat', 'Satuan', 'Harga Satuan'],
+      ],
+      AHSP_ITEMS: [
+        ['No', 'Kode Analisa', 'Uraian Pekerjaan', 'Kategori', 'Satuan'],
+        [1, 'A.1', 'Galian tanah manual', 'Tanah', 'm3'],
+      ],
+      AHSP_DETAILS: [
+        ['No', 'Kode AHSP', 'Jenis', 'Uraian Komponen', 'Kode Komponen', 'Satuan', 'Koefisien'],
+        [1, 'A.1', 'TENAGA', 'Pekerja', 'L.01', 'OH', 0.5],
+      ],
+    })
+
+    const enriched = enrichAhspImportPreview(preview, payload, {
+      satuan: ['OH', 'OH'],
+      kategori: ['Tanah'],
+      masterUpah: ['Pekerja'],
+      masterBahan: [],
+      masterAlat: [],
+      ahspCodes: ['A.1'],
+    })
+
+    expect(enriched.changeSummary).toMatchObject({
+      newSatuan: 1,
+      reusedSatuan: 1,
+      reusedKategori: 1,
+      updateMasterUpah: 1,
+      updateAhspItems: 1,
+    })
+    expect(enriched.conflicts).toEqual(['Database punya satuan duplikat: oh. Rapikan dulu sebelum import.'])
+    expect(enriched.canImport).toBe(false)
   })
 })
 
@@ -76,8 +164,8 @@ describe('previewAhspImportWorkbook', () => {
       {
         name: 'AHSP_ITEMS',
         rows: [
-          ['No', 'Kode Analisa', 'Uraian Pekerjaan'],
-          [1, 'A.1', 'Galian tanah manual'],
+          ['No', 'Kode Analisa', 'Uraian Pekerjaan', 'Kategori', 'Satuan'],
+          [1, 'A.1', 'Galian tanah manual', 'Tanah', 'm3'],
         ],
       },
       {
