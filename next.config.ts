@@ -1,5 +1,10 @@
 import type { NextConfig } from "next";
 
+const allowedDevOrigins = process.env.NEXT_ALLOWED_DEV_ORIGINS
+  ?.split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
+
 const securityHeaders = [
   {
     key: 'X-Frame-Options',
@@ -24,6 +29,7 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  ...(allowedDevOrigins?.length ? { allowedDevOrigins } : {}),
   async headers() {
     return [
       {
