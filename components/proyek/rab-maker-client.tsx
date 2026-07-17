@@ -1,6 +1,7 @@
 'use client'
 
 import { Fragment, type KeyboardEvent, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CheckIcon, Loader2Icon, PencilIcon, Trash2Icon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -25,6 +26,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import type { AhspItemRow, KategoriPekerjaanMasterRow, RabMakerSnapshot } from '@/lib/types/ahsp'
 import { formatRupiah } from '@/lib/utils'
 
@@ -81,6 +83,7 @@ export function RabMakerClient({
   const [hargaDraft, setHargaDraft] = useState<HargaOverrideDraft | null>(null)
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
   const [busyAction, setBusyAction] = useState<string | null>(null)
+  const isCompactScreen = useMediaQuery('(max-width: 1023px)')
 
   function toggleDetails(itemId: string) {
     setExpandedItemId((current) => current === itemId ? null : itemId)
@@ -197,6 +200,26 @@ export function RabMakerClient({
 
     toast.success('Item RAB dihapus.')
     router.refresh()
+  }
+
+  if (isCompactScreen) {
+    return (
+      <section className="rounded-xl border border-border bg-card p-5 sm:p-6">
+        <p className="text-sm font-bold text-foreground">RAB Maker membutuhkan layar desktop</p>
+        <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+          Tabel volume, harga dasar, profit, dan detail komponen perlu ruang kerja yang lebih lebar agar angka tidak tertukar.
+          Buka halaman ini pada layar minimal 1024 px untuk menyunting RAB dengan aman.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Button asChild variant="outline">
+            <Link href="/proyek/rab">Kembali ke Daftar RAB</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href={`/proyek/${projectId}`}>Lihat Detail Proyek</Link>
+          </Button>
+        </div>
+      </section>
+    )
   }
 
   return (

@@ -74,7 +74,7 @@ export function RabProjectListClient({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-muted-foreground">Estimasi</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">Pembuatan RAB</h1>
+          <h1 className="mt-1 text-xl font-bold tracking-tight text-foreground lg:text-2xl">Pembuatan RAB</h1>
           <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
             Daftar proyek Perencanaan yang dapat dipakai untuk menyusun RAB/EE. Tenaga Ahli melihat proyek non-sensitif tanpa nilai pagu, HPS, atau kontrak.
           </p>

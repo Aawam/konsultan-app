@@ -1,13 +1,17 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { PieChart, Pie, Cell, Tooltip } from 'recharts'
 import { ProyekDisplay, getNamaPerusahaan } from '@/lib/types/proyek'
 import { BadgeJenis, BadgeTahap } from '@/components/proyek/badges'
 import { formatRupiah } from '@/lib/utils'
 import { TabGroup } from '@/components/ui/tab-group'
 import { StatCard, MiniBar } from '@/components/ui/stat-card'
+import { PageHeader } from '@/components/ui/page-header'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { buildProjectListHref, readDashboardFilters, type DashboardFilters } from '@/lib/dashboard-filters'
 import {
   filterProjects,
   getProjectCompanyNames,
@@ -133,12 +137,6 @@ function pct(part: number, total: number) {
   return Math.round((part / total) * 100)
 }
 
-function worklistHref(params: Record<string, string | number>) {
-  const search = new URLSearchParams()
-  for (const [key, value] of Object.entries(params)) search.set(key, String(value))
-  return `/proyek?${search.toString()}`
-}
-
 function MetricLinkCard({
   label,
   value,
@@ -153,9 +151,9 @@ function MetricLinkCard({
   href: string
 }) {
   return (
-    <Link href={href} className="stat-card transition-colors hover:border-brand/40 hover:bg-muted/30">
+    <Link href={href} className="stat-card transition-colors hover:border-brand/60 hover:bg-muted/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
       <p className="stat-label">{label}</p>
-      <p className={`text-2xl font-bold font-mono leading-tight ${color}`}>{value}</p>
+      <p className={`stat-value ${color}`}>{value}</p>
       {sub && <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>}
     </Link>
   )
@@ -196,10 +194,31 @@ export function DashboardClient({
   proyek: ProyekDisplay[]
   canViewCommercial?: boolean
 }) {
-  const [yearFilter, setYearFilter] = useState<YearFilter>('semua')
-  const [jenisFilter, setJenisFilter] = useState<JenisFilter>('Semua')
-  const [perusahaanFilter, setPerusahaanFilter] = useState<string>('Semua')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('Semua')
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
+  const filters = readDashboardFilters(searchParams)
+  const yearFilter = filters.year as YearFilter
+  const jenisFilter = filters.jenis as JenisFilter
+  const perusahaanFilter = filters.perusahaan
+  const statusFilter = filters.status as StatusFilter
+
+  const updateFilters = useCallback((patch: Partial<DashboardFilters>) => {
+    const next = { ...filters, ...patch }
+    const params = new URLSearchParams(searchParams.toString())
+
+    for (const key of ['year', 'jenis', 'status', 'perusahaan']) params.delete(key)
+    if (next.year !== 'semua') params.set('year', String(next.year))
+    if (next.jenis !== 'Semua') params.set('jenis', next.jenis)
+    if (next.status !== 'Semua') params.set('status', next.status)
+    if (next.perusahaan !== 'Semua') params.set('perusahaan', next.perusahaan)
+
+    const query = params.toString()
+    startTransition(() => {
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
+    })
+  }, [filters, pathname, router, searchParams])
 
   const years = useMemo(
     () => getProjectYears(proyek),
@@ -258,82 +277,80 @@ export function DashboardClient({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            {canViewCommercial ? 'Owner Overview' : 'Project Overview'}
-          </p>
-          <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">Dashboard Proyek</h1>
-          <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
-            Ringkasan progress dan distribusi proyek untuk keputusan harian.
-          </p>
+      <PageHeader
+        eyebrow={canViewCommercial ? 'Owner Overview' : 'Project Overview'}
+        title="Dashboard Proyek"
+        description={`${filtered.length} proyek sesuai filter aktif${isPending ? ' · memuat…' : ''}.`}
+        actions={(
+          <Link
+            href="/proyek"
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            Buka Daftar Proyek
+          </Link>
+        )}
+      />
+
+      <div className="space-y-3 rounded-xl border border-border bg-card p-3">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+          <p className="filter-label shrink-0">Periode</p>
+          <TabGroup
+            className="max-w-full overflow-x-auto"
+            tabs={[
+              { label: 'Semua', value: 'semua' as const },
+              ...years.map((year) => ({ label: String(year), value: year })),
+            ]}
+            value={yearFilter}
+            onChange={(value) => updateFilters({ year: value })}
+          />
+          <span className="text-sm text-muted-foreground lg:ml-auto">{filtered.length} proyek</span>
         </div>
-        <Link
-          href="/proyek"
-          className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
-        >
-          Buka Daftar Proyek
-        </Link>
-      </div>
 
-      {/* ── Filter bar ── */}
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3">
-        {/* Year tabs */}
-        <TabGroup
-          className="overflow-x-auto shrink-0"
-          tabs={[
-            { label: 'Semua', value: 'semua' as const },
-            ...years.map((y) => ({ label: String(y), value: y })),
-          ]}
-          value={yearFilter}
-          onChange={(v) => setYearFilter(v)}
-        />
-
-        {/* Jenis tabs */}
-        <TabGroup
-          className="shrink-0"
-          tabs={(['Semua', 'Perencanaan', 'Pengawasan'] as JenisFilter[]).map((j) => ({ label: j, value: j }))}
-          value={jenisFilter}
-          onChange={(v) => setJenisFilter(v as JenisFilter)}
-        />
-
-        {/* Perusahaan dropdown */}
-        <select
-          value={perusahaanFilter}
-          onChange={(e) => setPerusahaanFilter(e.target.value)}
-          className="text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-foreground focus:outline-none focus:border-brand shrink-0 max-w-[180px]"
-        >
-          {perusahaanList.map((name) => (
-            <option key={name} value={name}>{name}</option>
-          ))}
-        </select>
-
-        {/* Status dropdown */}
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-          className="text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-foreground focus:outline-none focus:border-brand shrink-0"
-        >
-          {(['Semua', 'Work', 'Borrowed', 'Get Borrowed'] as StatusFilter[]).map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-
-        <span className="ml-auto text-xs text-muted-foreground">{filtered.length} proyek</span>
+        <div className="flex flex-col gap-2 border-t border-border-subtle pt-3 lg:flex-row lg:items-center">
+          <p className="filter-label shrink-0">Filter</p>
+          <TabGroup
+            className="shrink-0"
+            tabs={(['Semua', 'Perencanaan', 'Pengawasan'] as JenisFilter[]).map((jenis) => ({ label: jenis, value: jenis }))}
+            value={jenisFilter}
+            onChange={(value) => updateFilters({ jenis: value as JenisFilter })}
+          />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:ml-auto lg:flex lg:items-center">
+            <Select value={perusahaanFilter} onValueChange={(value) => updateFilters({ perusahaan: value })}>
+              <SelectTrigger className="h-9 min-w-[190px] border-input bg-background text-sm">
+                <SelectValue placeholder="Semua perusahaan" />
+              </SelectTrigger>
+              <SelectContent className="select-content">
+                {perusahaanList.map((name) => (
+                  <SelectItem key={name} value={name} className="select-item">{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={(value) => updateFilters({ status: value as StatusFilter })}>
+              <SelectTrigger className="h-9 min-w-[160px] border-input bg-background text-sm">
+                <SelectValue placeholder="Semua status" />
+              </SelectTrigger>
+              <SelectContent className="select-content">
+                {(['Semua', 'Work', 'Borrowed', 'Get Borrowed'] as StatusFilter[]).map((status) => (
+                  <SelectItem key={status} value={status} className="select-item">{status === 'Semua' ? 'Semua status' : status}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
       {/* ── Stat cards ── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-        <MetricLinkCard label="Total Proyek" value={stats.total} color="text-foreground" sub="Sesuai filter" href="/proyek" />
-        <MetricLinkCard label="Sedang Berjalan" value={stats.berjalan} color="text-brand" sub="Ada progress" href={worklistHref({ progress: 'berjalan' })} />
-        <MetricLinkCard label="Selesai" value={stats.selesai} color="text-emerald" sub={`${pct(stats.selesai, stats.total)}% dari total`} href={worklistHref({ progress: 'selesai' })} />
-        <MetricLinkCard label="Belum Mulai" value={stats.belumMulai} color="text-muted-foreground" sub="Belum ada tahap" href={worklistHref({ progress: 'belum_mulai' })} />
-        <MetricLinkCard label="Perlu Update" value={stats.perluUpdate} color="text-amber" sub="Data penting kosong" href={worklistHref({ progress: 'perlu_update' })} />
+        <MetricLinkCard label="Total Proyek" value={stats.total} color="text-foreground" sub="Sesuai filter" href={buildProjectListHref(filters)} />
+        <MetricLinkCard label="Sedang Berjalan" value={stats.berjalan} color="text-brand" sub="Ada progress" href={buildProjectListHref(filters, { progress: 'berjalan' })} />
+        <MetricLinkCard label="Selesai" value={stats.selesai} color="text-emerald" sub={`${pct(stats.selesai, stats.total)}% dari total`} href={buildProjectListHref(filters, { progress: 'selesai' })} />
+        <MetricLinkCard label="Belum Mulai" value={stats.belumMulai} color="text-muted-foreground" sub="Belum ada tahap" href={buildProjectListHref(filters, { progress: 'belum_mulai' })} />
+        <MetricLinkCard label="Perlu Update" value={stats.perluUpdate} color="text-amber" sub="Data penting kosong" href={buildProjectListHref(filters, { progress: 'perlu_update' })} />
         <StatCard label="Avg Progress"    value={`${stats.avgProgress}%`} color="text-violet" />
         {canViewCommercial && (
           <div className="stat-card col-span-2 sm:col-span-3 xl:col-span-6">
             <p className="stat-label">Total Kontrak</p>
-            <p className="text-2xl font-bold font-mono leading-tight text-amber truncate">{formatRupiah(stats.nilaiTotal)}</p>
+            <p className="stat-value truncate text-amber">{formatRupiah(stats.nilaiTotal)}</p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">Akumulasi nilai penawaran/kontrak yang tercatat</p>
           </div>
         )}
@@ -344,7 +361,7 @@ export function DashboardClient({
 
         {/* Jenis komposisi — top-left */}
         {canViewCommercial && (
-          <JenisPieCard filtered={filtered} jenisFilter={jenisFilter} onToggle={(j) => setJenisFilter((prev) => prev === j ? 'Semua' : j)} />
+          <JenisPieCard filtered={filtered} jenisFilter={jenisFilter} onToggle={(jenis) => updateFilters({ jenis: jenisFilter === jenis ? 'Semua' : jenis })} />
         )}
 
         {/* Tahap breakdown */}

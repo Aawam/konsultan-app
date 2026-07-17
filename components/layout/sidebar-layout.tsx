@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { ComponentType, ReactNode } from 'react'
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import {
   Calculator,
   Database,
@@ -67,6 +67,29 @@ const NAV_GROUPS: NavGroup[] = [
 ]
 
 const SIDEBAR_STORAGE_KEY = 'konsultan:sidebar-open'
+const SIDEBAR_STORAGE_EVENT = 'konsultan:sidebar-open-change'
+
+function subscribeToSidebarPreference(onStoreChange: () => void) {
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === SIDEBAR_STORAGE_KEY) onStoreChange()
+  }
+
+  window.addEventListener('storage', handleStorage)
+  window.addEventListener(SIDEBAR_STORAGE_EVENT, onStoreChange)
+
+  return () => {
+    window.removeEventListener('storage', handleStorage)
+    window.removeEventListener(SIDEBAR_STORAGE_EVENT, onStoreChange)
+  }
+}
+
+function getSidebarPreferenceSnapshot() {
+  return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) !== 'false'
+}
+
+function getServerSidebarPreferenceSnapshot() {
+  return true
+}
 
 function Clock() {
   const [now, setNow] = useState<Date | null>(null)
@@ -106,16 +129,17 @@ export function SidebarLayout({
   const pathname = usePathname()
   const router = useRouter()
   const isCompactViewport = useMediaQuery('(max-width: 1023px)')
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    if (typeof window === 'undefined') return true
-    return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) !== 'false'
-  })
+  const sidebarOpen = useSyncExternalStore(
+    subscribeToSidebarPreference,
+    getSidebarPreferenceSnapshot,
+    getServerSidebarPreferenceSnapshot
+  )
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
 
-  useEffect(() => {
-    if (!isCompactViewport) {
-      window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(sidebarOpen))
-    }
-  }, [isCompactViewport, sidebarOpen])
+  const setSidebarOpen = useCallback((open: boolean) => {
+    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(open))
+    window.dispatchEvent(new Event(SIDEBAR_STORAGE_EVENT))
+  }, [])
 
   const isActive = (href: string | null) => {
     if (!href) return false
@@ -139,13 +163,17 @@ export function SidebarLayout({
   const initial = displayName.slice(0, 1).toUpperCase()
   const roleLabel = getRoleLabel(profile?.role)
   const canManageProjects = isOwnerAdmin(profile)
-  const effectiveSidebarOpen = isCompactViewport ? false : sidebarOpen
+  const effectiveSidebarOpen = isCompactViewport ? mobileDrawerOpen : sidebarOpen
 
   return (
     <SidebarProvider
       open={effectiveSidebarOpen}
       onOpenChange={(open) => {
-        if (!isCompactViewport) setSidebarOpen(open)
+        if (isCompactViewport) {
+          setMobileDrawerOpen(open)
+          return
+        }
+        setSidebarOpen(open)
       }}
     >
       <Sidebar collapsible="icon">
@@ -254,18 +282,22 @@ export function SidebarLayout({
       </Sidebar>
 
       <SidebarInset>
-        <header className="app-topbar sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border/70 px-5 backdrop-blur-md">
+        <header className="app-topbar sticky top-0 z-20 flex h-12 items-center justify-between border-b border-border/70 px-3 backdrop-blur-md lg:h-14 lg:px-5">
           <div className="flex min-w-0 items-center gap-2">
-            <SidebarTrigger title={sidebarOpen ? 'Minimize sidebar' : 'Expand sidebar'} />
+            <SidebarTrigger
+              className="size-9 lg:size-8"
+              aria-label={effectiveSidebarOpen ? 'Tutup navigasi' : 'Buka navigasi'}
+              title={effectiveSidebarOpen ? 'Tutup navigasi' : 'Buka navigasi'}
+            />
             <TopbarTitle />
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <Clock />
+            <div className="hidden lg:block"><Clock /></div>
           </div>
         </header>
 
-        <main className="flex-1 px-5 py-5 md:px-6 md:py-6">{children}</main>
+        <main className="flex-1 px-3 py-4 lg:px-6 lg:py-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   )

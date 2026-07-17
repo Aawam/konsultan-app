@@ -6,6 +6,7 @@ import { formatRupiah, formatTanggal } from '@/lib/utils'
 import { TAHAP_BAR_COLOR } from '@/lib/constants/proyek'
 import { TombolAksi } from '@/components/proyek/proyek-actions'
 import { WorkflowTransitionAction } from '@/components/proyek/workflow-transition-action'
+import { PageHeader } from '@/components/ui/page-header'
 import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 import { evaluateProjectCompleteness, getProjectWorkflowGate } from '@/lib/project-completeness'
 import { evaluateProjectWorkflowTransition } from '@/lib/project-workflow'
@@ -17,16 +18,18 @@ function MetricCard({
   value,
   caption,
   accent,
+  numeric = false,
 }: {
   label: string
   value: string
   caption?: string
   accent?: string
+  numeric?: boolean
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className={`mt-1.5 text-xl font-bold leading-tight ${accent ?? 'text-foreground'}`}>{value}</p>
+    <div className="stat-card p-4">
+      <p className="stat-label">{label}</p>
+      <p className={`mt-1.5 text-xl font-semibold leading-tight ${numeric ? 'font-mono' : ''} ${accent ?? 'text-foreground'}`}>{value}</p>
       {caption && <p className="mt-1.5 text-[11px] text-muted-foreground">{caption}</p>}
     </div>
   )
@@ -42,9 +45,11 @@ function DetailCard({
   className?: string
 }) {
   return (
-    <section className={`rounded-xl border border-border bg-card p-5 ${className}`}>
-      <h2 className="text-lg font-bold text-foreground">{title}</h2>
-      <div className="mt-5 space-y-5">{children}</div>
+    <section className={`overflow-hidden rounded-xl border border-border bg-card ${className}`}>
+      <div className="border-b border-border-subtle bg-muted/35 px-4 py-3">
+        <h2 className="text-sm font-semibold tracking-tight text-foreground">{title}</h2>
+      </div>
+      <div className="space-y-4 px-4 py-4">{children}</div>
     </section>
   )
 }
@@ -52,8 +57,8 @@ function DetailCard({
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
-      <p className="text-xs font-bold text-muted-foreground">{label}</p>
-      <p className="min-w-0 break-words text-sm font-semibold text-foreground">{value || '-'}</p>
+      <p className="detail-label">{label}</p>
+      <p className="min-w-0 break-words text-sm font-medium leading-6 text-foreground">{value || '-'}</p>
     </div>
   )
 }
@@ -89,31 +94,31 @@ export default async function DetailProyekPage({ params }: Props) {
 
   return (
     <div className="pb-10">
-      <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Monitoring / Detail Proyek</p>
-          <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">Detail Proyek</h1>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHeader
+        eyebrow="Monitoring / Detail Proyek"
+        title="Detail Proyek"
+        actions={(
+          <>
           <Link
             href="/proyek"
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
             ← Kembali
           </Link>
           {proyek.jenis_pekerjaan === 'Perencanaan' && (
             <Link
               href={`/proyek/${id}/rab`}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             >
               RAB / EE
             </Link>
           )}
           {canViewCommercial && <TombolAksi id={id} />}
-        </div>
-      </div>
+          </>
+        )}
+      />
 
-      <section className="rounded-xl border border-border bg-card px-6 py-6">
+      <section className="mt-5 rounded-xl border border-border bg-card px-5 py-5 md:px-6 md:py-6">
         <div className="flex flex-wrap items-center gap-2">
           <BadgeJenis jenis={proyek.jenis_pekerjaan} />
           <BadgeTahap tahap={proyek.tahap_progress} />
@@ -122,7 +127,7 @@ export default async function DetailProyekPage({ params }: Props) {
         </div>
         <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_120px] lg:items-end">
           <div>
-            <h2 className="max-w-3xl text-2xl font-bold leading-tight text-foreground">
+            <h2 className="max-w-3xl text-xl font-bold leading-tight tracking-tight text-foreground lg:text-2xl">
               {proyek.nama_proyek}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -130,43 +135,37 @@ export default async function DetailProyekPage({ params }: Props) {
               {namaPerusahaan && <> · {namaPerusahaan}</>}
             </p>
             <div className="mt-5">
-              <p className="text-xs font-medium text-muted-foreground">Progress keseluruhan</p>
+              <p className="detail-label">Progress keseluruhan</p>
               <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                 <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${persen}%` }} />
               </div>
             </div>
           </div>
-          <p className={`text-right text-3xl font-bold font-mono ${isSelesai ? 'text-emerald' : 'text-brand'}`}>
+          <p className={`text-left text-2xl font-bold font-mono lg:text-right lg:text-3xl ${isSelesai ? 'text-emerald' : 'text-brand'}`}>
             {persen}%
           </p>
         </div>
       </section>
 
-      <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {canViewCommercial && (
           <>
-            <MetricCard label="Pagu Dana" value={formatRupiah(proyek.pagu_dana)} caption={proyek.sumber_dana} />
-            <MetricCard label="HPS" value={formatRupiah(proyek.hps)} caption="Harga Perkiraan Sendiri" />
-            <MetricCard label="Nilai Kontrak" value={formatRupiah(proyek.nilai_penawaran ?? null)} caption="Efisiensi terhadap pagu" accent="text-teal" />
+            <MetricCard label="Pagu Dana" value={formatRupiah(proyek.pagu_dana)} caption={proyek.sumber_dana} numeric />
+            <MetricCard label="HPS" value={formatRupiah(proyek.hps)} caption="Harga Perkiraan Sendiri" numeric />
+            <MetricCard label="Nilai Kontrak" value={formatRupiah(proyek.nilai_penawaran ?? null)} caption="Efisiensi terhadap pagu" accent="text-teal" numeric />
           </>
         )}
-        <MetricCard label="Tahun Anggaran" value={String(proyek.tahun_anggaran)} caption={isSelesai ? 'Selesai' : 'Berjalan'} />
+        <MetricCard label="Tahun Anggaran" value={String(proyek.tahun_anggaran)} caption={isSelesai ? 'Selesai' : 'Berjalan'} numeric />
         <MetricCard label="Sumber Dana" value={proyek.sumber_dana} caption="Pemerintah daerah" accent="text-violet" />
       </div>
 
-      <div className="mt-5 flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
-        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Ringkasan proyek</p>
-        <div className="h-px flex-1 bg-border" />
-      </div>
-
-      <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
         <DetailCard title="Kesiapan Workflow" className="xl:col-span-2">
           <InfoRow label="Gate Saat Ini" value={workflowGate} />
           <InfoRow label="Aksi Berikutnya" value={completeness.nextAction} />
           {canViewCommercial && rabTransition.allowed && (
             <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
-              <p className="text-xs font-bold text-muted-foreground">Transisi</p>
+              <p className="detail-label">Transisi</p>
               <div>
                 <WorkflowTransitionAction projectId={id} />
               </div>
@@ -174,7 +173,7 @@ export default async function DetailProyekPage({ params }: Props) {
           )}
           {completeness.missingFields.length > 0 && (
             <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
-              <p className="text-xs font-bold text-muted-foreground">Data Kurang</p>
+              <p className="detail-label">Data Kurang</p>
               <div className="flex flex-wrap gap-1.5">
                 {completeness.missingFields.map((field) => (
                   <span
@@ -189,7 +188,7 @@ export default async function DetailProyekPage({ params }: Props) {
           )}
           {completeness.blockingReasons.length > 0 && (
             <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
-              <p className="text-xs font-bold text-muted-foreground">Butuh Review</p>
+              <p className="detail-label">Butuh Review</p>
               <div className="space-y-1">
                 {completeness.blockingReasons.map((reason) => (
                   <p key={reason} className="text-sm font-semibold text-violet">
@@ -210,7 +209,6 @@ export default async function DetailProyekPage({ params }: Props) {
 
         <DetailCard title="Pemberi Kerja">
           <InfoRow label="Dinas / SKPD" value={proyek.dinas} />
-          <InfoRow label="Lokasi" value={proyek.lokasi_kecamatan} />
           <InfoRow label="Nama PPK" value={proyek.nama_ppk} />
           <InfoRow label="Kecamatan" value={proyek.lokasi_kecamatan} />
         </DetailCard>
@@ -224,9 +222,9 @@ export default async function DetailProyekPage({ params }: Props) {
         </DetailCard>
 
         {canViewCommercial && (
-          <DetailCard title="Catatan Kerja" className="min-h-52">
-            <div className="min-h-36 rounded-xl border border-border p-4">
-              <p className="text-sm font-medium leading-relaxed text-muted-foreground whitespace-pre-wrap">
+          <DetailCard title="Catatan Kerja">
+            <div className="min-h-32 rounded-lg border border-border-subtle bg-muted/25 p-3.5">
+              <p className="text-sm leading-6 text-muted-foreground whitespace-pre-wrap">
                 {proyek.catatan || 'Belum ada catatan untuk proyek ini.'}
               </p>
             </div>

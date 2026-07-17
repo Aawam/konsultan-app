@@ -11,14 +11,59 @@ export function ProyekFormProgressPanel({
   stepCompletion,
   checklist,
   onStepChange,
+  variant = 'full',
+  className = '',
 }: {
   step: number
   stepCompletion: boolean[]
   checklist: ChecklistItem[]
   onStepChange: (step: number) => void
+  variant?: 'compact' | 'full'
+  className?: string
 }) {
+  if (variant === 'compact') {
+    return (
+      <aside className={`rounded-xl border border-border bg-card p-3 ${className}`}>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-bold text-foreground">Langkah {step} dari {STEPS.length}</p>
+            <p className="text-xs text-muted-foreground">{STEPS[step - 1]}</p>
+          </div>
+          <span className="text-xs font-semibold text-muted-foreground">{stepCompletion.filter(Boolean).length}/{STEPS.length} siap</span>
+        </div>
+
+        <div className="mt-3 grid grid-cols-4 gap-2" aria-label="Pilih langkah pengisian">
+          {STEPS.map((label, index) => {
+            const num = index + 1
+            const active = step === num
+            const done = stepCompletion[index]
+            return (
+              <button
+                key={label}
+                type="button"
+                onClick={() => onStepChange(num)}
+                aria-current={active ? 'step' : undefined}
+                aria-label={`Langkah ${num}: ${label}${done ? ', siap' : ''}`}
+                className={[
+                  'flex h-9 items-center justify-center rounded-lg border text-xs font-bold transition-colors',
+                  done
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : active
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-primary',
+                ].join(' ')}
+              >
+                {done ? '✓' : num}
+              </button>
+            )
+          })}
+        </div>
+      </aside>
+    )
+  }
+
   return (
-    <aside className="rounded-2xl border border-border bg-card p-5 xl:sticky xl:top-20 xl:self-start">
+    <aside className={`rounded-2xl border border-border bg-card p-5 xl:sticky xl:top-20 xl:self-start ${className}`}>
       <h2 className="text-base font-bold text-foreground">Progress Pengisian</h2>
       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
         Isi data berurutan. Field bertanda * wajib diisi.
@@ -34,6 +79,7 @@ export function ProyekFormProgressPanel({
               key={label}
               type="button"
               onClick={() => onStepChange(num)}
+              aria-current={active ? 'step' : undefined}
               className="flex w-full items-center gap-3 rounded-xl text-left transition-colors hover:text-primary"
             >
               <span
@@ -95,6 +141,7 @@ export function ProyekFormSummaryPanel({
   paguDana,
   selectedDinas,
   checklist,
+  className = '',
 }: {
   namaProyek: string
   jenisPekerjaan: string
@@ -103,9 +150,10 @@ export function ProyekFormSummaryPanel({
   paguDana: string
   selectedDinas: string
   checklist: ChecklistItem[]
+  className?: string
 }) {
   return (
-    <aside className="rounded-2xl border border-border bg-card p-5 xl:sticky xl:top-20 xl:self-start">
+    <aside className={`rounded-2xl border border-border bg-card p-5 xl:sticky xl:top-20 xl:self-start ${className}`}>
       <h2 className="text-base font-bold text-foreground">Ringkasan Draft</h2>
       <p className="mt-1 text-xs text-muted-foreground">Akan berubah otomatis saat field diisi.</p>
       <div className="mt-5 inline-flex rounded-full border border-amber/40 bg-amber/10 px-3 py-1 text-[11px] font-semibold text-amber">

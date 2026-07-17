@@ -165,9 +165,13 @@ export function ProyekSlideover({
                     Klik row untuk menampilkan ringkasan tanpa pindah halaman.
                   </p>
                 </div>
-                <button onClick={onClose}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Tutup preview proyek"
+                  title="Tutup preview proyek"
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M18 6 6 18M6 6l12 12" />
                   </svg>
                 </button>

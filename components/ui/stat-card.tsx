@@ -12,8 +12,8 @@ export function StatCard({
   return (
     <div className="stat-card">
       <p className="stat-label">{label}</p>
-      <p className={`text-2xl font-bold font-mono leading-tight ${color}`}>{value}</p>
-      {sub && <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>}
+      <p className={`stat-value ${color}`}>{value}</p>
+      {sub && <p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p>}
     </div>
   )
 }
@@ -38,10 +38,10 @@ export function MiniBar({
   return (
     <div className="mb-3 last:mb-0">
       <div className="flex justify-between items-center mb-1">
-        <span className="text-[12px] text-foreground font-medium truncate max-w-[200px]">{label}</span>
+        <span className="max-w-[200px] truncate text-[12px] font-medium text-foreground">{label}</span>
         <span className="text-[11px] font-mono text-muted-foreground ml-2 shrink-0">{count}</span>
       </div>
-      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
         <div className={`h-full rounded-full ${colorClass}`} style={{ width: `${p}%` }} />
       </div>
     </div>

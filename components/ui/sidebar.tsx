@@ -56,6 +56,14 @@ function SidebarProvider({
         className={cn('app-shell-background flex min-h-screen w-full text-foreground', className)}
         {...props}
       >
+        {open && (
+          <button
+            type="button"
+            aria-label="Tutup menu navigasi"
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-20 bg-foreground/20 backdrop-blur-[1px] lg:hidden"
+          />
+        )}
         {children}
       </div>
     </SidebarContext.Provider>
@@ -77,7 +85,7 @@ function Sidebar({
       data-slot="sidebar"
       data-state={open ? 'expanded' : 'collapsed'}
       className={cn(
-        'app-sidebar-shell group/sidebar sticky top-0 z-30 flex h-screen shrink-0 flex-col overflow-hidden border-r border-sidebar-border text-sidebar-foreground transition-[width] duration-200 ease-out lg:overflow-visible',
+        'app-sidebar-shell group/sidebar fixed inset-y-0 left-0 z-30 flex h-screen shrink-0 flex-col overflow-hidden border-r border-sidebar-border text-sidebar-foreground transition-[width] duration-200 ease-out lg:sticky lg:top-0 lg:overflow-visible',
         widthClass,
         className
       )}

@@ -18,7 +18,7 @@ export default async function TambahProyekPage() {
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Daftar Proyek</p>
-          <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">Tambah Proyek Baru</h1>
+          <h1 className="mt-0.5 text-xl font-bold tracking-tight text-foreground lg:text-2xl">Tambah Proyek Baru</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Isi data berurutan. Nomor kontrak, HPS, dan tanggal bisa dikosongkan dulu jika belum tersedia.
           </p>

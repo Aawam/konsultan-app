@@ -121,15 +121,15 @@ function StatCard({
 }) {
   const content = (
     <>
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className={`mt-1.5 text-2xl font-bold font-mono leading-none ${colorClass}`}>{value}</p>
-      <p className="mt-1.5 text-[11px] text-muted-foreground">{caption}</p>
+      <p className="stat-label">{label}</p>
+      <p className={`mt-1 font-mono text-xl font-bold leading-none lg:text-2xl ${colorClass}`}>{value}</p>
+      <p className="mt-1 text-[11px] text-muted-foreground">{caption}</p>
     </>
   )
 
   const className = [
-    'rounded-xl border bg-card px-4 py-3.5 text-left transition-colors',
-    active ? 'border-brand bg-brand/5' : 'border-border hover:border-muted-foreground/30',
+    'stat-card min-w-0 px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:px-4 lg:py-3.5',
+    active ? 'border-brand bg-brand/10' : 'hover:border-border-strong hover:bg-muted/35',
   ].join(' ')
 
   if (onClick) {
@@ -141,6 +141,66 @@ function StatCard({
   }
 
   return <div className={className}>{content}</div>
+}
+
+function MobileProjectCard({
+  project,
+  canViewCommercial,
+  onOpen,
+}: {
+  project: ProyekDisplay
+  canViewCommercial: boolean
+  onOpen: () => void
+}) {
+  const completeness = evaluateProjectCompleteness(project, { includeCommercial: canViewCommercial })
+  const workflowGate = getProjectWorkflowGate(completeness)
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="w-full rounded-xl border border-border bg-card p-3 text-left transition-colors hover:border-brand/45 hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      aria-label={`Buka preview proyek ${project.nama_proyek}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">{project.nama_proyek}</p>
+          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{project.dinas}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <BadgeJenis jenis={project.jenis_pekerjaan} />
+          {project.pernah_dioverride && <BadgeOverride />}
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-y border-border-subtle py-3 text-xs">
+        <div className="min-w-0">
+          <p className="detail-label">Perusahaan</p>
+          <p className="mt-1 line-clamp-2 font-medium leading-snug text-foreground">{getNamaPerusahaan(project.perusahaan)}</p>
+        </div>
+        <div>
+          <p className="detail-label">Tahun / Lokasi</p>
+          <p className="mt-1 font-mono font-medium text-foreground">{project.tahun_anggaran}</p>
+          <p className="mt-0.5 line-clamp-1 text-muted-foreground">{project.lokasi_kecamatan ?? '—'}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <BadgeWorkflow status={completeness.status} gate={workflowGate} />
+          <p className="mt-1 text-[11px] text-muted-foreground">Update: {formatTanggal(project.updated_at ?? project.created_at ?? null)}</p>
+        </div>
+        <div className="shrink-0 text-right">
+          <ProgressCell tahap={project.tahap_progress ?? null} persen={project.persentase_progress ?? null} />
+          {canViewCommercial && (
+            <p className="mt-1 font-mono text-xs font-semibold text-foreground">
+              {project.nilai_penawaran ? formatCompactRupiah(project.nilai_penawaran) : '—'}
+            </p>
+          )}
+        </div>
+      </div>
+    </button>
+  )
 }
 
 function getProgressLabel(value: ProjectProgressFilter) {
@@ -371,7 +431,7 @@ export function ProyekTableClient({
         <PageHeader
           eyebrow="Monitoring"
           title={title}
-          description="Pantau status proyek, progres, dan PIC dari satu halaman yang mudah discan."
+          description={`${pagination.total} proyek sesuai filter saat ini.`}
           actions={
             <>
             {canViewCommercial && (
@@ -386,7 +446,7 @@ export function ProyekTableClient({
             {canManageProjects && (
               <Link
                 href="/proyek/baru"
-                className="inline-flex h-10 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand/90"
+                className="inline-flex h-10 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-brand/90"
               >
                 + Tambah Proyek
               </Link>
@@ -398,8 +458,8 @@ export function ProyekTableClient({
 
       {/* ── Stat strip ── */}
       <div className={canViewCommercial
-        ? 'grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-[repeat(5,minmax(0,1fr))_minmax(220px,1.45fr)]'
-        : 'grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-5'
+        ? 'grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-3 lg:gap-3 xl:grid-cols-[repeat(5,minmax(0,1fr))_minmax(220px,1.45fr)]'
+        : 'grid grid-cols-2 gap-2 sm:grid-cols-3 lg:gap-3 xl:grid-cols-5'
       }>
         <StatCard
           label="Sedang Berjalan"
@@ -450,7 +510,8 @@ export function ProyekTableClient({
       </div>
 
       {/* ── Toolbar ── */}
-      <div className="flex flex-wrap items-center gap-2.5 rounded-xl border border-border bg-card p-3">
+      <div className="rounded-xl border border-border bg-card p-3">
+        <div className="flex flex-wrap items-center gap-2.5">
 
         {/* Year tabs: last 3 inline, older years in dropdown */}
         <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -464,9 +525,9 @@ export function ProyekTableClient({
                 key={tab.value}
                 onClick={() => updateYear(tab.value)}
                 className={[
-                  'h-9 rounded-full border px-4 text-sm font-semibold transition-colors',
+                  'h-9 rounded-lg border px-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
                   active
-                    ? 'border-foreground bg-foreground text-background'
+                    ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground',
                 ].join(' ')}
               >
@@ -478,9 +539,9 @@ export function ProyekTableClient({
             <div className="relative" ref={yearDropdownRef}>
               <button
                 onClick={() => setYearDropdownOpen((o) => !o)}
-                className={`flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors ${
+                className={`flex h-9 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
                   selectedYearIsInDropdown
-                    ? 'bg-foreground text-background border-foreground font-semibold'
+                    ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
@@ -493,7 +554,7 @@ export function ProyekTableClient({
                 </svg>
               </button>
               {yearDropdownOpen && (
-                <div className="absolute top-full left-0 mt-1 z-20 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[90px]">
+                <div className="absolute top-full left-0 z-20 mt-1 min-w-[90px] rounded-lg border border-border bg-popover py-1 shadow-md shadow-black/10">
                   {dropdownYears.map((y) => (
                     <button
                       key={y}
@@ -518,7 +579,7 @@ export function ProyekTableClient({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari nama proyek, dinas, kecamatan…"
-            className="h-10 w-full rounded-lg border border-border bg-muted pl-10 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/30"
+            className="h-10 w-full rounded-lg border border-input bg-background pl-10 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
           />
           {search && (
             <button
@@ -534,7 +595,7 @@ export function ProyekTableClient({
           value={jenisFilter}
           onValueChange={(value) => updateJenis(value as JenisFilter)}
         >
-          <SelectTrigger className="h-10 w-[180px] rounded-lg border-border bg-card px-4 text-sm font-semibold text-foreground">
+          <SelectTrigger className="h-10 w-[180px] rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
             <SelectValue placeholder="Jenis pekerjaan" />
           </SelectTrigger>
           <SelectContent className="select-content">
@@ -545,7 +606,7 @@ export function ProyekTableClient({
         </Select>
 
         <Select value={progressFilter} onValueChange={(value) => updateProgress(value as ProjectProgressFilter)}>
-          <SelectTrigger className="h-10 w-[170px] rounded-lg border-border bg-card px-4 text-sm font-semibold text-foreground">
+          <SelectTrigger className="h-10 w-[170px] rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
             <SelectValue placeholder="Progress" />
           </SelectTrigger>
           <SelectContent className="select-content">
@@ -558,7 +619,7 @@ export function ProyekTableClient({
         </Select>
 
         <Select value={statusFilter} onValueChange={(value) => updateStatus(value as ProjectStatusFilter)}>
-          <SelectTrigger className="h-10 w-[165px] rounded-lg border-border bg-card px-4 text-sm font-semibold text-foreground">
+          <SelectTrigger className="h-10 w-[165px] rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent className="select-content">
@@ -570,7 +631,7 @@ export function ProyekTableClient({
         </Select>
 
         <Select value={perusahaanFilter} onValueChange={updatePerusahaan}>
-          <SelectTrigger className="h-10 w-[210px] rounded-lg border-border bg-card px-4 text-sm font-semibold text-foreground">
+          <SelectTrigger className="h-10 w-[210px] rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
             <SelectValue placeholder="Perusahaan" />
           </SelectTrigger>
           <SelectContent className="select-content">
@@ -587,20 +648,21 @@ export function ProyekTableClient({
           <button
             type="button"
             onClick={resetFilters}
-            className="h-10 rounded-lg border border-border bg-card px-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="h-10 rounded-lg border border-border bg-card px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Reset
           </button>
         )}
 
-        <span className="ml-auto text-sm text-muted-foreground shrink-0">
+        <span className="ml-auto shrink-0 text-sm text-muted-foreground">
           {pagination.total} proyek{isPending ? ' · memuat...' : ''}
         </span>
+        </div>
       </div>
 
       {hasActiveFilters && (
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-semibold text-foreground">Filter aktif:</span>
+          <span className="font-medium text-foreground">Filter aktif:</span>
           {tahunFilter !== 'semua' && <span className="rounded-full bg-muted px-2.5 py-1">Tahun {tahunFilter}</span>}
           {jenisFilter !== 'Semua' && <span className="rounded-full bg-muted px-2.5 py-1">{jenisFilter}</span>}
           {progressFilter !== 'semua' && <span className="rounded-full bg-muted px-2.5 py-1">{getProgressLabel(progressFilter)}</span>}
@@ -611,7 +673,33 @@ export function ProyekTableClient({
       )}
 
       {/* ── Table ── */}
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
+      <div className="space-y-3 lg:hidden">
+        {proyek.length > 0 ? (
+          proyek.map((project) => (
+            <MobileProjectCard
+              key={project.id}
+              project={project}
+              canViewCommercial={canViewCommercial}
+              onOpen={() => setSelectedId(project.id)}
+            />
+          ))
+        ) : (
+          <div className="rounded-xl border border-border bg-card px-4 py-12 text-center text-sm text-muted-foreground">
+            <p>Tidak ada proyek yang sesuai filter</p>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="mt-3 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+              >
+                Reset filter
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="hidden overflow-hidden rounded-xl border border-border bg-card lg:block">
         <Table className="table-fixed">
           <colgroup>
             <col style={{ width: '34%' }} />
@@ -623,7 +711,7 @@ export function ProyekTableClient({
             <col style={{ width: '11%' }} />
           </colgroup>
           <TableHeader>
-            <TableRow className="border-border bg-card hover:bg-transparent">
+            <TableRow className="border-border bg-muted/45 hover:bg-transparent">
               <TableHead className="table-head px-4 py-3.5 normal-case tracking-normal">Nama Proyek</TableHead>
               <TableHead className="table-head px-4 py-3.5 normal-case tracking-normal">Perusahaan</TableHead>
               <TableHead className="table-head px-4 py-3.5 normal-case tracking-normal">Jenis</TableHead>
@@ -645,12 +733,20 @@ export function ProyekTableClient({
                 return (
                 <TableRow
                   key={p.id}
-                  className="cursor-pointer border-border transition-colors hover:bg-brand/5"
+                  tabIndex={0}
+                  aria-label={`Buka preview proyek ${p.nama_proyek}`}
+                  className="cursor-pointer border-border transition-colors hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
                   onClick={() => setSelectedId(p.id)}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return
+                    event.preventDefault()
+                    setSelectedId(p.id)
+                  }}
                 >
                   <TableCell className="px-4 py-4 whitespace-normal">
                     <div className="flex items-center gap-1.5">
                       <button
+                        type="button"
                         onClick={(event) => { event.stopPropagation(); setSelectedId(p.id) }}
                         className="block text-left text-sm font-semibold leading-tight text-foreground transition-colors hover:text-brand"
                       >

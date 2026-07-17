@@ -381,8 +381,11 @@ export function DatabaseClient({
           <div className="section-header">
             <p className="section-title">Semua Proyek</p>
           </div>
+          <p className="border-b border-border-subtle px-4 py-2 text-xs text-muted-foreground lg:hidden">
+            Geser tabel ke samping untuk melihat semua kolom.
+          </p>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
+            <table className="min-w-[880px] w-full border-collapse text-sm">
               <thead>
                 <tr className="bg-muted/40 border-b border-border">
                   {['Nama Proyek', 'Perusahaan', 'Dinas / SKPD', 'Jenis', 'Tahun', 'Kontrak'].map((heading, index) => (
@@ -428,8 +431,11 @@ export function DatabaseClient({
             <div className="section-header">
               <p className="section-title">Data Dinas / SKPD</p>
             </div>
+            <p className="border-b border-border-subtle px-4 py-2 text-xs text-muted-foreground lg:hidden">
+              Geser tabel ke samping untuk melihat semua kolom.
+            </p>
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
+              <table className="min-w-[620px] w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/35">
                     {['Daftar Dinas / SKPD', 'Proyek Sedang Berjalan', 'Proyek Selesai', 'Total Proyek'].map((heading, index) => (
@@ -479,8 +485,11 @@ export function DatabaseClient({
             <div className="section-header">
               <p className="section-title">Data Perusahaan</p>
             </div>
+            <p className="border-b border-border-subtle px-4 py-2 text-xs text-muted-foreground lg:hidden">
+              Geser tabel ke samping untuk melihat semua kolom.
+            </p>
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
+              <table className="min-w-[860px] w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/35">
                     {['Daftar Perusahaan', 'Total Proyek', 'Perencanaan', 'Pengawasan', 'Nama Direktur', 'Aksi'].map((heading, index) => (

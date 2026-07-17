@@ -26,14 +26,17 @@ export function ThemeToggle() {
 
   return (
     <button
+      type="button"
       onClick={toggle}
-      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label={isDark ? 'Gunakan mode terang' : 'Gunakan mode gelap'}
+      aria-pressed={isDark}
+      title={isDark ? 'Gunakan mode terang' : 'Gunakan mode gelap'}
       className="flex items-center gap-2 rounded-full border border-border bg-muted px-2 py-1 transition-colors hover:bg-accent"
     >
-      <span className="text-base leading-none select-none">
+      <span aria-hidden="true" className="text-base leading-none select-none">
         {isDark ? '🌙' : '☀️'}
       </span>
-      <div className="relative w-9 h-5 rounded-full bg-border transition-colors">
+      <div aria-hidden="true" className="relative w-9 h-5 rounded-full bg-border transition-colors">
         <div
           className={[
             'absolute top-0.5 w-4 h-4 rounded-full bg-foreground shadow-sm transition-all duration-200',

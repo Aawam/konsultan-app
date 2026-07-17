@@ -1,4 +1,5 @@
 import { ListTreeIcon, PencilIcon, Trash2Icon } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -45,6 +46,17 @@ function EmptyRow({ colSpan, label }: { colSpan: number; label: string }) {
   )
 }
 
+function ScrollableTableFrame({ children }: { children: ReactNode }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
+      <p className="border-b border-border-subtle px-3 py-2 text-xs text-muted-foreground lg:hidden">
+        Geser tabel ke samping untuk melihat semua kolom.
+      </p>
+      {children}
+    </div>
+  )
+}
+
 export function AhspTable({
   rows,
   canManage,
@@ -59,7 +71,7 @@ export function AhspTable({
   onEdit: (row: AhspItemRow) => void
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-card">
+    <ScrollableTableFrame>
       <Table className="min-w-[960px] table-fixed">
         <TableHeader>
           <TableRow className="border-border bg-muted/40 hover:bg-transparent">
@@ -128,7 +140,7 @@ export function AhspTable({
           )}
         </TableBody>
       </Table>
-    </div>
+    </ScrollableTableFrame>
   )
 }
 
@@ -142,7 +154,7 @@ export function HargaTable({
   onEdit: (row: MasterHargaRow) => void
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-card">
+    <ScrollableTableFrame>
       <Table className="min-w-[680px] table-fixed">
         <TableHeader>
           <TableRow className="border-border bg-muted/40 hover:bg-transparent">
@@ -185,7 +197,7 @@ export function HargaTable({
           )}
         </TableBody>
       </Table>
-    </div>
+    </ScrollableTableFrame>
   )
 }
 
@@ -201,7 +213,7 @@ export function AhspDetailTable({
   onDelete: (row: AhspDetailRow) => void
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-card">
+    <ScrollableTableFrame>
       <Table className="min-w-[720px] table-fixed">
         <TableHeader>
           <TableRow className="border-border bg-muted/40 hover:bg-transparent">
@@ -260,6 +272,6 @@ export function AhspDetailTable({
           )}
         </TableBody>
       </Table>
-    </div>
+    </ScrollableTableFrame>
   )
 }

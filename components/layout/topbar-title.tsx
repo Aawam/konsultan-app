@@ -22,10 +22,10 @@ export function TopbarTitle() {
 
   return (
     <div>
-      <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-[0.12em]">
+      <p className="hidden text-[9px] font-mono uppercase tracking-[0.12em] text-muted-foreground sm:block">
         {match.crumb}
       </p>
-      <p className="text-[14px] font-semibold text-foreground leading-tight">{match.title}</p>
+      <p className="text-[13px] font-semibold leading-tight text-foreground lg:text-[14px]">{match.title}</p>
     </div>
   )
 }

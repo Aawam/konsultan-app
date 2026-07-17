@@ -13,7 +13,7 @@ Theme diatur di `app/globals.css` dengan Tailwind CSS v4, shadcn tokens, dan CSS
 - `localStorage.theme === "light"` menghapus class `dark`.
 - Selain itu aplikasi memakai dark mode default.
 
-Gunakan token Tailwind/CSS variable, bukan hex/rgb hardcoded.
+Gunakan token Tailwind/CSS variable, bukan hex/rgb hardcoded. Light mode memakai canvas netral-biru yang tenang; dark mode memisahkan canvas, card, dan control dengan jelas. Jangan menambah kembali border putih transparan atau gradient dekoratif pada card.
 
 ### Core Tokens
 
@@ -26,8 +26,18 @@ Gunakan token Tailwind/CSS variable, bukan hex/rgb hardcoded.
 | `bg-muted` | Inputs, table hover, soft fills. |
 | `text-foreground` | Primary text. |
 | `text-muted-foreground` | Labels, metadata, secondary text. |
-| `border-border` | Standard borders. |
+| `border-border-subtle` | Internal divider dan separator baris tabel. |
+| `border-border` | Boundary card, panel, dan control standar. |
+| `border-border-strong` / `border-input` | Input, control terpilih, dan boundary kuat. |
 | `bg-sidebar` / `var(--app-sidebar-bg)` | Sidebar background. |
+
+### Surface Hierarchy
+
+- `bg-background` adalah canvas halaman.
+- `bg-card` adalah panel atau table container yang dibatasi.
+- `bg-muted` untuk control recessed, soft header, hover state, atau emphasis ringan.
+- Input memakai `bg-background border-input` agar tetap terbaca di dalam card pada kedua theme.
+- Card standar bersifat flat. Semantic tint hanya untuk workflow, warning, completion, atau destructive state yang nyata.
 
 ### Semantic Accents
 
@@ -76,7 +86,7 @@ Defined in `app/globals.css`.
 <Input className="field-input" />
 ```
 
-Use for form inputs. It applies muted light/dark backgrounds, borders, text color, placeholder color, and top margin.
+Use for form inputs. It applies an inset surface, strong control border, text color, placeholder color, and top margin.
 
 ### Select
 
@@ -106,6 +116,13 @@ Use for compact uppercase table headers.
 ```
 
 Used by dashboard/list metrics.
+
+### Typography
+
+- Gunakan `page-eyebrow` untuk konteks halaman, `page-title` untuk satu `h1`, dan `page-summary` hanya untuk konteks operasional yang hidup.
+- Gunakan `section-title` pada header data panel dan `detail-label` untuk label field.
+- Value memakai `text-sm font-medium`; jangan membuat label dan value sama-sama bold.
+- Gunakan `font-mono` hanya untuk currency, angka, persentase, tanggal, kode, dan durasi. Tambahkan `tabular-nums` jika alignment kolom penting.
 
 ### Section Card
 
@@ -179,10 +196,10 @@ Small amber `!` indicator for records with `pernah_dioverride === true`.
 Use compact data tables for operational screens.
 
 ```tsx
-<div className="rounded-xl border border-border bg-card overflow-hidden">
+<div className="overflow-hidden rounded-xl border border-border bg-card">
   <Table className="table-fixed">
     <TableHeader>
-      <TableRow className="border-border bg-muted/40 hover:bg-transparent">
+      <TableRow className="border-border bg-muted/45 hover:bg-transparent">
         <TableHead className="table-head">Kolom</TableHead>
       </TableRow>
     </TableHeader>
@@ -205,7 +222,7 @@ Prefer existing `components/ui/button.tsx` where practical.
 
 | Type | Pattern |
 |---|---|
-| Primary | `bg-brand text-white hover:bg-brand/90` |
+| Primary | `bg-brand text-primary-foreground hover:bg-brand/90` |
 | Secondary | `border border-border bg-card text-foreground hover:bg-muted` |
 | Destructive | `bg-rose/10 text-rose border border-rose/20 hover:bg-rose/20` |
 | Warning/Override | `bg-amber/15 text-amber border border-amber/20 hover:bg-amber/25` |

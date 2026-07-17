@@ -339,7 +339,7 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
     setValue(field, formatNumberInput(value), { shouldDirty: true, shouldValidate: true })
   }
 
-  const fi = 'field-input aria-invalid:border-border aria-invalid:ring-0 dark:aria-invalid:border-white/10'
+  const fi = 'field-input aria-invalid:border-destructive aria-invalid:ring-0'
   const submitLabel = mode === 'edit' ? 'Perbarui Proyek' : 'Simpan Proyek'
   const stepTitles = ['Identitas Proyek', 'Anggaran', 'Pemberi Kerja', 'Pelaksanaan']
   const stepDescriptions = [
@@ -382,11 +382,21 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
           stepCompletion={stepCompletion}
           checklist={checklist}
           onStepChange={goToStep}
+          className="hidden xl:block"
         />
 
         <div className="min-w-0 space-y-6">
+          <ProyekFormProgressPanel
+            step={step}
+            stepCompletion={stepCompletion}
+            checklist={checklist}
+            onStepChange={goToStep}
+            variant="compact"
+            className="xl:hidden"
+          />
+
           <div className="rounded-2xl border border-border bg-card p-5 md:p-6">
-            <p className="text-2xl font-bold tracking-tight text-foreground">
+            <p className="text-xl font-bold tracking-tight text-foreground lg:text-2xl">
               {step}. {stepTitles[step - 1]}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">{stepDescriptions[step - 1]}</p>
@@ -417,6 +427,19 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
                 </p>
               ))}
             </div>
+          )}
+
+          {step === STEPS.length && (
+            <ProyekFormSummaryPanel
+              namaProyek={namaProyek}
+              jenisPekerjaan={jenisPekerjaan ?? ''}
+              kategoriPekerjaan={kategoriPekerjaan}
+              nilaiPenawaran={nilaiPenawaran}
+              paguDana={paguDana}
+              selectedDinas={selectedDinas}
+              checklist={checklist}
+              className="xl:hidden"
+            />
           )}
 
           <div className="grid gap-3 sm:grid-cols-3">
@@ -466,6 +489,7 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
           paguDana={paguDana}
           selectedDinas={selectedDinas}
           checklist={checklist}
+          className="hidden xl:block"
         />
       </div>
 
