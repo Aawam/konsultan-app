@@ -12,13 +12,6 @@ type RabStatusRequestBody = {
   action?: unknown
 }
 
-type RabStatusRpcClient = {
-  rpc: (
-    fn: 'approve_rab_maker' | 'finalize_rab_maker',
-    args: { target_proyek_id: string }
-  ) => Promise<{ data: string | null; error: { message: string } | null }>
-}
-
 function parseAction(value: unknown): RabStatusAction | null {
   return value === 'approve' || value === 'finalize' ? value : null
 }
@@ -52,7 +45,7 @@ export async function POST(
   if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const fn = action === 'approve' ? 'approve_rab_maker' : 'finalize_rab_maker'
-  const { data, error } = await (supabase as unknown as RabStatusRpcClient).rpc(fn, {
+  const { data, error } = await supabase.rpc(fn, {
     target_proyek_id: id,
   })
 

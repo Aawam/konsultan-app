@@ -27,6 +27,13 @@ export function apiError(
   status: number,
   details?: unknown
 ) {
+  if (errorCode === 'INTERNAL_ERROR') {
+    return NextResponse.json({
+      error: 'Terjadi kesalahan pada server. Silakan coba lagi.',
+      errorCode,
+    }, { status })
+  }
+
   const body: ApiErrorBody = details === undefined
     ? { error: message, errorCode }
     : { error: message, errorCode, details }

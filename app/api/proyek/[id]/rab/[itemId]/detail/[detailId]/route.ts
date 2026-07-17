@@ -6,13 +6,6 @@ import { getCurrentUserProfile } from '@/lib/auth'
 import { normalizeOverrideReason, parseRabDecimalInput } from '@/lib/rab-maker'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
-type UpdateRabMakerDetailHargaRpcClient = {
-  rpc: (
-    fn: 'update_rab_maker_detail_harga_dasar',
-    args: { target_detail_id: string; new_harga_dasar: number; override_reason: string | null }
-  ) => Promise<{ data: null; error: { message: string } | null }>
-}
-
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; itemId: string; detailId: string }> }
@@ -57,9 +50,9 @@ export async function PATCH(
     return apiError('CONFLICT', editGate.message ?? 'RAB terkunci.', 409, editGate)
   }
 
-  const { error } = await (supabase as unknown as UpdateRabMakerDetailHargaRpcClient).rpc(
+  const { error } = await supabase.rpc(
     'update_rab_maker_detail_harga_dasar',
-    { target_detail_id: detailId, new_harga_dasar: hargaDasar, override_reason: reason }
+    { target_detail_id: detailId, new_harga_dasar: hargaDasar, override_reason: reason ?? undefined }
   )
 
   if (error) return apiError('VALIDATION_ERROR', error.message, 400)

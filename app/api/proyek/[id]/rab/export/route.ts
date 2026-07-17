@@ -5,21 +5,10 @@ import { getCurrentUserProfile } from '@/lib/auth'
 import { getProyekById } from '@/lib/actions/proyek'
 import { canAccessRabProject, getRabMakerSnapshotByProyekId } from '@/lib/actions/rab'
 import { buildRabExportFilename, createRabXlsx } from '@/lib/rab-export'
+import { rabExportRecordSchema } from '@/lib/rpc-contracts'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
-
-type RecordRabExportHistoryRpcClient = {
-  rpc: (
-    fn: 'record_rab_export_file',
-    args: {
-      target_rab_maker_id: string
-      export_format: string
-      base_file_name: string
-      file_size_bytes: number
-    }
-  ) => Promise<{ data: { versionNumber: number; fileName: string } | null; error: { message: string } | null }>
-}
 
 export async function GET(
   _req: NextRequest,
@@ -51,7 +40,7 @@ export async function GET(
 
   if (snapshot.maker) {
     const supabase = await createSupabaseServerClient()
-    const { data: exportRecord, error: historyError } = await (supabase as unknown as RecordRabExportHistoryRpcClient).rpc(
+    const { data: exportRecord, error: historyError } = await supabase.rpc(
       'record_rab_export_file',
       {
         target_rab_maker_id: snapshot.maker.id,
@@ -62,10 +51,12 @@ export async function GET(
     )
 
     if (historyError) return apiError('INTERNAL_ERROR', historyError.message, 500)
-    if (exportRecord) {
-      exportVersion = exportRecord.versionNumber
-      filename = exportRecord.fileName
+    const parsedExportRecord = rabExportRecordSchema.safeParse(exportRecord)
+    if (!parsedExportRecord.success) {
+      return apiError('INTERNAL_ERROR', 'Respons pencatatan export RAB tidak valid.', 500)
     }
+    exportVersion = parsedExportRecord.data.versionNumber
+    filename = parsedExportRecord.data.fileName
   }
 
   return new Response(workbook, {

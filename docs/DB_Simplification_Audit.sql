@@ -4,11 +4,10 @@
 --
 -- Tujuan:
 -- 1. Memastikan aplikasi monitoring hanya bergantung pada tabel inti
--- 2. Mengidentifikasi object legacy modul dokumen yang siap dihapus
+-- 2. Menginventarisasi object legacy; keberadaan/ketiadaan data bukan izin hapus
 -- 3. Memberi snapshot singkat sebelum cleanup dijalankan
 --
--- Jalankan di Supabase SQL Editor sebelum menjalankan
--- DB_Simplification_Cleanup.sql
+-- Script ini read-only dan tidak membuktikan bahwa object aman dihapus.
 -- ============================================================
 
 
@@ -33,7 +32,7 @@ WHERE NOT EXISTS (
 
 
 -- ────────────────────────────────────────────────────────────
--- BAGIAN 2 — Tabel legacy kandidat hapus
+-- BAGIAN 2 — Inventaris tabel legacy
 -- Jika tabel ada, ia akan muncul di hasil
 -- ────────────────────────────────────────────────────────────
 
@@ -136,7 +135,7 @@ ORDER BY tablename, policyname;
 
 
 -- ────────────────────────────────────────────────────────────
--- BAGIAN 6 — Perkiraan isi data legacy (sanity check sebelum hapus)
+-- BAGIAN 6 — Perkiraan isi data legacy (inventory only)
 -- Menggunakan pg_stat_user_tables supaya aman walau tabel sudah tidak ada
 -- n_live_tup bersifat estimasi, cukup untuk cek cepat
 -- ────────────────────────────────────────────────────────────

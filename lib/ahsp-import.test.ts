@@ -49,6 +49,7 @@ describe('analyzeAhspImportRows', () => {
       { kodeAhsp: 'A.3', jenis: 'BAHAN', komponen: 'Semen' },
     ])
     expect(result.blockers).toContain('Ada Kode Analisa duplikat.')
+    expect(result.blockers).toContain('Setiap AHSP item wajib memiliki minimal satu detail komponen.')
     expect(result.canImport).toBe(false)
   })
 
@@ -89,8 +90,59 @@ describe('analyzeAhspImportRows', () => {
       kode_ahsp: 'A.1',
       komponen_tipe: 'upah',
       nama_komponen: 'Pekerja',
+      satuan: 'OH',
       koefisien: 0.5,
     })
+  })
+
+  it('allows the same component name in different units and resolves details by unit', () => {
+    const { preview, payload } = buildAhspImportPayload({
+      MASTER_UPAH: [['No', 'Kode', 'Tenaga Kerja', 'Satuan', 'Harga Per Hari']],
+      MASTER_BAHAN: [
+        ['No', 'Bahan', 'Satuan', 'Harga Satuan'],
+        [1, 'Semen Portland', 'kg', 1500],
+        [2, 'Semen Portland', 'm3', 2100000],
+      ],
+      MASTER_ALAT: [['No', 'Kode', 'Nama Alat', 'Satuan', 'Harga Satuan']],
+      AHSP_ITEMS: [
+        ['No', 'Kode Analisa', 'Uraian Pekerjaan', 'Kategori', 'Satuan'],
+        [1, 'A.1', 'Beton satu meter kubik', 'Beton', 'm3'],
+      ],
+      AHSP_DETAILS: [
+        ['No', 'Kode AHSP', 'Jenis', 'Uraian Komponen', 'Kode Komponen', 'Satuan', 'Koefisien'],
+        [1, 'A.1', 'BAHAN', 'Semen Portland', '', 'kg', 320],
+      ],
+    })
+
+    expect(preview.blockers).toEqual([])
+    expect(payload.master.bahan).toHaveLength(2)
+    expect(payload.ahspDetails[0]).toMatchObject({
+      nama_komponen: 'Semen Portland',
+      satuan: 'kg',
+    })
+  })
+
+  it('blocks duplicate master components with the same normalized name and unit', () => {
+    const preview = analyzeAhspImportRows({
+      MASTER_UPAH: [['No', 'Kode', 'Tenaga Kerja', 'Satuan', 'Harga Per Hari']],
+      MASTER_BAHAN: [
+        ['No', 'Bahan', 'Satuan', 'Harga Satuan'],
+        [1, 'Semen Portland', 'kg', 1500],
+        [2, ' semen   portland ', 'KG', 1600],
+      ],
+      MASTER_ALAT: [['No', 'Kode', 'Nama Alat', 'Satuan', 'Harga Satuan']],
+      AHSP_ITEMS: [
+        ['No', 'Kode Analisa', 'Uraian Pekerjaan', 'Kategori', 'Satuan'],
+        [1, 'A.1', 'Beton satu meter kubik', 'Beton', 'm3'],
+      ],
+      AHSP_DETAILS: [
+        ['No', 'Kode AHSP', 'Jenis', 'Uraian Komponen', 'Kode Komponen', 'Satuan', 'Koefisien'],
+        [1, 'A.1', 'BAHAN', 'Semen Portland', '', 'kg', 320],
+      ],
+    })
+
+    expect(preview.blockers).toContain('Ada pasangan nama dan satuan bahan duplikat di workbook.')
+    expect(preview.canImport).toBe(false)
   })
 })
 

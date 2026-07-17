@@ -71,28 +71,6 @@ export type RabProjectListPage = {
   pageCount: number
 }
 
-export type RabDraftRow = {
-  id: string
-  kode_analisa: string
-  uraian_pekerjaan: string
-  satuan: string
-  volume: number
-  harga_satuan: number
-  jumlah_harga: number
-  urutan: number
-}
-
-export type RabRekapRow = {
-  id: string
-  subtotal: number
-  margin_persen: number
-  overhead_persen: number
-  ppn_persen: number
-  pembulatan_rule: string | null
-  total_final: number
-  status: 'draft' | 'review' | 'validated' | 'final'
-}
-
 export type RabMakerHeader = {
   id: string
   proyek_id: string

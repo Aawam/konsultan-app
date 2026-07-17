@@ -8,9 +8,9 @@ import {
 } from '@/lib/queries/proyek-selects'
 import type { DinasOption, ProyekDetail, ProyekDisplay, ProyekFormData, ProyekPayload } from '@/lib/types/proyek'
 import type { ProjectJenisFilter, ProjectProgressFilter, ProjectStatusFilter, ProjectYearFilter } from '@/lib/proyek-analytics'
-import { evaluateProjectCompleteness } from '@/lib/project-completeness'
 import { proyekSchema } from '@/lib/validations/proyek'
 import { parseNumberInput } from '@/lib/utils'
+import { z } from 'zod'
 
 // ── Queries ──────────────────────────────────────────────────────────────────
 
@@ -38,43 +38,43 @@ export type ProyekListPage = {
 export const DEFAULT_PROYEK_LIST_PAGE_SIZE = 25
 export const PROYEK_LIST_PAGE_SIZES = [10, 25, 50, 100] as const
 
-type ProyekTeknisRow = {
-  id: string
-  nama_proyek: string
-  paket_pekerjaan_induk: string | null
-  nomor_kontrak: string | null
-  jenis_pekerjaan: string
-  kategori_pekerjaan: string
-  tahun_anggaran: number
-  sumber_dana: string
-  dinas: string
-  lokasi_kecamatan: string | null
-  nama_ppk: string | null
-  perusahaan_id: string | null
-  perusahaan_nama: string | null
-  perusahaan_adalah_perusahaan_sendiri: boolean | null
-  tanggal_mulai: string | null
-  tanggal_selesai: string | null
-  durasi_hari: number | null
-  tahap_progress: string | null
-  persentase_progress: number | null
-  pernah_dioverride: boolean | null
-  status_proyek: 'Work' | 'Borrowed' | 'Get Borrowed' | null
-  jalur_masuk: string | null
-  created_at: string
-  updated_at: string
-  is_deleted: boolean | null
-}
+const proyekTeknisRowSchema = z.object({
+  id: z.string().uuid(),
+  nama_proyek: z.string(),
+  paket_pekerjaan_induk: z.string().nullable(),
+  nomor_kontrak: z.string().nullable(),
+  jenis_pekerjaan: z.string(),
+  kategori_pekerjaan: z.string(),
+  tahun_anggaran: z.number().int(),
+  sumber_dana: z.string(),
+  dinas: z.string(),
+  lokasi_kecamatan: z.string().nullable(),
+  nama_ppk: z.string().nullable(),
+  perusahaan_id: z.string().uuid().nullable(),
+  perusahaan_nama: z.string().nullable(),
+  perusahaan_adalah_perusahaan_sendiri: z.boolean().nullable(),
+  tanggal_mulai: z.string().nullable(),
+  tanggal_selesai: z.string().nullable(),
+  durasi_hari: z.number().int().nullable(),
+  tahap_progress: z.string().nullable(),
+  persentase_progress: z.number().nullable(),
+  pernah_dioverride: z.boolean().nullable(),
+  status_proyek: z.enum(['Work', 'Borrowed', 'Get Borrowed']).nullable(),
+  jalur_masuk: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  is_deleted: z.boolean().nullable(),
+})
 
-type ProyekTeknisRpcClient = {
-  rpc: (
-    fn: 'get_proyek_teknis',
-    args?: { target_proyek_id?: string | null }
-  ) => Promise<{
-    data: ProyekTeknisRow[] | null
-    error: { message: string; code?: string } | null
-  }>
-}
+type ProyekTeknisRow = z.infer<typeof proyekTeknisRowSchema>
+
+const proyekTeknisPageRpcResultSchema = z.object({
+  rows: z.array(proyekTeknisRowSchema),
+  total: z.number().int().nonnegative(),
+  page: z.number().int().positive(),
+  pageSize: z.number().int().min(1).max(100),
+  pageCount: z.number().int().positive(),
+})
 
 function toProyekDisplayFromTeknis(row: ProyekTeknisRow): ProyekDisplay {
   return {
@@ -144,41 +144,53 @@ function toProyekDetailFromTeknis(row: ProyekTeknisRow): ProyekDetail {
 
 async function getProyekTeknisRows(targetProyekId?: string) {
   const supabase = await createSupabaseServerClient()
-  const rpcClient = supabase as unknown as ProyekTeknisRpcClient
-  return rpcClient.rpc('get_proyek_teknis', {
-    target_proyek_id: targetProyekId ?? null,
+  const { data, error } = await supabase.rpc('get_proyek_teknis', {
+    target_proyek_id: targetProyekId,
   })
+
+  if (error) return { data: null, error }
+
+  const parsed = z.array(proyekTeknisRowSchema).safeParse(data)
+  if (!parsed.success) {
+    return {
+      data: null,
+      error: {
+        code: 'INVALID_RPC_RESPONSE',
+        message: 'Respons proyek teknis tidak sesuai kontrak API.',
+      },
+    }
+  }
+
+  return { data: parsed.data, error: null }
 }
 
-function filterProyekListRows(rows: ProyekDisplay[], filters: ProyekListFilters) {
-  const search = filters.search.trim().toLowerCase()
-
-  return rows.filter((project) => {
-    const progress = project.persentase_progress ?? 0
-    const isBelumMulai = !project.tahap_progress && progress === 0
-    const isSelesai = progress === 100
-    const isBerjalan = !isBelumMulai && !isSelesai
-    const perluUpdate = evaluateProjectCompleteness(project, { includeCommercial: false }).missingFields.length > 0
-
-    if (filters.year !== 'semua' && project.tahun_anggaran !== filters.year) return false
-    if (filters.jenis !== 'Semua' && project.jenis_pekerjaan !== filters.jenis) return false
-    if (filters.status !== 'Semua' && project.status_proyek !== filters.status) return false
-    if (filters.perusahaanId !== 'Semua' && project.perusahaan_id !== filters.perusahaanId) return false
-    if (filters.progress === 'selesai' && !isSelesai) return false
-    if (filters.progress === 'belum_mulai' && !isBelumMulai) return false
-    if (filters.progress === 'berjalan' && !isBerjalan) return false
-    if (filters.progress === 'perlu_update' && !perluUpdate) return false
-
-    if (!search) return true
-
-    return [
-      project.nama_proyek,
-      project.dinas,
-      project.lokasi_kecamatan,
-      project.status_proyek,
-      project.tahap_progress,
-    ].some((value) => value?.toLowerCase().includes(search))
+async function getProyekTeknisPage(filters: ProyekListFilters) {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase.rpc('get_proyek_teknis_page', {
+    target_page: filters.page,
+    target_page_size: filters.pageSize,
+    target_tahun_anggaran: filters.year === 'semua' ? undefined : filters.year,
+    target_jenis_pekerjaan: filters.jenis === 'Semua' ? undefined : filters.jenis,
+    target_status_proyek: filters.status === 'Semua' ? undefined : filters.status,
+    target_perusahaan_id: filters.perusahaanId === 'Semua' ? undefined : filters.perusahaanId,
+    target_progress: filters.progress === 'semua' ? undefined : filters.progress,
+    target_search: filters.search.trim() || undefined,
   })
+
+  if (error) return { data: null, error }
+
+  const parsed = proyekTeknisPageRpcResultSchema.safeParse(data)
+  if (!parsed.success) {
+    return {
+      data: null,
+      error: {
+        code: 'INVALID_RPC_RESPONSE',
+        message: 'Respons pagination proyek teknis tidak sesuai kontrak API.',
+      },
+    }
+  }
+
+  return { data: parsed.data, error: null }
 }
 
 export async function getDaftarProyek({ includeSensitive = true }: { includeSensitive?: boolean } = {}) {
@@ -186,7 +198,7 @@ export async function getDaftarProyek({ includeSensitive = true }: { includeSens
   if (!includeSensitive) {
     const { data, error } = await getProyekTeknisRows()
     return {
-      data: (data ?? []).map(toProyekDisplayFromTeknis),
+      data: data?.map(toProyekDisplayFromTeknis) ?? null,
       error,
     }
   }
@@ -228,19 +240,16 @@ export async function getDaftarProyekPage(
   const to = from + pageSize - 1
 
   if (!includeSensitive) {
-    const { data, error } = await getDaftarProyek({ includeSensitive: false })
-    const filteredRows = filterProyekListRows(data ?? [], filters)
-      .sort((a, b) => b.tahun_anggaran - a.tahun_anggaran || a.nama_proyek.localeCompare(b.nama_proyek))
-    const total = filteredRows.length
-    const pageCount = Math.max(1, Math.ceil(total / pageSize))
+    const { data, error } = await getProyekTeknisPage({ ...filters, page, pageSize })
+    if (!data) return { data: null, error }
 
     return {
       data: {
-        rows: filteredRows.slice(from, to + 1),
-        total,
-        page: Math.min(page, pageCount),
-        pageSize,
-        pageCount,
+        rows: data.rows.map(toProyekDisplayFromTeknis),
+        total: data.total,
+        page: data.page,
+        pageSize: data.pageSize,
+        pageCount: data.pageCount,
       },
       error,
     }
@@ -303,6 +312,13 @@ export async function getDaftarProyekPage(
 
   const total = count ?? 0
   const pageCount = Math.max(1, Math.ceil(total / pageSize))
+
+  if (!error && total > 0 && page > pageCount) {
+    return getDaftarProyekPage(
+      { ...filters, page: pageCount, pageSize },
+      { client: supabase, includeSensitive: true }
+    )
+  }
 
   return {
     data: {

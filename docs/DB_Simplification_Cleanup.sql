@@ -1,18 +1,23 @@
 -- ============================================================
--- DB SIMPLIFICATION CLEANUP — Monitoring-only scope
+-- DEPRECATED: DB SIMPLIFICATION CLEANUP — DO NOT RUN
 -- Tanggal: 2026-06-17
 --
 -- Tujuan:
 -- Menghapus object legacy modul dokumen setelah aplikasi dipangkas
 -- menjadi monitoring proyek + database perusahaan.
 --
--- PENTING:
--- 1. Backup database dulu
--- 2. Jalankan DB_Simplification_Audit.sql dulu
--- 3. Pastikan smoke test app sudah lolos
+-- PENTING: Script historis ini sengaja diblokir. Audit lama tidak membuktikan
+-- object sudah tidak dipakai. Buat migration baru yang scoped setelah usage
+-- production terbukti nol, backup tersedia, dan approval eksplisit diberikan.
 -- ============================================================
 
 BEGIN;
+
+DO $$
+BEGIN
+  RAISE EXCEPTION 'Deprecated cleanup blocked. Use a reviewed, scoped migration instead.';
+END
+$$;
 
 -- ────────────────────────────────────────────────────────────
 -- BAGIAN 1 — Hapus policy legacy jika tabelnya masih ada

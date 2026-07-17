@@ -5,21 +5,10 @@ import { getCurrentUserProfile } from '@/lib/auth'
 import { getProyekById } from '@/lib/actions/proyek'
 import { canAccessRabProject, getRabMakerSnapshotByProyekId } from '@/lib/actions/rab'
 import { buildRabPdfFilename, createRabPdf } from '@/lib/rab-pdf'
+import { rabExportRecordSchema } from '@/lib/rpc-contracts'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
-
-type RecordRabExportHistoryRpcClient = {
-  rpc: (
-    fn: 'record_rab_export_file',
-    args: {
-      target_rab_maker_id: string
-      export_format: string
-      base_file_name: string
-      file_size_bytes: number
-    }
-  ) => Promise<{ data: { versionNumber: number; fileName: string } | null; error: { message: string } | null }>
-}
 
 export async function GET(
   _req: NextRequest,
@@ -52,7 +41,7 @@ export async function GET(
   const pdf = createRabPdf(project, snapshot)
   let filename = buildRabPdfFilename(project)
   const supabase = await createSupabaseServerClient()
-  const { data: exportRecord, error: historyError } = await (supabase as unknown as RecordRabExportHistoryRpcClient).rpc(
+  const { data: exportRecord, error: historyError } = await supabase.rpc(
     'record_rab_export_file',
     {
       target_rab_maker_id: snapshot.maker.id,
@@ -63,7 +52,11 @@ export async function GET(
   )
 
   if (historyError) return apiError('INTERNAL_ERROR', historyError.message, 500)
-  if (exportRecord) filename = exportRecord.fileName
+  const parsedExportRecord = rabExportRecordSchema.safeParse(exportRecord)
+  if (!parsedExportRecord.success) {
+    return apiError('INTERNAL_ERROR', 'Respons pencatatan export RAB tidak valid.', 500)
+  }
+  filename = parsedExportRecord.data.fileName
 
   return new Response(pdf, {
     status: 200,
@@ -71,10 +64,8 @@ export async function GET(
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="${filename}"`,
       'Cache-Control': 'no-store',
-      ...(exportRecord ? {
-        'X-RAB-Export-Version': String(exportRecord.versionNumber),
-        'X-RAB-Export-Filename': filename,
-      } : {}),
+      'X-RAB-Export-Version': String(parsedExportRecord.data.versionNumber),
+      'X-RAB-Export-Filename': filename,
     },
   })
 }

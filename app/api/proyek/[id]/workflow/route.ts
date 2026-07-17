@@ -14,19 +14,6 @@ function parseTransition(value: unknown): ProjectWorkflowTransition | null {
   return value === 'mark_rab_ready' ? value : null
 }
 
-type TransitionProjectWorkflowRpcClient = {
-  rpc: (
-    fn: 'transition_project_workflow_to_rab_ready',
-    args: {
-      target_proyek_id: string
-      actor_email: string | null
-    }
-  ) => Promise<{
-    data: string | null
-    error: { message: string; code?: string } | null
-  }>
-}
-
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -43,7 +30,7 @@ export async function POST(
     return apiError('VALIDATION_ERROR', 'Transisi workflow tidak valid.', 400)
   }
 
-  const { supabase, user, authError } = await createAuthenticatedSupabaseServerClient()
+  const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
   if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: project, error: projectError } = await getProyekById(id, {
@@ -72,11 +59,10 @@ export async function POST(
     )
   }
 
-  const { data, error: transitionError } = await (supabase as unknown as TransitionProjectWorkflowRpcClient).rpc(
+  const { data, error: transitionError } = await supabase.rpc(
     'transition_project_workflow_to_rab_ready',
     {
       target_proyek_id: id,
-      actor_email: user?.email ?? null,
     }
   )
 

@@ -4,14 +4,12 @@ import { isOwnerAdmin } from '@/lib/auth-types'
 import type {
   AhspItemRow,
   AvailableAhspForRabResult,
-  RabDraftRow,
   RabMakerHeader,
   RabMakerItemDetailRow,
   RabMakerItemRow,
   RabMakerSnapshot,
   RabProjectListPage,
   RabProjectListItem,
-  RabRekapRow,
   RelationValue,
 } from '@/lib/types/ahsp'
 import {
@@ -213,64 +211,6 @@ export async function getRabProjectMutationGate(projectId: string, profile: Curr
     canAccess: Boolean(project && project.jenis_pekerjaan === 'Perencanaan'),
     readiness,
     error: null,
-  }
-}
-
-export async function getRabRekapByProyekId(projectId: string) {
-  const supabase = await createSupabaseServerClient()
-  const { data, error } = await supabase
-    .from('rab_rekap')
-    .select('id, subtotal, margin_persen, overhead_persen, ppn_persen, pembulatan_rule, total_final, status')
-    .eq('proyek_id', projectId)
-    .maybeSingle()
-
-  return { data: (data as RabRekapRow | null) ?? null, error }
-}
-
-export async function getRabDraftByProyekId(projectId: string) {
-  const supabase = await createSupabaseServerClient()
-  const { data, error } = await supabase
-    .from('rab_draft')
-    .select(`
-      id,
-      volume,
-      harga_satuan,
-      jumlah_harga,
-      urutan,
-      ahsp_item:ahsp_item_id (
-        kode_analisa,
-        uraian_pekerjaan,
-        satuan:satuan_id (nama_satuan)
-      )
-    `)
-    .eq('proyek_id', projectId)
-    .order('urutan')
-
-  const rows = (data ?? []) as unknown as Array<
-    Record<string, unknown> & {
-      ahsp_item: RelationValue<{
-        kode_analisa: string
-        uraian_pekerjaan: string
-        satuan: RelationValue<{ nama_satuan: string }>
-      }>
-    }
-  >
-
-  return {
-    data: rows.map((row) => {
-      const ahspItem = firstRelation(row.ahsp_item)
-      return {
-        id: String(row.id),
-        kode_analisa: ahspItem?.kode_analisa ?? '-',
-        uraian_pekerjaan: ahspItem?.uraian_pekerjaan ?? '-',
-        satuan: firstRelation(ahspItem?.satuan ?? null)?.nama_satuan ?? '-',
-        volume: Number(row.volume ?? 0),
-        harga_satuan: Number(row.harga_satuan ?? 0),
-        jumlah_harga: Number(row.jumlah_harga ?? 0),
-        urutan: Number(row.urutan ?? 0),
-      }
-    }) satisfies RabDraftRow[],
-    error,
   }
 }
 

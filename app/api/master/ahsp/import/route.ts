@@ -4,21 +4,13 @@ import { requireOwnerAdminApi } from '@/lib/api-auth'
 import { apiData, apiError } from '@/lib/api-response'
 import {
   buildAhspImportWorkbookPayload,
-  type AhspImportPayload,
-  type AhspImportResult,
 } from '@/lib/ahsp-import'
+import { ahspImportResultSchema } from '@/lib/rpc-contracts'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
 
 const MAX_IMPORT_BYTES = 15 * 1024 * 1024
-
-type ImportAhspRpcClient = {
-  rpc: (
-    fn: 'import_ahsp_masterfile',
-    args: { import_payload: AhspImportPayload }
-  ) => Promise<{ data: AhspImportResult | null; error: { message: string } | null }>
-}
 
 export async function POST(req: NextRequest) {
   const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh import AHSP.')
@@ -47,13 +39,17 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = await createSupabaseServerClient()
-    const { data, error } = await (supabase as unknown as ImportAhspRpcClient).rpc(
+    const { data, error } = await supabase.rpc(
       'import_ahsp_masterfile',
       { import_payload: payload }
     )
 
     if (error) return apiError('INTERNAL_ERROR', error.message, 500)
-    return apiData({ result: data, preview })
+    const parsedResult = ahspImportResultSchema.safeParse(data)
+    if (!parsedResult.success) {
+      return apiError('INTERNAL_ERROR', 'Respons import AHSP tidak sesuai kontrak API.', 500)
+    }
+    return apiData({ result: parsedResult.data, preview })
   } catch (error) {
     return apiError(
       'VALIDATION_ERROR',

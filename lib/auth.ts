@@ -31,12 +31,7 @@ export async function getCurrentUserProfile(): Promise<{
           nama: data.nama,
           role: data.role,
         }
-      : {
-          id: user.id,
-          email: user.email ?? '',
-          nama: user.email?.split('@')[0] ?? 'User',
-          role: 'tenaga_ahli',
-        },
+      : null,
     error: null,
   }
 }

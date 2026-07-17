@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import type { Database } from '@/lib/database.types'
 import type {
   AhspDetailRow,
   AhspItemRow,
@@ -261,9 +262,11 @@ export async function getAhspDetailList() {
   }
 }
 
-function buildAhspDetailMutationPayload(ahspItemId: string | null, payload: AhspDetailPayload) {
+type AhspDetailInsert = Database['public']['Tables']['ahsp_details']['Insert']
+type AhspDetailUpdate = Database['public']['Tables']['ahsp_details']['Update']
+
+function buildAhspDetailComponentPayload(payload: AhspDetailPayload) {
   return {
-    ...(ahspItemId ? { ahsp_item_id: ahspItemId } : {}),
     komponen_tipe: payload.komponen_tipe,
     upah_id: payload.komponen_tipe === 'upah' ? payload.komponen_id : null,
     bahan_id: payload.komponen_tipe === 'bahan' ? payload.komponen_id : null,
@@ -274,9 +277,13 @@ function buildAhspDetailMutationPayload(ahspItemId: string | null, payload: Ahsp
 
 export async function createAhspDetail(ahspItemId: string, payload: AhspDetailPayload) {
   const supabase = await createSupabaseServerClient()
+  const insertPayload = {
+    ...buildAhspDetailComponentPayload(payload),
+    ahsp_item_id: ahspItemId,
+  } satisfies AhspDetailInsert
   const { data, error } = await supabase
     .from('ahsp_details')
-    .insert(buildAhspDetailMutationPayload(ahspItemId, payload))
+    .insert(insertPayload)
     .select('id')
     .single()
 
@@ -285,9 +292,10 @@ export async function createAhspDetail(ahspItemId: string, payload: AhspDetailPa
 
 export async function updateAhspDetail(ahspItemId: string, detailId: string, payload: AhspDetailPayload) {
   const supabase = await createSupabaseServerClient()
+  const updatePayload = buildAhspDetailComponentPayload(payload) satisfies AhspDetailUpdate
   const { data, error } = await supabase
     .from('ahsp_details')
-    .update(buildAhspDetailMutationPayload(null, payload))
+    .update(updatePayload)
     .eq('id', detailId)
     .eq('ahsp_item_id', ahspItemId)
     .select('id')

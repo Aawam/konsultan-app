@@ -6,27 +6,6 @@ import { getRabMakerEditGateByProyekId, getRabProjectMutationGate } from '@/lib/
 import { normalizeOverrideReason, parseRabDecimalInput } from '@/lib/rab-maker'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
-type UpdateRabMakerRpcClient = {
-  rpc: (
-    fn: 'update_rab_maker_item_volume',
-    args: { target_item_id: string; new_volume: number }
-  ) => Promise<{ data: null; error: { message: string } | null }>
-}
-
-type UpdateRabMakerProfitRpcClient = {
-  rpc: (
-    fn: 'update_rab_maker_item_profit',
-    args: { target_item_id: string; new_profit_persen: number; override_reason: string | null }
-  ) => Promise<{ data: null; error: { message: string } | null }>
-}
-
-type DeleteRabMakerRpcClient = {
-  rpc: (
-    fn: 'delete_rab_maker_item',
-    args: { target_item_id: string }
-  ) => Promise<{ data: null; error: { message: string } | null }>
-}
-
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; itemId: string }> }
@@ -73,9 +52,9 @@ export async function PATCH(
       return apiError('VALIDATION_ERROR', 'Profit harus angka dan tidak boleh negatif.', 400)
     }
 
-    const { error } = await (supabase as unknown as UpdateRabMakerProfitRpcClient).rpc(
+    const { error } = await supabase.rpc(
       'update_rab_maker_item_profit',
-      { target_item_id: itemId, new_profit_persen: profit, override_reason: reason }
+      { target_item_id: itemId, new_profit_persen: profit, override_reason: reason ?? undefined }
     )
 
     if (error) return apiError('VALIDATION_ERROR', error.message, 400)
@@ -89,7 +68,7 @@ export async function PATCH(
     return apiError('VALIDATION_ERROR', 'Volume harus angka dan tidak boleh negatif.', 400)
   }
 
-  const { error } = await (supabase as unknown as UpdateRabMakerRpcClient).rpc(
+  const { error } = await supabase.rpc(
     'update_rab_maker_item_volume',
     { target_item_id: itemId, new_volume: volume }
   )
@@ -130,7 +109,7 @@ export async function DELETE(
     return apiError('CONFLICT', editGate.message ?? 'RAB terkunci.', 409, editGate)
   }
 
-  const { error } = await (supabase as unknown as DeleteRabMakerRpcClient).rpc(
+  const { error } = await supabase.rpc(
     'delete_rab_maker_item',
     { target_item_id: itemId }
   )

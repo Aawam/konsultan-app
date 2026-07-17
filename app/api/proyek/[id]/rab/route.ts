@@ -10,13 +10,6 @@ import {
 } from '@/lib/actions/rab'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
-type CreateRabMakerRpcClient = {
-  rpc: (
-    fn: 'create_rab_maker_from_ahsp',
-    args: { target_proyek_id: string; source_ahsp_item_id: string }
-  ) => Promise<{ data: string | null; error: { message: string } | null }>
-}
-
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -75,7 +68,7 @@ export async function POST(
     return apiError('CONFLICT', editGate.message ?? 'RAB terkunci.', 409, editGate)
   }
 
-  const { data, error } = await (supabase as unknown as CreateRabMakerRpcClient).rpc(
+  const { data, error } = await supabase.rpc(
     'create_rab_maker_from_ahsp',
     { target_proyek_id: id, source_ahsp_item_id: ahspItemId }
   )

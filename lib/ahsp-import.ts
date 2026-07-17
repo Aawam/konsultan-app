@@ -25,6 +25,7 @@ export type AhspImportDetailRow = {
   kode_ahsp: string
   komponen_tipe: 'upah' | 'bahan' | 'alat'
   nama_komponen: string
+  satuan: string
   koefisien: number
   urutan: number
 }
@@ -360,14 +361,30 @@ function masterRows(rows: Array<Record<string, unknown>>, kind: 'upah' | 'bahan'
   })
 }
 
+function masterReferenceKey(reference: string, satuan: string) {
+  return `${normalizeKey(reference)}\u0000${normalizeKey(satuan)}`
+}
+
 function buildReferenceMap(rows: AhspImportMasterRow[]) {
   const map = new Map<string, AhspImportMasterRow>()
   for (const row of rows) {
     for (const ref of row.refs) {
-      map.set(normalizeKey(ref), row)
+      map.set(masterReferenceKey(ref, row.satuan), row)
     }
   }
   return map
+}
+
+function hasDuplicateMasterIdentity(rows: AhspImportMasterRow[]) {
+  const seen = new Set<string>()
+
+  for (const row of rows) {
+    const key = masterReferenceKey(row.nama, row.satuan)
+    if (seen.has(key)) return true
+    seen.add(key)
+  }
+
+  return false
 }
 
 export function buildAhspImportPayload(sheets: SpreadsheetRows): { preview: AhspImportPreview; payload: AhspImportPayload } {
@@ -392,19 +409,21 @@ export function buildAhspImportPayload(sheets: SpreadsheetRows): { preview: Ahsp
   const detailCodeSet = new Set(detailCodes)
   const duplicateAhspCodes = duplicateKeys(itemCodes)
 
-  const upahRefs = new Set(masterUpah.flatMap((row) => [text(row.Kode), text(row['Tenaga Kerja'])].filter(Boolean)))
-  const bahanRefs = new Set(masterBahan.flatMap((row) => [text(row.Bahan)].filter(Boolean)))
-  const alatRefs = new Set(masterAlat.flatMap((row) => [text(row.Kode), text(row['Nama Alat'])].filter(Boolean)))
-
   const missingComponentReferences = ahspDetails.flatMap((row) => {
     const jenis = text(row.Jenis).toUpperCase()
+    const komponenTipe = normalizeComponentType(row.Jenis)
     const kodeAhsp = text(row['Kode AHSP'])
     const kode = text(row['Kode Komponen'])
     const nama = text(row['Uraian Komponen'])
-    const refs = jenis === 'TENAGA' ? upahRefs : jenis === 'BAHAN' ? bahanRefs : jenis === 'ALAT' ? alatRefs : null
+    const satuan = text(row.Satuan)
+    const refs = komponenTipe ? refMaps[komponenTipe] : null
 
     if (!refs) return [{ kodeAhsp, jenis, komponen: nama || kode || '-' }]
-    if ((kode && refs.has(kode)) || (nama && refs.has(nama))) return []
+    if (
+      satuan
+      && ((kode && refs.has(masterReferenceKey(kode, satuan)))
+        || (nama && refs.has(masterReferenceKey(nama, satuan))))
+    ) return []
     return [{ kodeAhsp, jenis, komponen: nama || kode || '-' }]
   })
 
@@ -414,8 +433,9 @@ export function buildAhspImportPayload(sheets: SpreadsheetRows): { preview: Ahsp
 
     const kode = text(row['Kode Komponen'])
     const nama = text(row['Uraian Komponen'])
-    const reference = (kode ? refMaps[komponenTipe].get(normalizeKey(kode)) : null)
-      ?? (nama ? refMaps[komponenTipe].get(normalizeKey(nama)) : null)
+    const satuan = text(row.Satuan)
+    const reference = (kode ? refMaps[komponenTipe].get(masterReferenceKey(kode, satuan)) : null)
+      ?? (nama ? refMaps[komponenTipe].get(masterReferenceKey(nama, satuan)) : null)
 
     if (!reference) return []
 
@@ -423,6 +443,7 @@ export function buildAhspImportPayload(sheets: SpreadsheetRows): { preview: Ahsp
       kode_ahsp: text(row['Kode AHSP']),
       komponen_tipe: komponenTipe,
       nama_komponen: reference.nama,
+      satuan: reference.satuan,
       koefisien: parseDecimal(row.Koefisien),
       urutan: index + 1,
     }]
@@ -476,10 +497,10 @@ export function buildAhspImportPayload(sheets: SpreadsheetRows): { preview: Ahsp
     blockers.push('Harga dasar tidak boleh negatif.')
   }
   if (normalizedDetails.some((row) => row.koefisien <= 0)) blockers.push('Koefisien detail AHSP harus lebih dari 0.')
-  if (duplicateKeys(upahPayload.map((row) => row.nama)).length > 0) blockers.push('Ada nama upah duplikat di workbook.')
-  if (duplicateKeys(bahanPayload.map((row) => row.nama)).length > 0) blockers.push('Ada nama bahan duplikat di workbook.')
-  if (duplicateKeys(alatPayload.map((row) => row.nama)).length > 0) blockers.push('Ada nama alat duplikat di workbook.')
-  if (itemsWithoutDetails.length > 0) warnings.push('Ada AHSP item tanpa detail komponen.')
+  if (hasDuplicateMasterIdentity(upahPayload)) blockers.push('Ada pasangan nama dan satuan upah duplikat di workbook.')
+  if (hasDuplicateMasterIdentity(bahanPayload)) blockers.push('Ada pasangan nama dan satuan bahan duplikat di workbook.')
+  if (hasDuplicateMasterIdentity(alatPayload)) blockers.push('Ada pasangan nama dan satuan alat duplikat di workbook.')
+  if (itemsWithoutDetails.length > 0) blockers.push('Setiap AHSP item wajib memiliki minimal satu detail komponen.')
 
   const preview: AhspImportPreview = {
     totals: {
