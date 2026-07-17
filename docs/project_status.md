@@ -1,8 +1,8 @@
 # Project Status - Konsulindo Project Suite
 
-**Tanggal:** 2026-06-16  
+**Tanggal:** 2026-07-17
 **Versi:** 0.4 internal  
-**Framework:** Next.js 16.2.3 App Router  
+**Framework:** Next.js 16.2.10 App Router
 **Status umum:** aktif dikembangkan, modul Proyek menjadi modul utama produksi.
 
 ---
@@ -17,9 +17,9 @@
 | Bahasa | TypeScript 5 |
 | Validasi | Zod |
 | Toast | Sonner |
-| Export | Native CSV; RAB Excel export planned server-side |
+| Export | Native CSV; generated RAB XLSX and PDF |
 | Charts | Recharts |
-| Test | Vitest, Testing Library, jsdom |
+| Test | Vitest |
 | Runtime | Node.js >=20.19.0 (`.nvmrc` uses 22) |
 
 ---
@@ -128,13 +128,17 @@ Pelanggaran bisa dioverride dengan alasan, lalu disimpan di `override_log`.
 Test yang ada:
 
 - `lib/actions/proyek.test.ts`
+- `lib/actions/proyek-page.test.ts`
+- `lib/ahsp-import.test.ts`
 - `lib/constants/proyek.test.ts`
+- `lib/rab-lock.test.ts`
+- `lib/simple-xlsx.test.ts`
 - `lib/utils.test.ts`
 - `lib/validations/proyek.test.ts`
 
 Konfigurasi:
 
-- `vitest.config.ts`
+- `vitest.config.mts`
 - `vitest.setup.ts`
 
 Jalankan dengan:
@@ -156,7 +160,7 @@ npm test
 - `app/proyek/loading.tsx` dan `app/database/loading.tsx` memberi skeleton cepat untuk route dinamis yang menunggu Supabase.
 - `public/templates/` masih boleh dipakai untuk aset referensi lokal, tetapi tidak lagi dibutuhkan untuk fitur inti aplikasi.
 - `.env.example` disimpan sebagai template konfigurasi aman; `.env.local` tetap lokal dan di-ignore.
-- GitHub Actions menjalankan `npm ci`, lint, dan test di `.github/workflows/ci.yml`.
+- GitHub Actions menjalankan install bersih, lint, typecheck, test, build, dan audit dependency produksi di `.github/workflows/ci.yml`.
 - `.next/`, `tsconfig.tsbuildinfo`, `.DS_Store`, `.claude/`, `.vscode/`, dan `supabase/.temp/` adalah artefak lokal dan tidak perlu disimpan.
 - `CLAUDE.md` dihapus karena hanya berisi pointer ke `AGENTS.md`; `AGENTS.md` tetap dipakai sebagai instruksi agent lintas tooling.
 - Folder staging lama `public/external/fixes*` sudah tidak menjadi bagian struktur aplikasi. File di area itu adalah salinan patch/eksperimen, bukan source aktif.

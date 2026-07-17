@@ -8,13 +8,13 @@ The app is intentionally kept small: no document-maker module, no unused UI wrap
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 16.2.3 App Router |
+| Framework | Next.js 16.2.10 App Router |
 | Runtime | React 19, Node.js >=20.19.0 |
 | UI | Tailwind CSS v4, shadcn/Radix primitives, lucide-react |
 | Database/Auth | Supabase PostgreSQL + Supabase Auth |
 | Validation | Zod, react-hook-form |
 | Charts | Recharts |
-| Export | xlsx |
+| Export | Native CSV, generated XLSX and PDF |
 | Tests | Vitest |
 
 ## Getting Started
@@ -44,7 +44,9 @@ npm run dev            # local development
 npm run build          # production build
 npm run start          # run production server after build
 npm run lint           # ESLint
+npm run typecheck      # TypeScript without emit
 npm test               # Vitest
+npm run check          # lint + typecheck + test + build
 npm run types:supabase # regenerate Supabase types
 npm run db:export:data # export database data script
 npm run latency -- https://your-domain.com 5 # measure deployed route latency
@@ -55,9 +57,10 @@ npm run latency -- https://your-domain.com 5 # measure deployed route latency
 | Module | Routes | Purpose |
 |---|---|---|
 | Auth | `/login`, `proxy.ts` | Supabase login, route protection, logout from app shell. |
-| Proyek | `/proyek`, `/proyek/baru`, `/proyek/[id]`, `/proyek/[id]/edit`, `/proyek/dashboard` | Project list, create/edit, detail, dashboard, export, override log. |
-| Database | `/database`, `/database/perusahaan/[id]` | Company records, project history, Dinas/SKPD aggregation. |
-| API | `/api/proyek/*`, `/api/perusahaan/*`, `/api/dinas/*` | CRUD, export, override, and reference-data endpoints. |
+| Proyek | `/proyek`, `/proyek/baru`, `/proyek/[id]`, `/proyek/[id]/edit`, `/proyek/dashboard` | Project list, create/edit, detail, dashboard, export, and workflow. |
+| RAB/AHSP | `/proyek/rab`, `/proyek/[id]/rab`, `/database` | RAB Maker, approval/final lock, XLSX/PDF export, and controlled AHSP import. |
+| Database | `/database`, `/database/perusahaan/[id]` | Company and master/reference data. |
+| API | `/api/proyek/*`, `/api/master/*`, `/api/perusahaan/*`, `/api/dinas/*` | Authenticated domain endpoints. |
 
 Document-generation modules are out of active scope. The product currently focuses on monitoring and database workflows.
 
@@ -162,11 +165,8 @@ psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f docs/DB_Index_Verification.sql
 Before pushing changes:
 
 ```bash
-npm test
-npm run build
+npm run check
 ```
 
-Current cleanup verification:
-
-- `npm test`: 5 files, 20 tests passed.
-- `npm run build`: production build passed on Next.js 16.2.3.
+CI runs the same lint, typecheck, test, and build gates on `experiment`,
+`staging`, and `main`, plus a high-severity production-dependency audit.

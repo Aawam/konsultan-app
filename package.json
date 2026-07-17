@@ -10,8 +10,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "types:supabase": "supabase gen types typescript --project-id otivzjkfedxlwkgiewkm > lib/database.types.ts",
+    "check": "npm run lint && npm run typecheck && npm test && npm run build",
+    "types:supabase": "node scripts/generate-supabase-types.mjs",
     "db:export:data": "node scripts/export-db-data.mjs",
     "latency": "node scripts/measure-latency.mjs"
   },

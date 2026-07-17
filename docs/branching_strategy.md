@@ -15,7 +15,7 @@ Project ini memakai tiga branch utama.
 ## Alur Kerja
 
 1. Kerjakan perubahan di `experiment`.
-2. Jalankan verifikasi minimal: `npm run lint`, `npm test`, dan `npm run build`.
+2. Jalankan verifikasi penuh: `npm run check` dan audit dependency produksi.
 3. Push ke `experiment`.
 4. Jika siap diuji sebagai kandidat deploy, fast-forward atau merge ke `staging`.
 5. Jika staging sudah diterima, merge ke `main` untuk production.
@@ -25,4 +25,5 @@ Project ini memakai tiga branch utama.
 - Branch sementara boleh dibuat untuk pekerjaan besar, tetapi harus pendek umur.
 - Jangan langsung push pekerjaan eksperimen ke `main`.
 - `staging` tidak dipakai untuk eksplorasi; isinya harus merepresentasikan kandidat deploy berikutnya.
+- Promosi ke `staging` bukan deploy production. Production baru berubah setelah merge terpisah ke `main` dan persetujuan eksplisit.
 - Archive branch hanya untuk riwayat transisi, bukan target kerja harian.

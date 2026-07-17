@@ -1,6 +1,6 @@
 # PRD Gap Audit
 
-Status: 2026-07-09
+Status: 2026-07-17
 
 This audit compares the current repository against the Draft v1 PRD for
 `konsultan-app`. The PRD sitemap and Settings module are intentionally not used
@@ -36,15 +36,8 @@ but behind the PRD in product completeness. The current state is roughly
 
 ## Behind PRD
 
-- Excel export is not implemented for final RAB/EE.
-- PDF export is not implemented for final RAB/EE.
-- Excel import is not implemented for AHSP/master upah/bahan/alat.
-- Rekap RAB is not yet a full user workflow. It currently behaves mostly as a
-  calculated summary, not a product flow for setting document-level parameters,
-  changing status, locking validated/final documents, and exporting the final
-  EE.
-- RAB status workflow is incomplete in the UI: `draft -> review -> validated ->
-  final` exists in schema intent, but not as a complete interaction model.
+- Rekap RAB still needs a complete product surface for every document-level
+  parameter and review exception, despite working approval/finalization locks.
 - Global parameters such as default PPN, default margin, overhead, and rounding
   rules are not yet a first-class app surface. This is acceptable for the
   current single-operator phase but must be revisited before multi-user
@@ -65,8 +58,5 @@ but behind the PRD in product completeness. The current state is roughly
    `lib/validations/*` and `lib/actions/*`.
 2. Add an explicit migration folder and stop treating `docs/*.sql` as runnable
    production migrations.
-3. Complete Rekap RAB workflow before export:
-   status transition, document-level PPN/rounding, final lock rules, and audit.
-4. Implement Excel export.
-5. Implement PDF export.
-6. Implement Excel import with a fixed template and validation.
+3. Finish the remaining Rekap RAB document-level parameter workflow.
+4. Keep XLSX/PDF export and controlled AHSP import covered by regression tests.
