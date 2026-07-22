@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import { buildProyekPayload } from '@/lib/actions/proyek'
-import { apiData, apiError } from '@/lib/api-response'
+import { apiData, apiError, apiUnauthorized, readJsonBody } from '@/lib/api-response'
 import { PROYEK_MUTATION_RETURN_SELECT } from '@/lib/queries/proyek-selects'
 import { proyekSchema } from '@/lib/validations/proyek'
 import type { ProyekFormData } from '@/lib/types/proyek'
@@ -9,9 +9,13 @@ import { parseNumberInput } from '@/lib/utils'
 import { requireOwnerAdminApi } from '@/lib/api-auth'
 
 export async function POST(req: NextRequest) {
-  const form = await req.json() as ProyekFormData
+  const { data: body, error: bodyError } = await readJsonBody<ProyekFormData>(req)
+  if (bodyError) return bodyError
+  if (!body) return apiError('VALIDATION_ERROR', 'Body request wajib diisi.', 400)
+
+  const form = body
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
-  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authError) return apiUnauthorized()
   const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh menambah proyek.')
   if (forbidden) return forbidden
 

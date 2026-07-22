@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import type { PerusahaanFormData } from '@/lib/types/perusahaan'
-import { apiData, apiError, apiOk, readJsonBody } from '@/lib/api-response'
+import { apiData, apiError, apiOk, apiUnauthorized, readJsonBody } from '@/lib/api-response'
 import { requireOwnerAdminApi } from '@/lib/api-auth'
 
 export async function PATCH(
@@ -22,7 +22,7 @@ export async function PATCH(
   }
 
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
-  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authError) return apiUnauthorized()
   const payload = {
     nama_perusahaan: nama,
     adalah_perusahaan_sendiri: Boolean(form.adalah_perusahaan_sendiri),
@@ -59,7 +59,7 @@ export async function DELETE(
   if (forbidden) return forbidden
 
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
-  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authError) return apiUnauthorized()
 
   const { count, error: countError } = await supabase
     .from('proyek')

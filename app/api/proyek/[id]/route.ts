@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import { buildProyekPayload } from '@/lib/actions/proyek'
-import { apiData, apiError, apiOk } from '@/lib/api-response'
+import { apiData, apiError, apiOk, apiUnauthorized, readJsonBody } from '@/lib/api-response'
 import {
   OVERRIDE_LOG_SELECT,
   PROYEK_DETAIL_SELECT,
@@ -18,7 +18,7 @@ export async function GET(
 ) {
   const { id } = await params
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
-  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authError) return apiUnauthorized()
 
   const [
     { data: proyek, error },
@@ -46,10 +46,10 @@ export async function GET(
   }
 
   if (overrideError) {
-    return NextResponse.json({ error: overrideError.message }, { status: 500 })
+    return apiError('INTERNAL_ERROR', overrideError.message, 500)
   }
 
-  return NextResponse.json({ proyek, overrideLogs: overrideLogs ?? [] })
+  return apiData({ proyek, overrideLogs: overrideLogs ?? [] })
 }
 
 export async function PATCH(
@@ -57,9 +57,13 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const form = await req.json() as ProyekFormData
+  const { data: body, error: bodyError } = await readJsonBody<ProyekFormData>(req)
+  if (bodyError) return bodyError
+  if (!body) return apiError('VALIDATION_ERROR', 'Body request wajib diisi.', 400)
+
+  const form = body
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
-  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authError) return apiUnauthorized()
   const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh mengubah proyek.')
   if (forbidden) return forbidden
 
@@ -95,7 +99,7 @@ export async function DELETE(
 ) {
   const { id } = await params
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
-  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authError) return apiUnauthorized()
   const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh menghapus proyek.')
   if (forbidden) return forbidden
 

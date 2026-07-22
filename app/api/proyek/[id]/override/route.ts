@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
-import { apiError, apiOk, readJsonBody } from '@/lib/api-response'
+import { apiError, apiOk, apiUnauthorized, readJsonBody } from '@/lib/api-response'
 import { requireOwnerAdminApi } from '@/lib/api-auth'
 
 export async function POST(
@@ -24,7 +24,7 @@ export async function POST(
   }
 
   const { supabase, user, authError } = await createAuthenticatedSupabaseServerClient()
-  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authError) return apiUnauthorized()
   const now = new Date().toISOString()
 
   const [{ error: proyekError }, { error: logError }] = await Promise.all([

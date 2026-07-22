@@ -21,6 +21,8 @@ import {
 import { evaluateProjectRabReadiness } from '@/lib/project-completeness'
 import { getRabMakerLockState, type RabMakerLockState } from '@/lib/rab-lock'
 
+type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>
+
 function firstRelation<T>(value: RelationValue<T>): T | null {
   if (Array.isArray(value)) return value[0] ?? null
   return value
@@ -389,6 +391,59 @@ export async function getRabMakerEditGateByProyekId(
     data: getRabMakerLockState(data?.status ?? null),
     error: null,
   }
+}
+
+export async function assertRabItemBelongsToProject(
+  projectId: string,
+  itemId: string,
+  client?: SupabaseServerClient
+): Promise<{
+  ok: boolean
+  error: { message: string; code?: string } | null
+}> {
+  const supabase = client ?? await createSupabaseServerClient()
+  const { data: item, error: itemError } = await supabase
+    .from('rab_maker_items')
+    .select('rab_maker_id')
+    .eq('id', itemId)
+    .maybeSingle()
+
+  if (itemError) return { ok: false, error: itemError }
+
+  const makerId = item?.rab_maker_id
+  if (!makerId) return { ok: false, error: null }
+
+  const { data: maker, error: makerError } = await supabase
+    .from('rab_maker')
+    .select('id')
+    .eq('id', makerId)
+    .eq('proyek_id', projectId)
+    .maybeSingle()
+
+  if (makerError) return { ok: false, error: makerError }
+  return { ok: Boolean(maker), error: null }
+}
+
+export async function assertRabDetailBelongsToProject(
+  projectId: string,
+  itemId: string,
+  detailId: string,
+  client?: SupabaseServerClient
+): Promise<{
+  ok: boolean
+  error: { message: string; code?: string } | null
+}> {
+  const supabase = client ?? await createSupabaseServerClient()
+  const { data: detail, error: detailError } = await supabase
+    .from('rab_maker_item_details')
+    .select('rab_maker_item_id')
+    .eq('id', detailId)
+    .maybeSingle()
+
+  if (detailError) return { ok: false, error: detailError }
+  if (detail?.rab_maker_item_id !== itemId) return { ok: false, error: null }
+
+  return assertRabItemBelongsToProject(projectId, itemId, supabase)
 }
 
 export type AvailableAhspForRabFilters = {

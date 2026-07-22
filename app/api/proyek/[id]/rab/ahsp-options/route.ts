@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 
 import { apiData, apiError } from '@/lib/api-response'
-import { getCurrentUserProfile } from '@/lib/auth'
+import { requireCurrentUserProfileApi } from '@/lib/api-auth'
 import { canAccessRabProject, getAvailableAhspForRab } from '@/lib/actions/rab'
 
 export async function GET(
@@ -9,7 +9,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const { profile } = await getCurrentUserProfile()
+  const { profile, response: authResponse } = await requireCurrentUserProfileApi()
+  if (authResponse) return authResponse
+
   const canAccess = await canAccessRabProject(id, profile)
 
   if (!canAccess) {

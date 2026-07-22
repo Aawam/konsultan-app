@@ -34,7 +34,11 @@ describe('getCurrentUserProfile', () => {
   it('does not invent a tenaga_ahli profile for an auth user missing from public.users', async () => {
     createSupabaseServerClientMock.mockResolvedValue(buildClient(null) as never)
 
-    await expect(getCurrentUserProfile()).resolves.toEqual({ profile: null, error: null })
+    await expect(getCurrentUserProfile()).resolves.toEqual({
+      user: { id: 'auth-user-id', email: 'user@example.com' },
+      profile: null,
+      error: null,
+    })
   })
 
   it('returns the persisted application profile', async () => {
@@ -46,6 +50,10 @@ describe('getCurrentUserProfile', () => {
     }
     createSupabaseServerClientMock.mockResolvedValue(buildClient(profile) as never)
 
-    await expect(getCurrentUserProfile()).resolves.toEqual({ profile, error: null })
+    await expect(getCurrentUserProfile()).resolves.toEqual({
+      user: { id: 'auth-user-id', email: 'user@example.com' },
+      profile,
+      error: null,
+    })
   })
 })

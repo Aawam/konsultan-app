@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import type { PerusahaanFormData } from '@/lib/types/perusahaan'
-import { apiData, apiError, readJsonBody } from '@/lib/api-response'
+import { apiData, apiError, apiUnauthorized, readJsonBody } from '@/lib/api-response'
 import { requireOwnerAdminApi } from '@/lib/api-auth'
 
 export async function POST(req: NextRequest) {
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
-  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authError) return apiUnauthorized()
   const payload = {
     nama_perusahaan: nama,
     adalah_perusahaan_sendiri: Boolean(form.adalah_perusahaan_sendiri),

@@ -1,8 +1,12 @@
 import { NextRequest } from 'next/server'
 
 import { apiData, apiError, readJsonBody } from '@/lib/api-response'
-import { getRabMakerEditGateByProyekId, getRabProjectMutationGate } from '@/lib/actions/rab'
-import { getCurrentUserProfile } from '@/lib/auth'
+import {
+  assertRabDetailBelongsToProject,
+  getRabMakerEditGateByProyekId,
+  getRabProjectMutationGate,
+} from '@/lib/actions/rab'
+import { requireCurrentUserProfileApi } from '@/lib/api-auth'
 import { normalizeOverrideReason, parseRabDecimalInput } from '@/lib/rab-maker'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
@@ -10,8 +14,10 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; itemId: string; detailId: string }> }
 ) {
-  const { id, detailId } = await params
-  const { profile } = await getCurrentUserProfile()
+  const { id, itemId, detailId } = await params
+  const { profile, response: authResponse } = await requireCurrentUserProfileApi()
+  if (authResponse) return authResponse
+
   const { canAccess, readiness, error: gateError } = await getRabProjectMutationGate(id, profile)
 
   if (gateError) return apiError('INTERNAL_ERROR', gateError.message, 500)
@@ -43,6 +49,10 @@ export async function PATCH(
   }
 
   const supabase = await createSupabaseServerClient()
+  const binding = await assertRabDetailBelongsToProject(id, itemId, detailId, supabase)
+  if (binding.error) return apiError('INTERNAL_ERROR', binding.error.message, 500)
+  if (!binding.ok) return apiError('NOT_FOUND', 'Detail RAB tidak ditemukan pada item dan proyek ini.', 404)
+
   const { data: editGate, error: editGateError } = await getRabMakerEditGateByProyekId(id, supabase)
 
   if (editGateError) return apiError('INTERNAL_ERROR', editGateError.message, 500)

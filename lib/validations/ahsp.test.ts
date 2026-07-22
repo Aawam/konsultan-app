@@ -51,6 +51,19 @@ describe('validateAhspItemPayload', () => {
       message: 'Profit default tidak boleh negatif.',
     })
   })
+
+  it('rejects non-numeric profit defaults instead of coercing them to zero', () => {
+    expect(validateAhspItemPayload({
+      kode_analisa: 'A.1',
+      uraian_pekerjaan: 'Galian tanah manual',
+      kategori_id: 'kategori-1',
+      satuan_id: 'satuan-1',
+      profit_persen_default: 'bukan angka',
+    })).toEqual({
+      ok: false,
+      message: 'Profit default harus berupa angka.',
+    })
+  })
 })
 
 describe('validateMasterHargaPayload', () => {
@@ -75,6 +88,18 @@ describe('validateMasterHargaPayload', () => {
     expect(validateMasterHargaPayload({ kind: 'jasa' })).toEqual({
       ok: false,
       message: 'Jenis harga tidak valid.',
+    })
+  })
+
+  it('rejects non-numeric base prices instead of coercing them to zero', () => {
+    expect(validateMasterHargaPayload({
+      kind: 'bahan',
+      nama: 'Semen Portland',
+      satuan_id: 'zak',
+      harga_dasar: 'mahal',
+    })).toEqual({
+      ok: false,
+      message: 'Harga dasar harus berupa angka.',
     })
   })
 })
@@ -103,6 +128,17 @@ describe('validateAhspDetailPayload', () => {
     })).toEqual({
       ok: false,
       message: 'Koefisien harus lebih dari 0.',
+    })
+  })
+
+  it('rejects non-numeric coefficients instead of coercing them to zero', () => {
+    expect(validateAhspDetailPayload({
+      komponen_tipe: 'alat',
+      komponen_id: 'alat-1',
+      koefisien: 'satu',
+    })).toEqual({
+      ok: false,
+      message: 'Koefisien harus berupa angka.',
     })
   })
 })

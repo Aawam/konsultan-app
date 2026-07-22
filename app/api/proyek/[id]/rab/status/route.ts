@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
-import { requireOwnerAdminApi } from '@/lib/api-auth'
-import { apiData, apiError, readJsonBody } from '@/lib/api-response'
+import { requireOwnerAdminProfileApi } from '@/lib/api-auth'
+import { apiData, apiError, apiUnauthorized, readJsonBody } from '@/lib/api-response'
 import { getRabProjectMutationGate } from '@/lib/actions/rab'
-import { getCurrentUserProfile } from '@/lib/auth'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 
 type RabStatusAction = 'approve' | 'finalize'
@@ -21,8 +20,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh mengubah status RAB.')
-  if (forbidden) return forbidden
+  const { profile, response: authResponse } = await requireOwnerAdminProfileApi('Hanya Owner/Admin yang boleh mengubah status RAB.')
+  if (authResponse) return authResponse
 
   const { data: body, error: bodyError } = await readJsonBody<RabStatusRequestBody>(req)
   if (bodyError) return bodyError
@@ -32,7 +31,6 @@ export async function POST(
     return apiError('VALIDATION_ERROR', 'Aksi status RAB tidak valid.', 400)
   }
 
-  const { profile } = await getCurrentUserProfile()
   const { canAccess, readiness, error: gateError } = await getRabProjectMutationGate(id, profile)
 
   if (gateError) return apiError('INTERNAL_ERROR', gateError.message, 500)
@@ -42,7 +40,7 @@ export async function POST(
   }
 
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
-  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authError) return apiUnauthorized()
 
   const fn = action === 'approve' ? 'approve_rab_maker' : 'finalize_rab_maker'
   const { data, error } = await supabase.rpc(fn, {

@@ -41,6 +41,10 @@ export function apiError(
   return NextResponse.json(body, { status })
 }
 
+export function apiUnauthorized(message = 'Unauthorized') {
+  return apiError('UNAUTHORIZED', message, 401)
+}
+
 export function apiData<T>(data: T, status = 200) {
   return NextResponse.json<ApiSuccessBody<T>>({ data }, { status })
 }

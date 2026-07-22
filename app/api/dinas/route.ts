@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
-import { apiData, apiError, readJsonBody } from '@/lib/api-response'
+import { apiData, apiError, apiUnauthorized, readJsonBody } from '@/lib/api-response'
 import { requireOwnerAdminApi } from '@/lib/api-auth'
 
 export async function POST(req: NextRequest) {
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
-  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authError) return apiUnauthorized()
   const { data, error } = await supabase
     .from('dinas_skpd')
     .insert({ nama_dinas: dinas })

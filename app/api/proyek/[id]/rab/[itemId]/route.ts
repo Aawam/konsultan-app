@@ -1,8 +1,12 @@
 import { NextRequest } from 'next/server'
 
 import { apiData, apiError, readJsonBody } from '@/lib/api-response'
-import { getCurrentUserProfile } from '@/lib/auth'
-import { getRabMakerEditGateByProyekId, getRabProjectMutationGate } from '@/lib/actions/rab'
+import { requireCurrentUserProfileApi } from '@/lib/api-auth'
+import {
+  assertRabItemBelongsToProject,
+  getRabMakerEditGateByProyekId,
+  getRabProjectMutationGate,
+} from '@/lib/actions/rab'
 import { normalizeOverrideReason, parseRabDecimalInput } from '@/lib/rab-maker'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
@@ -11,7 +15,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; itemId: string }> }
 ) {
   const { id, itemId } = await params
-  const { profile } = await getCurrentUserProfile()
+  const { profile, response: authResponse } = await requireCurrentUserProfileApi()
+  if (authResponse) return authResponse
+
   const { canAccess, readiness, error: gateError } = await getRabProjectMutationGate(id, profile)
 
   if (gateError) return apiError('INTERNAL_ERROR', gateError.message, 500)
@@ -37,6 +43,10 @@ export async function PATCH(
   if (bodyError) return bodyError
 
   const supabase = await createSupabaseServerClient()
+  const binding = await assertRabItemBelongsToProject(id, itemId, supabase)
+  if (binding.error) return apiError('INTERNAL_ERROR', binding.error.message, 500)
+  if (!binding.ok) return apiError('NOT_FOUND', 'Item RAB tidak ditemukan pada proyek ini.', 404)
+
   const { data: editGate, error: editGateError } = await getRabMakerEditGateByProyekId(id, supabase)
 
   if (editGateError) return apiError('INTERNAL_ERROR', editGateError.message, 500)
@@ -83,7 +93,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; itemId: string }> }
 ) {
   const { id, itemId } = await params
-  const { profile } = await getCurrentUserProfile()
+  const { profile, response: authResponse } = await requireCurrentUserProfileApi()
+  if (authResponse) return authResponse
+
   const { canAccess, readiness, error: gateError } = await getRabProjectMutationGate(id, profile)
 
   if (gateError) return apiError('INTERNAL_ERROR', gateError.message, 500)
@@ -102,6 +114,10 @@ export async function DELETE(
   }
 
   const supabase = await createSupabaseServerClient()
+  const binding = await assertRabItemBelongsToProject(id, itemId, supabase)
+  if (binding.error) return apiError('INTERNAL_ERROR', binding.error.message, 500)
+  if (!binding.ok) return apiError('NOT_FOUND', 'Item RAB tidak ditemukan pada proyek ini.', 404)
+
   const { data: editGate, error: editGateError } = await getRabMakerEditGateByProyekId(id, supabase)
 
   if (editGateError) return apiError('INTERNAL_ERROR', editGateError.message, 500)

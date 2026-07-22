@@ -50,15 +50,17 @@ export function ProyekSlideover({
     try {
       const res = await fetch(`/api/proyek/${proyekId}`)
       const json = await res.json() as {
-        proyek?: ProyekDetail
-        overrideLogs?: OverrideLog[]
+        data?: {
+          proyek?: ProyekDetail
+          overrideLogs?: OverrideLog[]
+        }
         error?: string
       }
-      if (!res.ok || !json.proyek) {
+      if (!res.ok || !json.data?.proyek) {
         setFetchError(json.error ?? 'Gagal memuat data proyek.')
         return
       }
-      setProyek(json.proyek)
+      setProyek(json.data.proyek)
     } catch (error) {
       setFetchError(error instanceof Error ? error.message : 'Gagal memuat data proyek.')
     } finally {

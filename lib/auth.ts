@@ -3,8 +3,9 @@ import type { CurrentUserProfile } from '@/lib/auth-types'
 export { getRoleLabel, isOwnerAdmin, type AppRole, type CurrentUserProfile } from '@/lib/auth-types'
 
 export async function getCurrentUserProfile(): Promise<{
+  user: { id: string; email?: string | null } | null
   profile: CurrentUserProfile | null
-  error: { message: string } | null
+  error: { message: string; source: 'auth' | 'profile' } | null
 }> {
   const supabase = await createSupabaseServerClient()
   const {
@@ -12,8 +13,8 @@ export async function getCurrentUserProfile(): Promise<{
     error: userError,
   } = await supabase.auth.getUser()
 
-  if (userError) return { profile: null, error: { message: userError.message } }
-  if (!user) return { profile: null, error: null }
+  if (userError) return { user: null, profile: null, error: { message: userError.message, source: 'auth' } }
+  if (!user) return { user: null, profile: null, error: null }
 
   const { data, error } = await supabase
     .from('users')
@@ -21,9 +22,10 @@ export async function getCurrentUserProfile(): Promise<{
     .eq('id', user.id)
     .maybeSingle()
 
-  if (error) return { profile: null, error: { message: error.message } }
+  if (error) return { user, profile: null, error: { message: error.message, source: 'profile' } }
 
   return {
+    user,
     profile: data
       ? {
           id: data.id,

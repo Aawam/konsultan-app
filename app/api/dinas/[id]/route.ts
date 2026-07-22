@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
-import { apiData, apiError, apiOk, readJsonBody } from '@/lib/api-response'
+import { apiData, apiError, apiOk, apiUnauthorized, readJsonBody } from '@/lib/api-response'
 import { requireOwnerAdminApi } from '@/lib/api-auth'
 
 export async function PATCH(
@@ -21,7 +21,7 @@ export async function PATCH(
   }
 
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
-  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authError) return apiUnauthorized()
   const { data: existing, error: existingError } = await supabase
     .from('dinas_skpd')
     .select('id, nama_dinas')
@@ -61,7 +61,7 @@ export async function DELETE(
   if (forbidden) return forbidden
 
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
-  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authError) return apiUnauthorized()
   const { data: existing, error: existingError } = await supabase
     .from('dinas_skpd')
     .select('id, nama_dinas')

@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 import { requireOwnerAdminApi } from '@/lib/api-auth'
-import { apiData, apiError, readJsonBody } from '@/lib/api-response'
+import { apiData, apiError, apiUnauthorized, readJsonBody } from '@/lib/api-response'
 import { getProyekById } from '@/lib/actions/proyek'
 import { evaluateProjectWorkflowTransition, type ProjectWorkflowTransition } from '@/lib/project-workflow'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
@@ -31,7 +31,7 @@ export async function POST(
   }
 
   const { supabase, authError } = await createAuthenticatedSupabaseServerClient()
-  if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authError) return apiUnauthorized()
 
   const { data: project, error: projectError } = await getProyekById(id, {
     client: supabase,

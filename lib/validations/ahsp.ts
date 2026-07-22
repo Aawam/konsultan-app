@@ -42,11 +42,26 @@ type AhspDetailInput = Partial<Record<keyof AhspDetailPayload, unknown>>
 type KategoriInput = Partial<Record<keyof KategoriPayload, unknown>>
 type SatuanInput = Partial<Record<keyof SatuanPayload, unknown>>
 
-function parseDecimal(value: unknown): number {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : 0
-  if (typeof value !== 'string' || !value) return 0
-  const parsed = Number(value.replace(',', '.'))
-  return Number.isFinite(parsed) ? parsed : 0
+function parseDecimal(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  if (typeof value !== 'string') return null
+
+  const normalized = value.trim().replace(',', '.')
+  if (!normalized) return null
+
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function parseRupiah(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  if (typeof value !== 'string') return null
+
+  const trimmed = value.trim()
+  if (!trimmed || !/^[\d.,\s]+$/.test(trimmed)) return null
+
+  const parsed = parseNumberInput(trimmed)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 function trimString(value: unknown): string {
@@ -86,6 +101,10 @@ export function validateAhspItemPayload(input: AhspItemInput): ValidationResult<
     return { ok: false, message: 'Satuan wajib dipilih.' }
   }
 
+  if (profitPersenDefault === null) {
+    return { ok: false, message: 'Profit default harus berupa angka.' }
+  }
+
   if (profitPersenDefault < 0) {
     return { ok: false, message: 'Profit default tidak boleh negatif.' }
   }
@@ -107,7 +126,7 @@ export function validateAhspItemPayload(input: AhspItemInput): ValidationResult<
 export function validateMasterHargaPayload(input: MasterHargaInput): ValidationResult<MasterHargaPayload> {
   const nama = trimString(input.nama)
   const satuanId = trimString(input.satuan_id)
-  const hargaDasar = parseNumberInput(input.harga_dasar as string | number | null | undefined)
+  const hargaDasar = parseRupiah(input.harga_dasar)
 
   if (!isHargaKind(input.kind)) {
     return { ok: false, message: 'Jenis harga tidak valid.' }
@@ -119,6 +138,10 @@ export function validateMasterHargaPayload(input: MasterHargaInput): ValidationR
 
   if (!satuanId) {
     return { ok: false, message: 'Satuan wajib dipilih.' }
+  }
+
+  if (hargaDasar === null) {
+    return { ok: false, message: 'Harga dasar harus berupa angka.' }
   }
 
   if (hargaDasar < 0) {
@@ -146,6 +169,10 @@ export function validateAhspDetailPayload(input: AhspDetailInput): ValidationRes
 
   if (!komponenId) {
     return { ok: false, message: 'Komponen wajib dipilih.' }
+  }
+
+  if (koefisien === null) {
+    return { ok: false, message: 'Koefisien harus berupa angka.' }
   }
 
   if (koefisien <= 0) {
