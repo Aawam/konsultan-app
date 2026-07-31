@@ -25,6 +25,7 @@ const retiredImplementationPaths = [
   'lib/actions/rab.ts',
   'lib/ahsp-import.ts',
   'lib/project-workflow.ts',
+  'lib/rpc-contracts.ts',
   'lib/rab-export.ts',
   'lib/rab-lock.ts',
   'lib/rab-maker.ts',
