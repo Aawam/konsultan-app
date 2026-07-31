@@ -38,8 +38,7 @@ describe('evaluateProjectWorkflowTransition', () => {
         persentase_progress: PROJECT_WORKFLOW_TRANSITIONS.mark_rab_ready.persentaseProgress,
       },
       completeness: expect.objectContaining({
-        status: 'needs_review',
-        canStartRab: false,
+        status: 'complete',
       }),
     })
   })

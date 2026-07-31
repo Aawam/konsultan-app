@@ -1,7 +1,7 @@
 # Project Status - Konsulindo Project Suite
 
-**Tanggal:** 2026-07-17
-**Versi:** 0.4 internal  
+**Tanggal:** 2026-07-31
+**Versi:** 0.5 internal
 **Framework:** Next.js 16.2.10 App Router
 **Status umum:** aktif dikembangkan, modul Proyek menjadi modul utama produksi.
 
@@ -17,7 +17,7 @@
 | Bahasa | TypeScript 5 |
 | Validasi | Zod |
 | Toast | Sonner |
-| Export | Native CSV; generated RAB XLSX and PDF |
+| Export | Native CSV |
 | Charts | Recharts |
 | Test | Vitest |
 | Runtime | Node.js >=20.19.0 (`.nvmrc` uses 22) |
@@ -49,6 +49,16 @@
 | Agregasi Dinas/SKPD | Selesai | `/database` |
 | Detail perusahaan expandable | Selesai | `components/database/database-client.tsx` |
 
+Database aktif hanya memuat data pendukung monitoring: proyek, Dinas/SKPD, dan perusahaan. Akses pengelolaan dibatasi untuk Owner/Admin.
+
+### RAB/AHSP
+
+| Fitur | Status | Catatan |
+|---|---|---|
+| RAB Maker dan export RAB | Dijeda dari produk aktif | Data/skema dipertahankan; route halaman/API dan akses langsung role browser ditutup. |
+| Master AHSP dan harga | Dijeda dari produk aktif | Tidak ditampilkan di Database monitoring; endpoint dan akses langsung role browser ditutup. |
+| Reintegrasi | Belum dijadwalkan | Dilakukan setelah formula perhitungan selesai dan tervalidasi di proyek terpisah. |
+
 ### Dokumen
 
 | Fitur | Status | Catatan |
@@ -63,6 +73,7 @@
 | Login Supabase | Selesai | `/login` |
 | Proteksi route | Selesai | `proxy.ts` |
 | Logout | Selesai | `SidebarLayout` |
+| Role Owner/Admin dan Tenaga Ahli | Selesai | Owner/Admin mengelola data; Tenaga Ahli membaca data teknis nonkomersial. |
 
 ---
 
@@ -76,13 +87,17 @@
 | `/api/proyek/[id]` | DELETE | Hapus proyek. |
 | `/api/proyek/[id]/override` | POST | Simpan override log. |
 | `/api/proyek/export` | GET | Data proyek untuk export. |
+
+Endpoint RAB, workflow siap-RAB, dan master AHSP mengembalikan `404` selama modul berada di luar scope aktif.
 ---
 
 ## Database Utama
 
 Kode aktif saat ini bergantung pada tabel berikut:
 
+- `users`
 - `proyek`
+- `proyek_internal`
 - `perusahaan`
 - `override_log`
 - `dinas_skpd`
@@ -153,7 +168,7 @@ npm test
 
 - Strategi branch aktif memakai `experiment` untuk kerja utama/uji coba fitur, `staging` untuk kandidat uji sebelum deploy, dan `main` untuk production. Detail ada di `docs/branching_strategy.md`.
 - `vercel.json` menjalankan Vercel Functions di region `sin1` agar dekat dengan pengguna Indonesia dan Supabase Singapore.
-- `proxy.ts` hanya menjaga route halaman (`/login`, `/proyek/*`, `/database/*`). API route melakukan auth sendiri agar request API tidak selalu melewati proxy global.
+- `proxy.ts` menjaga route halaman dan menolak surface RAB/AHSP yang dijeda. API aktif melakukan auth sendiri agar request API tidak selalu melewati round-trip autentikasi global.
 - API route memakai helper authenticated Supabase server client dari `lib/supabase-server.ts`.
 - Select detail proyek dan override log dipusatkan di `lib/queries/proyek-selects.ts` supaya payload Supabase tidak memakai `select('*')`.
 - Create/edit proyek memakai loader referensi bersama agar daftar perusahaan dan dinas dibaca dengan satu client Supabase per request.

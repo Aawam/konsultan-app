@@ -28,13 +28,13 @@ const completeProject: ProjectCompletenessInput = {
 }
 
 describe('evaluateProjectCompleteness', () => {
-  it('marks a complete Perencanaan project as ready for RAB', () => {
+  it('marks a project as complete without coupling monitoring to RAB readiness', () => {
     const result = evaluateProjectCompleteness(completeProject)
 
     expect(result.status).toBe('complete')
     expect(result.missingFields).toEqual([])
-    expect(result.canStartRab).toBe(true)
-    expect(result.nextAction).toBe('Siap susun RAB/EE.')
+    expect(result.blockingReasons).toEqual([])
+    expect(result.nextAction).toBe('Data proyek lengkap. Lanjutkan monitoring pekerjaan.')
   })
 
   it('reports missing core project fields', () => {
@@ -54,25 +54,24 @@ describe('evaluateProjectCompleteness', () => {
       'Tanggal mulai',
       'Tahap progress',
     ])
-    expect(result.canStartRab).toBe(false)
   })
 
-  it('blocks RAB readiness before the RAB-producing Perencanaan phase', () => {
+  it('does not flag a complete early-phase project as a monitoring problem', () => {
     const result = evaluateProjectCompleteness({
       ...completeProject,
       tahap_progress: 'Konsep Desain',
       persentase_progress: 40,
     })
 
-    expect(result.status).toBe('needs_review')
-    expect(result.blockingReasons).toEqual(['Progress belum masuk tahap penyusunan RAB/EE.'])
-    expect(result.canStartRab).toBe(false)
+    expect(result.status).toBe('complete')
+    expect(result.blockingReasons).toEqual([])
+    expect(result.nextAction).toBe('Data proyek lengkap. Lanjutkan monitoring pekerjaan.')
   })
 })
 
 describe('getProjectWorkflowGate', () => {
   it('returns the first gate that still blocks the project', () => {
-    expect(getProjectWorkflowGate(evaluateProjectCompleteness(completeProject))).toBe('Siap RAB')
+    expect(getProjectWorkflowGate(evaluateProjectCompleteness(completeProject))).toBe('Data lengkap')
 
     const incomplete = evaluateProjectCompleteness({
       ...completeProject,

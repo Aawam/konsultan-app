@@ -1,20 +1,20 @@
 # Konsulindo Project Suite
 
-Internal operations app for a construction consulting workflow in Berau, East Kalimantan. The current production scope is project monitoring, company/reference data, project analytics, export, and Supabase-backed authentication.
+Internal operations app for monitoring construction-consulting projects in Berau, East Kalimantan. The active product scope is project monitoring, project analytics, supporting company/Dinas data, CSV export, and Supabase-backed authentication.
 
-The app is intentionally kept small: no document-maker module, no unused UI wrappers, and no duplicate Supabase singleton. Shared code is kept only where it is reused by active routes.
+The active product surface is intentionally small. Paused RAB/AHSP implementation remains in the repository for controlled future reintegration, while shared monitoring code stays focused on active routes.
 
 ## Stack
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 16.2.10 App Router |
+| Framework | Next.js 16.2.12 App Router |
 | Runtime | React 19, Node.js >=20.19.0 |
 | UI | Tailwind CSS v4, shadcn/Radix primitives, lucide-react |
 | Database/Auth | Supabase PostgreSQL + Supabase Auth |
 | Validation | Zod, react-hook-form |
 | Charts | Recharts |
-| Export | Native CSV, generated XLSX and PDF |
+| Export | Native CSV |
 | Tests | Vitest |
 
 ## Getting Started
@@ -57,12 +57,16 @@ npm run latency -- https://your-domain.com 5 # measure deployed route latency
 | Module | Routes | Purpose |
 |---|---|---|
 | Auth | `/login`, `proxy.ts` | Supabase login, route protection, logout from app shell. |
-| Proyek | `/proyek`, `/proyek/baru`, `/proyek/[id]`, `/proyek/[id]/edit`, `/proyek/dashboard` | Project list, create/edit, detail, dashboard, export, and workflow. |
-| RAB/AHSP | `/proyek/rab`, `/proyek/[id]/rab`, `/database` | RAB Maker, approval/final lock, XLSX/PDF export, and controlled AHSP import. |
-| Database | `/database`, `/database/perusahaan/[id]` | Company and master/reference data. |
-| API | `/api/proyek/*`, `/api/master/*`, `/api/perusahaan/*`, `/api/dinas/*` | Authenticated domain endpoints. |
+| Proyek | `/proyek`, `/proyek/baru`, `/proyek/[id]`, `/proyek/[id]/edit`, `/proyek/dashboard` | Project list, create/edit, detail, dashboard, progress monitoring, and CSV export. |
+| Database Monitoring | `/database`, `/database/perusahaan/[id]` | Owner/Admin management of project-supporting company and Dinas/SKPD data. |
+| API | `/api/proyek/*`, `/api/perusahaan/*`, `/api/dinas/*` | Authenticated monitoring endpoints with role checks. |
 
-Document-generation modules are out of active scope. The product currently focuses on monitoring and database workflows.
+The app keeps two roles:
+
+- `owner_admin`: manages projects and supporting reference data, including commercial fields.
+- `tenaga_ahli`: reads technical project monitoring data without commercial fields.
+
+RAB/AHSP implementation and database artifacts remain in the repository as paused work, but their navigation, pages, workflow endpoint, and APIs are outside the active product surface. Reintegration only happens after the calculation model is completed and verified in a separate project. See [ADR-002](docs/decisions/ADR-002-pause-rab-and-focus-on-project-monitoring.md).
 
 ## Project Structure
 
@@ -123,8 +127,8 @@ The `/proyek` list is paginated and filtered by the server. Keep that pattern fo
 
 Auth is split deliberately:
 
-- `proxy.ts` protects page navigation only: `/login`, `/proyek/*`, and `/database/*`.
-- API route handlers authenticate themselves through `createAuthenticatedSupabaseServerClient()`.
+- `proxy.ts` protects page navigation and rejects retired RAB/AHSP page/API surfaces before routing.
+- Active API route handlers authenticate themselves through `createAuthenticatedSupabaseServerClient()`.
 
 This avoids a global proxy auth round trip for every API request while keeping API access protected.
 

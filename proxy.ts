@@ -12,6 +12,16 @@ const API_MUTATION_LIMIT = 90
 const API_MUTATION_WINDOW_MS = 60_000
 const mutationRateLimits = new Map<string, RateLimitEntry>()
 
+function isRetiredRabPage(pathname: string) {
+  return pathname === '/proyek/rab'
+    || /^\/proyek\/[^/]+\/rab(?:\/|$)/.test(pathname)
+}
+
+function isRetiredRabApi(pathname: string) {
+  return pathname.startsWith('/api/master/')
+    || /^\/api\/proyek\/[^/]+\/(?:rab|workflow)(?:\/|$)/.test(pathname)
+}
+
 function pruneExpiredRateLimits(now: number) {
   if (mutationRateLimits.size < 1_000) return
 
@@ -59,6 +69,22 @@ function checkMutationRateLimit(request: NextRequest) {
 }
 
 export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+
+  if (isRetiredRabPage(pathname)) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/proyek'
+    return NextResponse.redirect(url)
+  }
+
+  if (isRetiredRabApi(pathname)) {
+    return apiError(
+      'NOT_FOUND',
+      'Fitur RAB belum menjadi bagian dari produk aktif.',
+      404
+    )
+  }
+
   const rateLimitResponse = checkMutationRateLimit(request)
   if (rateLimitResponse) return rateLimitResponse
 

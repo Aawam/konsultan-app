@@ -1,6 +1,6 @@
 # Project Structure - Konsulindo Project Suite
 
-**Tanggal:** 2026-07-09
+**Tanggal:** 2026-07-31
 
 Dokumen ini mengikuti struktur tracked aplikasi saat ini. Next.js 16 memakai App Router berbasis folder di `app/`; file khusus seperti `page.tsx`, `layout.tsx`, `route.ts`, dan `proxy.ts` mengikuti dokumentasi lokal di `node_modules/next/dist/docs/`.
 
@@ -92,9 +92,9 @@ Key responsibilities:
 | `app/globals.css` | Tailwind v4 imports, theme variables, shared component classes. |
 | `app/login/page.tsx` | Supabase login screen. |
 | `app/proyek/*` | Main project management routes. |
-| `app/proyek/rab/*` | RAB Maker project entry and per-project maker route. |
-| `app/database/*` | Company, Dinas/SKPD, AHSP, master harga, satuan, and kategori database surface. |
-| `app/api/**/route.ts` | Thin Route Handlers for CRUD, export, RAB Maker RPC calls, and override workflows. |
+| `app/proyek/rab/*` | Paused RAB source; requests are redirected by `proxy.ts`. |
+| `app/database/*` | Active Owner/Admin surface for project, company, and Dinas/SKPD monitoring data. |
+| `app/api/**/route.ts` | Active monitoring handlers plus paused RAB/AHSP handlers blocked by `proxy.ts`. |
 
 ---
 
@@ -128,7 +128,7 @@ components/
 | `proyek-actions.tsx` | Edit/delete actions. |
 | `badges.tsx` | Domain badges for jenis, tahap, override state. |
 | `progress-cell.tsx` | Table progress display. |
-| `rab-maker-client.tsx` | Client RAB Maker surface for AHSP item selection and draft item editing. |
+| `rab-maker-client.tsx` | Paused RAB Maker source retained for future reintegration work. |
 
 ### database/
 
@@ -137,9 +137,9 @@ components/
 | `database-client.tsx` | Tabs for perusahaan, all projects, and Dinas/SKPD aggregation. |
 | `database-display.tsx` | Presentational heading, search, stats, and Dinas/SKPD slide-over pieces for `database-client`. |
 | `database-forms.tsx` | Responsive form shell plus Dinas/SKPD and Perusahaan forms. |
-| `reference-database-client.tsx` | AHSP, master harga, satuan, and kategori reference database management. |
-| `reference-database-tables.tsx` | AHSP, harga dasar, and AHSP detail table components. |
-| `master-reference-page.tsx` | Shared server wrapper for filtered master reference pages. |
+| `reference-database-client.tsx` | Paused AHSP/master-price management source. |
+| `reference-database-tables.tsx` | Paused AHSP, harga dasar, and AHSP detail table components. |
+| `master-reference-page.tsx` | Paused server wrapper for master reference pages. |
 
 ### ui/
 
@@ -176,8 +176,8 @@ lib/
 |---|---|
 | `proyek.ts` | Project queries/mutations, form reference loaders, payload builder, override log, delete. |
 | `perusahaan.ts` | Company list and projects by company. |
-| `ahsp.ts` | AHSP, AHSP detail, master harga, satuan, and kategori read/write actions. |
-| `rab.ts` | RAB Maker snapshots, project RAB access checks, and available AHSP reads. |
+| `ahsp.ts` | Paused AHSP/master-data actions retained for future reintegration. |
+| `rab.ts` | Paused RAB Maker actions retained for future reintegration. |
 
 ### queries/
 
@@ -197,14 +197,14 @@ lib/
 |---|---|
 | `proyek.ts` | Project display/detail/form/payload types. |
 | `perusahaan.ts` | Company detail type. |
-| `ahsp.ts` | AHSP, master harga, and RAB Maker snapshot types. |
+| `ahsp.ts` | Paused AHSP, master harga, and RAB Maker snapshot types. |
 
 ### validations/
 
 | File | Purpose |
 |---|---|
 | `proyek.ts` | Zod schema for project form/API validation. |
-| `ahsp.ts` | AHSP/master data payload validation and normalization. |
+| `ahsp.ts` | Paused AHSP/master-data validation and normalization. |
 
 ### Root lib files
 
@@ -213,7 +213,7 @@ lib/
 | `database.types.ts` | Generated Supabase database types. |
 | `api-response.ts` | Shared API response helpers for Route Handlers. |
 | `auth.ts`, `auth-types.ts` | Current-user profile helpers and role checks. |
-| `rab-maker.ts` | RAB Maker parsing and override normalization helpers. |
+| `rab-maker.ts` | Paused RAB Maker parsing and override normalization helpers. |
 | `supabase-browser.ts` | Browser client for Client Components. |
 | `supabase-config.ts` | Shared Supabase environment config helpers. |
 | `supabase-server.ts` | Server client, authenticated API client helper, and current user helper. |

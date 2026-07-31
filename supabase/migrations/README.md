@@ -35,6 +35,7 @@ only reviewed, runnable schema/RLS/function changes into this folder.
 19. `20260717170000_retire_legacy_rab_draft_rekap.sql` - retire empty legacy RAB draft/rekap tables and the superseded export RPC with guarded preflight checks.
 20. `20260717180000_harden_identity_and_workflow_rpc.sql` - fail closed on missing app profiles and derive workflow audit identity from the authenticated profile.
 21. `20260717190000_close_final_sql_baseline_gaps.sql` - enforce database-side RAB readiness, reject non-finite numeric storage, separate read access from mutation readiness, and finish function hardening.
+22. `20260731120000_pause_rab_ahsp_access.sql` - preserve the surviving RAB/AHSP schema and data while revoking browser-role table/RPC access and making RAB authorization fail closed.
 
 Before promoting any additional `docs/DB_*.sql` script into this folder:
 
@@ -63,3 +64,6 @@ The rollback-only identity/workflow verification for migration 20 is
 
 The rollback-only final baseline verification for migration 21 is
 `docs/DB_Final_SQL_Baseline_Verification.sql`.
+
+The post-migration access verification for migration 22 is
+`docs/DB_RAB_AHSP_Pause_Verification.sql`.

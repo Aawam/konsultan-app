@@ -10,6 +10,29 @@ describe('proxy', () => {
     expect(unstable_doesMiddlewareMatch({ config, url: '/_next/static/chunk.js' })).toBe(false)
   })
 
+  it('redirects retired RAB pages back to active project monitoring', async () => {
+    const listResponse = await proxy(new NextRequest('https://example.test/proyek/rab'))
+    const detailResponse = await proxy(new NextRequest('https://example.test/proyek/project-1/rab'))
+
+    expect(listResponse.status).toBe(307)
+    expect(listResponse.headers.get('location')).toBe('https://example.test/proyek')
+    expect(detailResponse.status).toBe(307)
+    expect(detailResponse.headers.get('location')).toBe('https://example.test/proyek')
+  })
+
+  it('returns not found for retired RAB and AHSP API surfaces', async () => {
+    const rabResponse = await proxy(new NextRequest('https://example.test/api/proyek/project-1/rab'))
+    const workflowResponse = await proxy(new NextRequest('https://example.test/api/proyek/project-1/workflow'))
+    const ahspResponse = await proxy(new NextRequest('https://example.test/api/master/ahsp'))
+
+    expect(rabResponse.status).toBe(404)
+    expect(workflowResponse.status).toBe(404)
+    expect(ahspResponse.status).toBe(404)
+    await expect(rabResponse.json()).resolves.toMatchObject({
+      errorCode: 'NOT_FOUND',
+    })
+  })
+
   it('rate-limits repeated API mutations before route handlers run', async () => {
     const pathname = `/api/test-rate-limit-${Date.now()}`
     let response: Response | undefined

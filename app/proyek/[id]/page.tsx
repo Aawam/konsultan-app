@@ -5,11 +5,9 @@ import { BadgeJenis, BadgeTahap, BadgeOverride, BadgeWorkflow } from '@/componen
 import { formatRupiah, formatTanggal } from '@/lib/utils'
 import { TAHAP_BAR_COLOR } from '@/lib/constants/proyek'
 import { TombolAksi } from '@/components/proyek/proyek-actions'
-import { WorkflowTransitionAction } from '@/components/proyek/workflow-transition-action'
 import { PageHeader } from '@/components/ui/page-header'
 import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 import { evaluateProjectCompleteness, getProjectWorkflowGate } from '@/lib/project-completeness'
-import { evaluateProjectWorkflowTransition } from '@/lib/project-workflow'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -90,7 +88,6 @@ export default async function DetailProyekPage({ params }: Props) {
     : undefined
   const completeness = evaluateProjectCompleteness(proyek, { includeCommercial: false })
   const workflowGate = getProjectWorkflowGate(completeness)
-  const rabTransition = evaluateProjectWorkflowTransition(proyek, 'mark_rab_ready', { includeCommercial: false })
 
   return (
     <div className="pb-10">
@@ -105,14 +102,6 @@ export default async function DetailProyekPage({ params }: Props) {
           >
             ← Kembali
           </Link>
-          {proyek.jenis_pekerjaan === 'Perencanaan' && (
-            <Link
-              href={`/proyek/${id}/rab`}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              RAB / EE
-            </Link>
-          )}
           {canViewCommercial && <TombolAksi id={id} />}
           </>
         )}
@@ -163,14 +152,6 @@ export default async function DetailProyekPage({ params }: Props) {
         <DetailCard title="Kesiapan Workflow" className="xl:col-span-2">
           <InfoRow label="Gate Saat Ini" value={workflowGate} />
           <InfoRow label="Aksi Berikutnya" value={completeness.nextAction} />
-          {canViewCommercial && rabTransition.allowed && (
-            <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
-              <p className="detail-label">Transisi</p>
-              <div>
-                <WorkflowTransitionAction projectId={id} />
-              </div>
-            </div>
-          )}
           {completeness.missingFields.length > 0 && (
             <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
               <p className="detail-label">Data Kurang</p>

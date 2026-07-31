@@ -66,9 +66,7 @@ export function BadgeWorkflow({
     ? 'bg-amber/10 text-amber border-amber/25'
     : status === 'needs_review'
       ? 'bg-violet/10 text-violet border-violet/25'
-      : gate === 'Siap RAB'
-        ? 'bg-emerald/10 text-emerald border-emerald/25'
-        : 'bg-brand/10 text-brand border-brand/25'
+      : 'bg-emerald/10 text-emerald border-emerald/25'
 
   const label = status === 'incomplete'
     ? 'Kurang data'

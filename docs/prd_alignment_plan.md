@@ -1,55 +1,34 @@
-# PRD Alignment Plan
+# Product Scope and RAB Reintegration Plan
 
-Status: staging foundation applied; Step 6 core RLS applied; RAB Maker snapshot schema applied; app-level role boundary and read-only AHSP/RAB UI scaffold started.
+Status: monitoring-only product scope accepted on 2026-07-31. RAB/AHSP work is paused.
 
-## Verdict
+## Active Product
 
-The active app is a project monitoring system. To match the PRD, the next direction is not UI polish; it is security and data-model correction first.
+- Project list, filters, detail, progress, dashboard, and CSV export.
+- Owner/Admin project management and commercial data access.
+- Tenaga Ahli read access to technical project data without commercial fields.
+- Owner/Admin management of supporting company and Dinas/SKPD data.
 
-## Phase 0 - Build Health
+## Paused Surface
 
-- Done: keep `/api/proyek/[id]/rab/*` as explicit `501 Not Implemented` placeholders until RAB calculation modules exist.
-- Do not ship broken imports or half-wired RAB mutation/export endpoints.
+- `/proyek/rab` and `/proyek/[id]/rab`.
+- `/api/proyek/[id]/rab/*` and `/api/proyek/[id]/workflow`.
+- `/api/master/*` and AHSP/master-price UI.
+- RAB XLSX/PDF export, approval, final lock, and audit workflow.
 
-## Phase 1 - Role And Data Boundary
+The implementation and database artifacts are retained for reference. They are not active product capabilities and must not receive new feature work while this decision remains accepted.
 
-- Done in staging schema: add app-level `users` profile table mapped to `auth.users`.
-- Done in staging schema/app helpers: add roles `owner_admin`, `tenaga_ahli`.
-- Done in staging DB/app level: stop treating "authenticated" as sufficient authorization for core write/manage paths.
-- Done in staging schema: add `proyek_internal` for future commercial/internal fields.
-- In progress: technical project fields are readable to Tenaga Ahli; owner-only UI now hides existing `nilai_penawaran` and `catatan`.
-- Remaining: migrate existing `public.proyek.nilai_penawaran` and `public.proyek.catatan` into `proyek_internal` before strict DB-level RLS is safe for production.
+## Reintegration Gates
 
-## Phase 2 - AHSP Master Data
+RAB may return only after all of these are true:
 
-- Done in staging schema: add `satuan`, `kategori_pekerjaan_master`, `master_upah`, `master_bahan`, `master_alat`.
-- Done in staging schema: add `ahsp_items` and `ahsp_details`.
-- Done in app UI: Tenaga Ahli can read AHSP/master prices through read-only reference pages.
-- Remaining: Owner/Admin mutation UI for AHSP/master prices.
+1. The calculation model is completed in a separate project.
+2. Formula behavior is covered by deterministic fixtures and tests.
+3. Rounding, overhead, profit/margin, tax, and snapshot rules are explicit.
+4. Import/export contracts between the RAB project and this app are documented.
+5. Representative real project calculations have been reconciled manually.
+6. Role access, database migration, rollback, and monitoring plans are reviewed.
 
-## Phase 3 - RAB/EE Core
+## Immediate Direction
 
-- Done in staging schema: add `rab_draft`, `rab_rekap`, and `rab_audit_log`.
-- Done in staging schema: store snapshot `harga_satuan` and `jumlah_harga` per draft item.
-- Done in staging schema/read UI: store and display `margin_persen`, `overhead_persen`, `ppn_persen`, and `pembulatan_rule` per `rab_rekap`.
-- Done in app UI: restrict RAB pages to Owner/Admin and assigned Tenaga Ahli on Perencanaan projects.
-- Revised target: RAB Maker must be a full per-project snapshot copied from Masterfile AHSP plus project RAB template.
-- New draft: `docs/RAB_Maker_Workflow.md` and `docs/DB_RAB_Maker_Snapshot_Model.sql`.
-- Done in staging DB: apply snapshot model after Step 6 RLS.
-- Remaining: build centralized RAB calculation service before enabling item mutation.
-
-## Phase 4 - UI
-
-- Done: add sidebar entry `Pembuatan RAB`.
-- Done: add read-only database routes for AHSP, harga upah, harga bahan, harga alat, satuan, kategori.
-- Done: add `/proyek/[id]/rab` for Perencanaan only.
-- Done: split project detail display by role for commercial/internal fields.
-
-## Phase 5 - Export
-
-- Add Excel export after calculation logic is centralized and tested.
-- Add PDF export after final RAB/EE layout is stable.
-
-## Immediate Next Step
-
-Build app actions/types around `rab_maker`, `rab_maker_items`, and `rab_maker_item_details`, then implement centralized RAB calculation tests. Do not enable Excel/PDF export until calculation logic is covered by tests and current `nilai_penawaran`/`catatan` usage is migrated into the commercial boundary.
+Do not extend RAB/AHSP. Improve only the monitoring workflow, data quality, role boundaries, and operational reliability of the consultant project application.

@@ -1,6 +1,6 @@
 # Domain Boundaries
 
-Status: active
+Status: active for monitoring; RAB/AHSP boundaries retained as paused reference.
 
 This app is small enough to stay in a conventional Next.js structure, but the
 business domains must remain explicit. Do not treat `app/api/**/route.ts` as the
@@ -30,9 +30,9 @@ Route handlers must not:
   shaping.
 - `lib/actions/perusahaan.ts`: company records and company-project relations.
 - `lib/actions/ahsp.ts`: AHSP items, AHSP details, master harga, satuan, and
-  kategori pekerjaan.
+  kategori pekerjaan. Paused; do not extend while ADR-002 is active.
 - `lib/actions/rab.ts`: RAB Maker snapshots, assigned project access, and RAB
-  read models.
+  read models. Paused; do not extend while ADR-002 is active.
 
 ## Validation
 
@@ -45,7 +45,9 @@ Route handlers must not:
 
 ## RAB Calculation
 
-RAB calculation rules must remain centralized:
+This boundary is retained for future reintegration only. RAB calculation development belongs in the separate RAB project while ADR-002 is active.
+
+When reintegration begins, calculation rules must remain centralized:
 
 - Database-level recalculation lives in SQL/RPC where persistence is involved.
 - TypeScript-only parsing/normalization lives in `lib/rab-maker.ts`.

@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation'
 import type { ComponentType, ReactNode } from 'react'
 import { Fragment, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import {
-  Calculator,
   Database,
   FolderKanban,
   Gauge,
@@ -57,12 +56,8 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    group: 'Estimasi',
-    items: [{ label: 'Pembuatan RAB', href: '/proyek/rab', icon: Calculator }],
-  },
-  {
     group: 'Referensi',
-    items: [{ label: 'Database', href: '/database', icon: Database }],
+    items: [{ label: 'Database', href: '/database', icon: Database, ownerOnly: true }],
   },
 ]
 
@@ -143,9 +138,8 @@ export function SidebarLayout({
   const isActive = (href: string | null) => {
     if (!href) return false
     if (href === '/proyek/dashboard') return pathname.startsWith('/proyek/dashboard')
-    if (href === '/proyek/rab') return pathname.startsWith('/proyek/rab') || pathname.endsWith('/rab')
     if (href === '/proyek') {
-      return pathname === '/proyek' || (pathname.startsWith('/proyek/') && !pathname.startsWith('/proyek/dashboard') && !pathname.startsWith('/proyek/rab') && !pathname.endsWith('/rab'))
+      return pathname === '/proyek' || (pathname.startsWith('/proyek/') && !pathname.startsWith('/proyek/dashboard'))
     }
     if (href === '/database') return pathname.startsWith('/database')
     return pathname.startsWith(href)

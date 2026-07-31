@@ -1,5 +1,5 @@
 export type ProjectCompletenessStatus = 'complete' | 'incomplete' | 'needs_review'
-export type ProjectWorkflowGate = 'Lengkapi data' | 'Siap kerja' | 'Siap RAB'
+export type ProjectWorkflowGate = 'Lengkapi data' | 'Data lengkap'
 export type ProjectRabReadinessReason = 'not-planning' | 'missing-data' | 'workflow-review'
 
 export type ProjectCompletenessInput = {
@@ -32,7 +32,6 @@ export type ProjectCompletenessResult = {
   status: ProjectCompletenessStatus
   missingFields: MissingProjectField[]
   blockingReasons: string[]
-  canStartRab: boolean
   nextAction: string
 }
 
@@ -86,40 +85,23 @@ export function evaluateProjectCompleteness(
 ): ProjectCompletenessResult {
   const fields = includeCommercial ? [...CORE_FIELDS, ...COMMERCIAL_FIELDS] : CORE_FIELDS
   const missingFields = fields.filter((field) => isMissing(project, field))
-  const blockingReasons: string[] = []
-  const isPerencanaan = project.jenis_pekerjaan === 'Perencanaan'
-
-  if (isPerencanaan && missingFields.length === 0 && !RAB_READY_PHASES.has(project.tahap_progress ?? '')) {
-    blockingReasons.push('Progress belum masuk tahap penyusunan RAB/EE.')
-  }
-
-  const canStartRab = isPerencanaan && missingFields.length === 0 && blockingReasons.length === 0
   const status: ProjectCompletenessStatus = missingFields.length > 0
     ? 'incomplete'
-    : blockingReasons.length > 0
-      ? 'needs_review'
-      : 'complete'
+    : 'complete'
 
   return {
     status,
     missingFields,
-    blockingReasons,
-    canStartRab,
-    nextAction: getNextProjectAction(status, canStartRab, isPerencanaan),
+    blockingReasons: [],
+    nextAction: status === 'incomplete'
+      ? 'Lengkapi data proyek wajib.'
+      : 'Data proyek lengkap. Lanjutkan monitoring pekerjaan.',
   }
-}
-
-function getNextProjectAction(status: ProjectCompletenessStatus, canStartRab: boolean, isPerencanaan: boolean) {
-  if (status === 'incomplete') return 'Lengkapi data proyek wajib.'
-  if (status === 'needs_review') return 'Review gate workflow sebelum lanjut.'
-  if (canStartRab) return 'Siap susun RAB/EE.'
-  return isPerencanaan ? 'Lanjutkan progress sampai tahap RAB/EE.' : 'Siap dipakai untuk monitoring.'
 }
 
 export function getProjectWorkflowGate(result: ProjectCompletenessResult): ProjectWorkflowGate {
   if (result.missingFields.length > 0) return 'Lengkapi data'
-  if (result.canStartRab) return 'Siap RAB'
-  return 'Siap kerja'
+  return 'Data lengkap'
 }
 
 export function getMissingProjectFieldLabels(
@@ -133,35 +115,40 @@ export function evaluateProjectRabReadiness(
   project: ProjectCompletenessInput,
   options: { includeCommercial?: boolean } = { includeCommercial: false }
 ): ProjectRabReadinessResult {
-  const completeness = evaluateProjectCompleteness(project, options)
+  const baseCompleteness = evaluateProjectCompleteness(project, options)
 
   if (project.jenis_pekerjaan !== 'Perencanaan') {
     return {
       allowed: false,
       reason: 'not-planning',
-      completeness,
+      completeness: baseCompleteness,
     }
   }
 
-  if (completeness.missingFields.length > 0) {
+  if (baseCompleteness.missingFields.length > 0) {
     return {
       allowed: false,
       reason: 'missing-data',
-      completeness,
+      completeness: baseCompleteness,
     }
   }
 
-  if (completeness.blockingReasons.length > 0) {
+  if (!RAB_READY_PHASES.has(project.tahap_progress ?? '')) {
     return {
       allowed: false,
       reason: 'workflow-review',
-      completeness,
+      completeness: {
+        ...baseCompleteness,
+        status: 'needs_review',
+        blockingReasons: ['Progress belum masuk tahap penyusunan RAB/EE.'],
+        nextAction: 'Lanjutkan progress sampai tahap penyusunan RAB/EE.',
+      },
     }
   }
 
   return {
     allowed: true,
     reason: null,
-    completeness,
+    completeness: baseCompleteness,
   }
 }
