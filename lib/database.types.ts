@@ -1062,6 +1062,10 @@ export type Database = {
         Args: { target_rab_maker_id: string }
         Returns: undefined
       }
+      can_access_project_rab: {
+        Args: { target_proyek_id: string }
+        Returns: boolean
+      }
       can_manage_project_rab: {
         Args: { target_proyek_id: string }
         Returns: boolean
@@ -1168,12 +1172,20 @@ export type Database = {
           updated_at: string
         }[]
       }
+      has_complete_project_rab_core: {
+        Args: { target_proyek_id: string }
+        Returns: boolean
+      }
       import_ahsp_masterfile: { Args: { import_payload: Json }; Returns: Json }
       import_ahsp_masterfile_unchecked: {
         Args: { import_payload: Json }
         Returns: Json
       }
       is_owner_admin: { Args: never; Returns: boolean }
+      is_project_rab_ready: {
+        Args: { target_proyek_id: string }
+        Returns: boolean
+      }
       recalculate_rab_maker: {
         Args: { target_rab_maker_id: string }
         Returns: undefined

@@ -34,6 +34,7 @@ only reviewed, runnable schema/RLS/function changes into this folder.
 18. `20260717160000_harden_ahsp_import_replay.sql` - make AHSP imports replay-safe, preserve detail identity, and disambiguate same-name components by unit.
 19. `20260717170000_retire_legacy_rab_draft_rekap.sql` - retire empty legacy RAB draft/rekap tables and the superseded export RPC with guarded preflight checks.
 20. `20260717180000_harden_identity_and_workflow_rpc.sql` - fail closed on missing app profiles and derive workflow audit identity from the authenticated profile.
+21. `20260717190000_close_final_sql_baseline_gaps.sql` - enforce database-side RAB readiness, reject non-finite numeric storage, separate read access from mutation readiness, and finish function hardening.
 
 Before promoting any additional `docs/DB_*.sql` script into this folder:
 
@@ -59,3 +60,6 @@ The post-migration verification for migration 19 is
 
 The rollback-only identity/workflow verification for migration 20 is
 `docs/DB_Identity_Workflow_Hardening_Verification.sql`.
+
+The rollback-only final baseline verification for migration 21 is
+`docs/DB_Final_SQL_Baseline_Verification.sql`.

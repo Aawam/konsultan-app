@@ -192,34 +192,25 @@ $$;
 
 RESET ROLE;
 
-UPDATE public.rab_maker_items
-SET volume = 'NaN'::numeric,
-    jumlah_harga = 'NaN'::numeric
-WHERE id = current_setting('verification.item_id')::uuid;
-
-SELECT set_config('request.jwt.claim.sub', current_setting('verification.actor_id'), true);
-SELECT set_config('request.jwt.claim.role', 'authenticated', true);
-SET LOCAL ROLE authenticated;
-
 DO $$
 DECLARE
-  target_project_id uuid := current_setting('verification.project_id')::uuid;
   rejected boolean := false;
 BEGIN
   BEGIN
-    PERFORM public.approve_rab_maker(target_project_id);
+    UPDATE public.rab_maker_items
+    SET volume = 'NaN'::numeric,
+        jumlah_harga = 'NaN'::numeric
+    WHERE id = current_setting('verification.item_id')::uuid;
   EXCEPTION
     WHEN check_violation THEN
       rejected := true;
   END;
 
   IF NOT rejected THEN
-    RAISE EXCEPTION 'approve_rab_maker accepted a RAB containing NaN.';
+    RAISE EXCEPTION 'RAB numeric storage accepted NaN.';
   END IF;
 END
 $$;
-
-RESET ROLE;
 
 ROLLBACK;
 
