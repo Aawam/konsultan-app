@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -47,5 +47,16 @@ function containsImplementationFile(relativePath: string): boolean {
 describe('RAB implementation separation', () => {
   it.each(retiredImplementationPaths)('keeps %s out of the monitoring application', (relativePath) => {
     expect(containsImplementationFile(relativePath)).toBe(false)
+  })
+
+  it('keeps RAB readiness logic out of project monitoring completeness', () => {
+    const completenessSource = readFileSync(
+      path.join(projectRoot, 'lib/project-completeness.ts'),
+      'utf8'
+    )
+
+    expect(completenessSource).not.toContain('ProjectRabReadiness')
+    expect(completenessSource).not.toContain('evaluateProjectRabReadiness')
+    expect(completenessSource).not.toContain('RAB_READY_PHASES')
   })
 })

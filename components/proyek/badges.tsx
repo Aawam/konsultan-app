@@ -59,20 +59,14 @@ export function BadgeWorkflow({
   status,
   gate,
 }: {
-  status: 'complete' | 'incomplete' | 'needs_review'
+  status: 'complete' | 'incomplete'
   gate: string
 }) {
   const style = status === 'incomplete'
     ? 'bg-amber/10 text-amber border-amber/25'
-    : status === 'needs_review'
-      ? 'bg-violet/10 text-violet border-violet/25'
-      : 'bg-emerald/10 text-emerald border-emerald/25'
+    : 'bg-emerald/10 text-emerald border-emerald/25'
 
-  const label = status === 'incomplete'
-    ? 'Kurang data'
-    : status === 'needs_review'
-      ? 'Butuh review'
-      : gate
+  const label = status === 'incomplete' ? 'Kurang data' : gate
 
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold border whitespace-nowrap ${style}`}>

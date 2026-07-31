@@ -1,6 +1,5 @@
-export type ProjectCompletenessStatus = 'complete' | 'incomplete' | 'needs_review'
+export type ProjectCompletenessStatus = 'complete' | 'incomplete'
 export type ProjectWorkflowGate = 'Lengkapi data' | 'Data lengkap'
-export type ProjectRabReadinessReason = 'not-planning' | 'missing-data' | 'workflow-review'
 
 export type ProjectCompletenessInput = {
   nama_proyek?: string | null
@@ -35,12 +34,6 @@ export type ProjectCompletenessResult = {
   nextAction: string
 }
 
-export type ProjectRabReadinessResult = {
-  allowed: boolean
-  reason: ProjectRabReadinessReason | null
-  completeness: ProjectCompletenessResult
-}
-
 const CORE_FIELDS: MissingProjectField[] = [
   { key: 'nama_proyek', label: 'Nama proyek', scope: 'core' },
   { key: 'jenis_pekerjaan', label: 'Jenis pekerjaan', scope: 'core' },
@@ -62,12 +55,6 @@ const COMMERCIAL_FIELDS: MissingProjectField[] = [
   { key: 'hps', label: 'HPS', scope: 'commercial' },
   { key: 'nilai_penawaran', label: 'Nilai kontrak/penawaran', scope: 'commercial' },
 ]
-
-const RAB_READY_PHASES = new Set([
-  'Penyusunan Laporan Akhir & RAB',
-  'Penyerahan & Revisi',
-  'Selesai (BAST)',
-])
 
 function isBlank(value: unknown) {
   return value === null || value === undefined || (typeof value === 'string' && value.trim() === '')
@@ -109,46 +96,4 @@ export function getMissingProjectFieldLabels(
   options?: { includeCommercial?: boolean }
 ) {
   return evaluateProjectCompleteness(project, options).missingFields.map((field) => field.label)
-}
-
-export function evaluateProjectRabReadiness(
-  project: ProjectCompletenessInput,
-  options: { includeCommercial?: boolean } = { includeCommercial: false }
-): ProjectRabReadinessResult {
-  const baseCompleteness = evaluateProjectCompleteness(project, options)
-
-  if (project.jenis_pekerjaan !== 'Perencanaan') {
-    return {
-      allowed: false,
-      reason: 'not-planning',
-      completeness: baseCompleteness,
-    }
-  }
-
-  if (baseCompleteness.missingFields.length > 0) {
-    return {
-      allowed: false,
-      reason: 'missing-data',
-      completeness: baseCompleteness,
-    }
-  }
-
-  if (!RAB_READY_PHASES.has(project.tahap_progress ?? '')) {
-    return {
-      allowed: false,
-      reason: 'workflow-review',
-      completeness: {
-        ...baseCompleteness,
-        status: 'needs_review',
-        blockingReasons: ['Progress belum masuk tahap penyusunan RAB/EE.'],
-        nextAction: 'Lanjutkan progress sampai tahap penyusunan RAB/EE.',
-      },
-    }
-  }
-
-  return {
-    allowed: true,
-    reason: null,
-    completeness: baseCompleteness,
-  }
 }
