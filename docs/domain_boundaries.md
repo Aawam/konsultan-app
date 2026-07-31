@@ -1,6 +1,6 @@
 # Domain Boundaries
 
-Status: active for monitoring; RAB/AHSP boundaries retained as paused reference.
+Status: active for monitoring; RAB/AHSP application implementation is external.
 
 This app is small enough to stay in a conventional Next.js structure, but the
 business domains must remain explicit. Do not treat `app/api/**/route.ts` as the
@@ -19,7 +19,7 @@ Route handlers must not:
 
 - Own validation rules beyond request shape wiring.
 - Build Supabase table payloads directly when the payload belongs to a domain.
-- Duplicate RAB/AHSP calculation rules.
+- Introduce RAB/AHSP calculation rules into the monitoring application.
 - Contain permission logic that should also be enforced in RLS/RPC.
 
 ## Domain Actions
@@ -29,10 +29,6 @@ Route handlers must not:
 - `lib/actions/proyek.ts`: project queries/mutations and commercial boundary
   shaping.
 - `lib/actions/perusahaan.ts`: company records and company-project relations.
-- `lib/actions/ahsp.ts`: AHSP items, AHSP details, master harga, satuan, and
-  kategori pekerjaan. Paused; do not extend while ADR-002 is active.
-- `lib/actions/rab.ts`: RAB Maker snapshots, assigned project access, and RAB
-  read models. Paused; do not extend while ADR-002 is active.
 
 ## Validation
 
@@ -43,16 +39,11 @@ Route handlers must not:
 - It should be reused by route handlers and server actions when both need the
   same rule.
 
-## RAB Calculation
+## External RAB Boundary
 
-This boundary is retained for future reintegration only. RAB calculation development belongs in the separate RAB project while ADR-002 is active.
+This repository must not own RAB/AHSP formulas, imports, exports, or workflow readiness. Historical migrations, generated database types, and dormant database objects do not make RAB part of the active application domain.
 
-When reintegration begins, calculation rules must remain centralized:
-
-- Database-level recalculation lives in SQL/RPC where persistence is involved.
-- TypeScript-only parsing/normalization lives in `lib/rab-maker.ts`.
-- UI components may display calculated values, but must not define calculation
-  rules that differ from the domain/RPC layer.
+Future reintegration must start from an explicit versioned contract with the separate RAB project. Do not restore the retired source as an implicit integration path. `proxy.ts` keeps old URLs fail-closed until that contract is accepted.
 
 ## UI Components
 

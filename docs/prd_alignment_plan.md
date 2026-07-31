@@ -1,6 +1,6 @@
 # Product Scope and RAB Reintegration Plan
 
-Status: monitoring-only product scope accepted on 2026-07-31. RAB/AHSP work is paused.
+Status: monitoring-only product scope accepted on 2026-07-31. RAB/AHSP implementation is separated into another project.
 
 ## Active Product
 
@@ -9,14 +9,14 @@ Status: monitoring-only product scope accepted on 2026-07-31. RAB/AHSP work is p
 - Tenaga Ahli read access to technical project data without commercial fields.
 - Owner/Admin management of supporting company and Dinas/SKPD data.
 
-## Paused Surface
+## Retired Local Surface
 
 - `/proyek/rab` and `/proyek/[id]/rab`.
 - `/api/proyek/[id]/rab/*` and `/api/proyek/[id]/workflow`.
 - `/api/master/*` and AHSP/master-price UI.
 - RAB XLSX/PDF export, approval, final lock, and audit workflow.
 
-The implementation and database artifacts are retained for reference. They are not active product capabilities and must not receive new feature work while this decision remains accepted.
+The application implementation is removed from this repository. Historical migrations, generated database types, dormant database objects, and fail-closed access controls are retained so the separation is reversible and auditable without keeping two competing formula implementations.
 
 ## Reintegration Gates
 
@@ -31,4 +31,4 @@ RAB may return only after all of these are true:
 
 ## Immediate Direction
 
-Do not extend RAB/AHSP. Improve only the monitoring workflow, data quality, role boundaries, and operational reliability of the consultant project application.
+Do not implement RAB/AHSP formulas in this repository. Improve only the monitoring workflow, data quality, role boundaries, and operational reliability of the consultant project application.

@@ -2,7 +2,7 @@
 
 Internal operations app for monitoring construction-consulting projects in Berau, East Kalimantan. The active product scope is project monitoring, project analytics, supporting company/Dinas data, CSV export, and Supabase-backed authentication.
 
-The active product surface is intentionally small. Paused RAB/AHSP implementation remains in the repository for controlled future reintegration, while shared monitoring code stays focused on active routes.
+The active product surface is intentionally small. RAB/AHSP application implementation has been separated from this repository so shared code stays focused on project monitoring.
 
 ## Stack
 
@@ -66,7 +66,7 @@ The app keeps two roles:
 - `owner_admin`: manages projects and supporting reference data, including commercial fields.
 - `tenaga_ahli`: reads technical project monitoring data without commercial fields.
 
-RAB/AHSP implementation and database artifacts remain in the repository as paused work, but their navigation, pages, workflow endpoint, and APIs are outside the active product surface. Reintegration only happens after the calculation model is completed and verified in a separate project. See [ADR-002](docs/decisions/ADR-002-pause-rab-and-focus-on-project-monitoring.md).
+RAB/AHSP formulas and application code now belong to a separate project. This repository retains only historical migrations/generated database types, dormant database objects, and fail-closed route/database controls needed for a safe transition. Reintegration only happens through a documented contract after the external calculation model is complete and verified. See [ADR-003](docs/decisions/ADR-003-separate-rab-implementation.md).
 
 ## Project Structure
 
@@ -127,7 +127,7 @@ The `/proyek` list is paginated and filtered by the server. Keep that pattern fo
 
 Auth is split deliberately:
 
-- `proxy.ts` protects page navigation and rejects retired RAB/AHSP page/API surfaces before routing.
+- `proxy.ts` protects page navigation and rejects retired RAB/AHSP URLs before routing.
 - Active API route handlers authenticate themselves through `createAuthenticatedSupabaseServerClient()`.
 
 This avoids a global proxy auth round trip for every API request while keeping API access protected.

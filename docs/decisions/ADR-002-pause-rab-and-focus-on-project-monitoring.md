@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded in part by ADR-003
 
 ## Date
 
@@ -25,7 +25,7 @@ The active product is limited to consultant project monitoring.
 
 RAB/AHSP navigation and entry points are removed from the active interface. RAB pages redirect to the project list, and RAB/AHSP API surfaces return `404`. Browser-facing Supabase roles also lose table and RPC privileges for the paused domain, and the RAB authorization helpers fail closed. Monitoring completeness is evaluated independently from RAB phase readiness.
 
-Existing RAB/AHSP source code, tests, migrations, design documents, and the currently surviving database schema/data are retained as paused work. Previously retired legacy objects are not recreated. The retained artifacts may be useful during later reintegration.
+At the time of this decision, existing RAB/AHSP source code, tests, migrations, design documents, and surviving database schema/data were retained as paused work. ADR-003 later separated the application implementation while preserving the database history and fail-closed controls.
 
 RAB calculation development continues in a separate project until the formula model is complete and verified. Reintegration requires the gates documented in `docs/prd_alignment_plan.md`.
 

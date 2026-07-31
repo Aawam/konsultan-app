@@ -53,11 +53,9 @@ app/
 │   ├── page.tsx
 │   ├── baru/page.tsx
 │   ├── dashboard/page.tsx
-│   ├── rab/page.tsx
 │   └── [id]/
 │       ├── page.tsx
-│       ├── edit/page.tsx
-│       └── rab/page.tsx
+│       └── edit/page.tsx
 ├── database/
 │   ├── layout.tsx
 │   ├── page.tsx
@@ -69,18 +67,12 @@ app/
     ├── perusahaan/
     │   ├── route.ts
     │   └── [id]/route.ts
-    ├── master/
-    │   ├── ahsp/
-    │   ├── harga/
-    │   ├── kategori/route.ts
-    │   └── satuan/route.ts
     ├── proyek/
     │   ├── route.ts
     │   ├── export/route.ts
     │   └── [id]/
     │       ├── route.ts
-    │       ├── override/route.ts
-    │       └── rab/
+    │       └── override/route.ts
 ```
 
 Key responsibilities:
@@ -92,9 +84,8 @@ Key responsibilities:
 | `app/globals.css` | Tailwind v4 imports, theme variables, shared component classes. |
 | `app/login/page.tsx` | Supabase login screen. |
 | `app/proyek/*` | Main project management routes. |
-| `app/proyek/rab/*` | Paused RAB source; requests are redirected by `proxy.ts`. |
 | `app/database/*` | Active Owner/Admin surface for project, company, and Dinas/SKPD monitoring data. |
-| `app/api/**/route.ts` | Active monitoring handlers plus paused RAB/AHSP handlers blocked by `proxy.ts`. |
+| `app/api/**/route.ts` | Active monitoring handlers. Retired RAB/AHSP URLs are rejected by `proxy.ts`. |
 
 ---
 
@@ -128,7 +119,6 @@ components/
 | `proyek-actions.tsx` | Edit/delete actions. |
 | `badges.tsx` | Domain badges for jenis, tahap, override state. |
 | `progress-cell.tsx` | Table progress display. |
-| `rab-maker-client.tsx` | Paused RAB Maker source retained for future reintegration work. |
 
 ### database/
 
@@ -137,9 +127,6 @@ components/
 | `database-client.tsx` | Tabs for perusahaan, all projects, and Dinas/SKPD aggregation. |
 | `database-display.tsx` | Presentational heading, search, stats, and Dinas/SKPD slide-over pieces for `database-client`. |
 | `database-forms.tsx` | Responsive form shell plus Dinas/SKPD and Perusahaan forms. |
-| `reference-database-client.tsx` | Paused AHSP/master-price management source. |
-| `reference-database-tables.tsx` | Paused AHSP, harga dasar, and AHSP detail table components. |
-| `master-reference-page.tsx` | Paused server wrapper for master reference pages. |
 
 ### ui/
 
@@ -176,8 +163,6 @@ lib/
 |---|---|
 | `proyek.ts` | Project queries/mutations, form reference loaders, payload builder, override log, delete. |
 | `perusahaan.ts` | Company list and projects by company. |
-| `ahsp.ts` | Paused AHSP/master-data actions retained for future reintegration. |
-| `rab.ts` | Paused RAB Maker actions retained for future reintegration. |
 
 ### queries/
 
@@ -197,14 +182,12 @@ lib/
 |---|---|
 | `proyek.ts` | Project display/detail/form/payload types. |
 | `perusahaan.ts` | Company detail type. |
-| `ahsp.ts` | Paused AHSP, master harga, and RAB Maker snapshot types. |
 
 ### validations/
 
 | File | Purpose |
 |---|---|
 | `proyek.ts` | Zod schema for project form/API validation. |
-| `ahsp.ts` | Paused AHSP/master-data validation and normalization. |
 
 ### Root lib files
 
@@ -213,7 +196,8 @@ lib/
 | `database.types.ts` | Generated Supabase database types. |
 | `api-response.ts` | Shared API response helpers for Route Handlers. |
 | `auth.ts`, `auth-types.ts` | Current-user profile helpers and role checks. |
-| `rab-maker.ts` | Paused RAB Maker parsing and override normalization helpers. |
+| `project-completeness.ts` | Monitoring-only project completeness and workflow labels. |
+| `rab-separation.test.ts` | Guard against RAB/AHSP implementation returning to the monitoring application accidentally. |
 | `supabase-browser.ts` | Browser client for Client Components. |
 | `supabase-config.ts` | Shared Supabase environment config helpers. |
 | `supabase-server.ts` | Server client, authenticated API client helper, and current user helper. |
@@ -228,9 +212,9 @@ Tests are colocated with the logic they cover:
 ```text
 lib/actions/proyek.test.ts
 lib/constants/proyek.test.ts
-lib/rab-maker.test.ts
+lib/project-completeness.test.ts
+lib/rab-separation.test.ts
 lib/utils.test.ts
-lib/validations/ahsp.test.ts
 lib/validations/proyek.test.ts
 ```
 

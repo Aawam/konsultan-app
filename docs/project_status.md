@@ -55,8 +55,8 @@ Database aktif hanya memuat data pendukung monitoring: proyek, Dinas/SKPD, dan p
 
 | Fitur | Status | Catatan |
 |---|---|---|
-| RAB Maker dan export RAB | Dijeda dari produk aktif | Data/skema dipertahankan; route halaman/API dan akses langsung role browser ditutup. |
-| Master AHSP dan harga | Dijeda dari produk aktif | Tidak ditampilkan di Database monitoring; endpoint dan akses langsung role browser ditutup. |
+| RAB Maker dan export RAB | Dipisahkan dari aplikasi | Source route, UI, action, formula, dan export dihapus dari build monitoring. Skema/data dorman dan riwayat migrasi belum dihapus. |
+| Master AHSP dan harga | Dipisahkan dari aplikasi | Source UI/API/import dihapus; akses database role browser tetap ditutup. |
 | Reintegrasi | Belum dijadwalkan | Dilakukan setelah formula perhitungan selesai dan tervalidasi di proyek terpisah. |
 
 ### Dokumen
@@ -88,7 +88,7 @@ Database aktif hanya memuat data pendukung monitoring: proyek, Dinas/SKPD, dan p
 | `/api/proyek/[id]/override` | POST | Simpan override log. |
 | `/api/proyek/export` | GET | Data proyek untuk export. |
 
-Endpoint RAB, workflow siap-RAB, dan master AHSP mengembalikan `404` selama modul berada di luar scope aktif.
+URL lama RAB, workflow siap-RAB, dan master AHSP mengembalikan `404` atau dialihkan ke daftar proyek oleh `proxy.ts`; tidak ada handler implementasinya di build.
 ---
 
 ## Database Utama
@@ -144,10 +144,11 @@ Test yang ada:
 
 - `lib/actions/proyek.test.ts`
 - `lib/actions/proyek-page.test.ts`
-- `lib/ahsp-import.test.ts`
+- `lib/api-auth.test.ts`
+- `lib/auth.test.ts`
 - `lib/constants/proyek.test.ts`
-- `lib/rab-lock.test.ts`
-- `lib/simple-xlsx.test.ts`
+- `lib/project-completeness.test.ts`
+- `lib/rab-separation.test.ts`
 - `lib/utils.test.ts`
 - `lib/validations/proyek.test.ts`
 
@@ -168,7 +169,7 @@ npm test
 
 - Strategi branch aktif memakai `experiment` untuk kerja utama/uji coba fitur, `staging` untuk kandidat uji sebelum deploy, dan `main` untuk production. Detail ada di `docs/branching_strategy.md`.
 - `vercel.json` menjalankan Vercel Functions di region `sin1` agar dekat dengan pengguna Indonesia dan Supabase Singapore.
-- `proxy.ts` menjaga route halaman dan menolak surface RAB/AHSP yang dijeda. API aktif melakukan auth sendiri agar request API tidak selalu melewati round-trip autentikasi global.
+- `proxy.ts` menjaga route halaman dan menolak URL lama RAB/AHSP yang sudah dipisahkan. API aktif melakukan auth sendiri agar request API tidak selalu melewati round-trip autentikasi global.
 - API route memakai helper authenticated Supabase server client dari `lib/supabase-server.ts`.
 - Select detail proyek dan override log dipusatkan di `lib/queries/proyek-selects.ts` supaya payload Supabase tidak memakai `select('*')`.
 - Create/edit proyek memakai loader referensi bersama agar daftar perusahaan dan dinas dibaca dengan satu client Supabase per request.
