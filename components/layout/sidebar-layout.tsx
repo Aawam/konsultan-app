@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import type { ComponentType, ReactNode } from 'react'
 import { Fragment, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import {
@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/sidebar'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { useMediaQuery } from '@/hooks/use-media-query'
-import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { logoutAction } from '@/lib/actions/auth-session'
 import { getRoleLabel, isOwnerAdmin, type CurrentUserProfile } from '@/lib/auth-types'
 
 type NavGroup = {
@@ -127,7 +127,6 @@ export function SidebarLayout({
   profile: CurrentUserProfile | null
 }) {
   const pathname = usePathname()
-  const router = useRouter()
   const isCompactViewport = useMediaQuery('(max-width: 1023px)')
   const sidebarOpen = useSyncExternalStore(
     subscribeToSidebarPreference,
@@ -150,13 +149,6 @@ export function SidebarLayout({
     }
     if (href === '/database') return pathname.startsWith('/database')
     return pathname.startsWith(href)
-  }
-
-  const handleLogout = async () => {
-    const supabase = createSupabaseBrowserClient()
-    await supabase.auth.signOut()
-    router.replace('/login')
-    router.refresh()
   }
 
   const displayName = profile?.nama || profile?.email.split('@')[0] || 'User'
@@ -265,17 +257,18 @@ export function SidebarLayout({
                 {roleLabel}
               </p>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="group-data-[state=collapsed]/sidebar:hidden"
-              onClick={handleLogout}
-              aria-label="Keluar"
-              title="Keluar"
-            >
-              <LogOut />
-            </Button>
+            <form action={logoutAction}>
+              <Button
+                type="submit"
+                variant="ghost"
+                size="icon-sm"
+                className="group-data-[state=collapsed]/sidebar:hidden"
+                aria-label="Keluar"
+                title="Keluar"
+              >
+                <LogOut />
+              </Button>
+            </form>
           </div>
         </SidebarFooter>
         <SidebarRail />

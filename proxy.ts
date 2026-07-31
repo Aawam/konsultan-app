@@ -99,12 +99,13 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data } = await supabase.auth.getClaims()
+  const claims = data?.claims
 
   // Aturan Satpam:
   // Jika user belum login DAN mencoba masuk ke halaman selain /login, 
   // maka tendang (redirect) ke /login
-  if (!user && !request.nextUrl.pathname.startsWith('/login')) {
+  if (!claims && !request.nextUrl.pathname.startsWith('/login')) {
     if (isApiRoute) {
       return apiError('UNAUTHORIZED', 'Unauthorized', 401)
     }
@@ -116,7 +117,7 @@ export async function proxy(request: NextRequest) {
 
   // Jika user sudah login tapi mencoba buka halaman /login, 
   // arahkan langsung ke /proyek
-  if (user && request.nextUrl.pathname.startsWith('/login')) {
+  if (claims && request.nextUrl.pathname.startsWith('/login')) {
     const url = request.nextUrl.clone()
     url.pathname = '/proyek'
     return NextResponse.redirect(url)

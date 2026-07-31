@@ -17,8 +17,8 @@ function buildClient(profile: Record<string, unknown> | null) {
 
   return {
     auth: {
-      getUser: vi.fn().mockResolvedValue({
-        data: { user: { id: 'auth-user-id', email: 'user@example.com' } },
+      getClaims: vi.fn().mockResolvedValue({
+        data: { claims: { sub: 'auth-user-id', email: 'user@example.com' } },
         error: null,
       }),
     },
@@ -29,6 +29,20 @@ function buildClient(profile: Record<string, unknown> | null) {
 describe('getCurrentUserProfile', () => {
   beforeEach(() => {
     createSupabaseServerClientMock.mockReset()
+  })
+
+  it('returns no user when the verified session has no claims', async () => {
+    const client = buildClient(null)
+    client.auth.getClaims.mockResolvedValue({ data: { claims: null }, error: null })
+    createSupabaseServerClientMock.mockResolvedValue(client as never)
+
+    await expect(getCurrentUserProfile()).resolves.toEqual({
+      user: null,
+      profile: null,
+      error: null,
+    })
+
+    expect(client.from).not.toHaveBeenCalled()
   })
 
   it('does not invent a tenaga_ahli profile for an auth user missing from public.users', async () => {

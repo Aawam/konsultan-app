@@ -1,20 +1,33 @@
+import { cache } from 'react'
+
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import type { CurrentUserProfile } from '@/lib/auth-types'
 export { getRoleLabel, isOwnerAdmin, type AppRole, type CurrentUserProfile } from '@/lib/auth-types'
 
-export async function getCurrentUserProfile(): Promise<{
+async function loadCurrentUserProfile(): Promise<{
   user: { id: string; email?: string | null } | null
   profile: CurrentUserProfile | null
   error: { message: string; source: 'auth' | 'profile' } | null
 }> {
   const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser()
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims()
 
-  if (userError) return { user: null, profile: null, error: { message: userError.message, source: 'auth' } }
-  if (!user) return { user: null, profile: null, error: null }
+  if (claimsError) {
+    return {
+      user: null,
+      profile: null,
+      error: { message: claimsError.message, source: 'auth' },
+    }
+  }
+
+  const subject = claimsData?.claims?.sub
+  if (!subject) return { user: null, profile: null, error: null }
+
+  const email = claimsData.claims.email
+  const user = {
+    id: subject,
+    email: typeof email === 'string' ? email : null,
+  }
 
   const { data, error } = await supabase
     .from('users')
@@ -37,3 +50,5 @@ export async function getCurrentUserProfile(): Promise<{
     error: null,
   }
 }
+
+export const getCurrentUserProfile = cache(loadCurrentUserProfile)
