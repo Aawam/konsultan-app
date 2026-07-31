@@ -9,6 +9,7 @@ export type XlsxCellStyle =
   | 'text'
   | 'number'
   | 'decimal'
+  | 'percentage'
   | 'currency'
   | 'total'
   | 'volume'
@@ -37,6 +38,19 @@ export type XlsxSheet = {
   columns?: XlsxColumn[]
   merges?: string[]
   freezePane?: XlsxFreezePane
+  pageBreakPreview?: boolean
+  /** One-based rows repeated at the top of every printed page. */
+  printTitleRows?: {
+    start: number
+    end: number
+  }
+  /** One-based rows that begin a new printed page. */
+  rowBreaks?: number[]
+  print?: {
+    orientation?: 'portrait' | 'landscape'
+    fitToWidth?: number
+    fitToHeight?: number
+  }
 }
 
 const STYLE_IDS: Record<XlsxCellStyle, number> = {
@@ -51,6 +65,7 @@ const STYLE_IDS: Record<XlsxCellStyle, number> = {
   currency: 9,
   total: 10,
   volume: 11,
+  percentage: 12,
 }
 
 const CRC_TABLE = new Uint32Array(256)
@@ -163,8 +178,23 @@ function worksheetXml(sheet: XlsxSheet) {
     }).join('')}</cols>`
     : ''
 
-  const freezePaneXml = sheet.freezePane
-    ? `<sheetViews><sheetView workbookViewId="0"><pane${sheet.freezePane.xSplit ? ` xSplit="${sheet.freezePane.xSplit}"` : ''}${sheet.freezePane.ySplit ? ` ySplit="${sheet.freezePane.ySplit}"` : ''} topLeftCell="${escapeXml(sheet.freezePane.topLeftCell ?? 'A1')}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`
+  const sheetViewsXml = sheet.freezePane || sheet.pageBreakPreview
+    ? `<sheetViews><sheetView workbookViewId="0"${sheet.pageBreakPreview ? ' view="pageBreakPreview"' : ''}>${sheet.freezePane ? `<pane${sheet.freezePane.xSplit ? ` xSplit="${sheet.freezePane.xSplit}"` : ''}${sheet.freezePane.ySplit ? ` ySplit="${sheet.freezePane.ySplit}"` : ''} topLeftCell="${escapeXml(sheet.freezePane.topLeftCell ?? 'A1')}" activePane="bottomLeft" state="frozen"/>` : ''}</sheetView></sheetViews>`
+    : ''
+
+  const sheetPropertiesXml = sheet.print
+    ? '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>'
+    : ''
+
+  const pageLayoutXml = sheet.print
+    ? `<pageMargins left="0.25" right="0.25" top="0.5" bottom="0.5" header="0.2" footer="0.2"/><pageSetup${sheet.print.orientation ? ` orientation="${sheet.print.orientation}"` : ''}${sheet.print.fitToWidth !== undefined ? ` fitToWidth="${sheet.print.fitToWidth}"` : ''}${sheet.print.fitToHeight !== undefined ? ` fitToHeight="${sheet.print.fitToHeight}"` : ''} paperSize="9"/>`
+    : ''
+
+  const manualRowBreaks = [...new Set(sheet.rowBreaks ?? [])]
+    .filter((row) => Number.isInteger(row) && row > 1 && row <= rows.length)
+    .sort((a, b) => a - b)
+  const rowBreaksXml = manualRowBreaks.length > 0
+    ? `<rowBreaks count="${manualRowBreaks.length}" manualBreakCount="${manualRowBreaks.length}">${manualRowBreaks.map((row) => `<brk id="${row - 1}" min="0" max="16383" man="1"/>`).join('')}</rowBreaks>`
     : ''
 
   const mergesXml = sheet.merges?.length
@@ -172,16 +202,24 @@ function worksheetXml(sheet: XlsxSheet) {
     : ''
 
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${freezePaneXml}${columnsXml}<sheetData>${rowXml}</sheetData>${mergesXml}</worksheet>`
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${sheetPropertiesXml}${sheetViewsXml}${columnsXml}<sheetData>${rowXml}</sheetData>${mergesXml}${pageLayoutXml}${rowBreaksXml}</worksheet>`
 }
 
 function workbookXml(sheets: XlsxSheet[]) {
   const sheetXml = sheets.map((sheet, index) =>
     `<sheet name="${escapeXml(normalizeSheetName(sheet.name, index))}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`
   ).join('')
+  const definedNames = sheets.flatMap((sheet, index) => {
+    if (!sheet.printTitleRows) return []
+    const start = Math.max(1, Math.floor(sheet.printTitleRows.start))
+    const end = Math.max(start, Math.floor(sheet.printTitleRows.end))
+    const name = normalizeSheetName(sheet.name, index)
+    return [`<definedName name="_xlnm.Print_Titles" localSheetId="${index}">${escapeXml(`'${name.replace(/'/g, "''")}'!$${start}:$${end}`)}</definedName>`]
+  }).join('')
+  const definedNamesXml = definedNames ? `<definedNames>${definedNames}</definedNames>` : ''
 
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheetXml}</sheets><calcPr calcMode="auto" fullCalcOnLoad="1" forceFullCalc="1"/></workbook>`
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheetXml}</sheets>${definedNamesXml}<calcPr calcMode="auto" fullCalcOnLoad="1" forceFullCalc="1"/></workbook>`
 }
 
 function workbookRelsXml(sheets: XlsxSheet[]) {
@@ -231,7 +269,7 @@ const STYLES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <border><left style="thin"><color rgb="FFD1D5DB"/></left><right style="thin"><color rgb="FFD1D5DB"/></right><top style="thin"><color rgb="FFD1D5DB"/></top><bottom style="thin"><color rgb="FFD1D5DB"/></bottom><diagonal/></border>
   </borders>
   <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-  <cellXfs count="12">
+  <cellXfs count="13">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
     <xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"><alignment horizontal="center"/></xf>
     <xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"/>
@@ -244,6 +282,7 @@ const STYLES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
     <xf numFmtId="164" fontId="1" fillId="5" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
     <xf numFmtId="167" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
+    <xf numFmtId="10" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
   </cellXfs>
   <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
   <dxfs count="0"/>

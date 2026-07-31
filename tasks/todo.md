@@ -18,6 +18,13 @@
 - [x] Verify lint, targeted filter tests, and production build.
 - [ ] Browser-check authenticated project flows at 390px, 768px, and 1440px in light and dark modes.
 
+## Desktop Workflow Reliability
+
+- [x] Align the 1024px desktop breakpoint across project screens.
+- [x] Tune dashboard and detail scanning at desktop widths.
+- [x] Strengthen desktop form and RAB working surfaces.
+- [ ] Verify authenticated workflows at 1024px, 1280px, and 1440px.
+
 ## Production SQL Hardening
 
 - [x] Capture and reconcile the Codex CLI adversarial audit.
@@ -28,5 +35,5 @@
 - [x] Prepare a guarded cleanup migration for confirmed-unused RAB legacy objects.
 - [x] Remove dead TypeScript accessors only after the cleanup migration passes staging.
 - [x] Configure Supabase CLI authentication and regenerate database types.
-- [ ] Build and verify a clean production baseline without dummy seeds.
+- [x] Build and verify a clean production baseline without dummy seeds.
 - [ ] Obtain a reachable production project, backup, and explicit deployment approval.

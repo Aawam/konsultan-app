@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { AuditTimeline } from '@/components/proyek/audit-timeline'
 import { BadgeJenis, BadgeTahap, BadgeWorkflow } from '@/components/proyek/badges'
 import { RabAccessDeniedDialog } from '@/components/proyek/rab-access-denied-dialog'
+import { RabExportPreflight } from '@/components/proyek/rab-export-preflight'
 import { RabMakerClient } from '@/components/proyek/rab-maker-client'
 import { RabStatusActions } from '@/components/proyek/rab-status-actions'
 import { Button } from '@/components/ui/button'
@@ -196,9 +197,7 @@ export default async function RabProjectPage({ params }: Props) {
               <Button asChild variant="outline">
                 <Link href="/proyek/rab">Daftar RAB</Link>
               </Button>
-              <Button asChild>
-                <Link href={`/api/proyek/${id}/rab/export`}>Export XLSX</Link>
-              </Button>
+              <RabExportPreflight projectId={id} />
               {canExportPdf ? (
                 <Button asChild variant="outline">
                   <Link href={`/api/proyek/${id}/rab/export/pdf`}>Export PDF</Link>

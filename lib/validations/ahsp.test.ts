@@ -102,6 +102,20 @@ describe('validateMasterHargaPayload', () => {
       message: 'Harga dasar harus berupa angka.',
     })
   })
+
+  it('rejects Rp0 and Rp1 placeholder prices', () => {
+    for (const hargaDasar of [0, 1]) {
+      expect(validateMasterHargaPayload({
+        kind: 'bahan',
+        nama: 'Agregat',
+        satuan_id: 'm3',
+        harga_dasar: hargaDasar,
+      })).toEqual({
+        ok: false,
+        message: 'Harga dasar harus lebih besar dari Rp1. Rp0 dan Rp1 tidak dapat digunakan sebagai placeholder.',
+      })
+    }
+  })
 })
 
 describe('validateAhspDetailPayload', () => {

@@ -2,13 +2,15 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { ArrowRightIcon, Trash2Icon } from 'lucide-react'
 import { toast } from 'sonner'
-import { BadgeJenis, BadgeTahap, BadgeOverride } from '@/components/proyek/badges'
+import { BadgeJenis, BadgeTahap, BadgeOverride, BadgeWorkflow } from '@/components/proyek/badges'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { formatRupiah } from '@/lib/utils'
 import { TAHAP_BAR_COLOR } from '@/lib/constants/proyek'
+import { evaluateProjectCompleteness, getProjectWorkflowGate } from '@/lib/project-completeness'
 import type { ProyekDetail } from '@/lib/types/proyek'
 
 type OverrideLog = { id: string; field_dioverride: string; alasan: string; dilakukan_pada: string }
@@ -105,6 +107,12 @@ export function ProyekSlideover({
     router.refresh()
   }
 
+  const handleOpenDetail = () => {
+    if (!id) return
+    onClose()
+    router.push(`/proyek/${id}`)
+  }
+
   const open = !!id
   const perusahaan = proyek?.perusahaan ?? null
   const persen     = proyek?.persentase_progress ?? 0
@@ -112,14 +120,32 @@ export function ProyekSlideover({
   const barColor   = isSelesai
     ? 'bg-emerald'
     : TAHAP_BAR_COLOR[proyek?.tahap_progress ?? ''] ?? 'bg-brand'
+  const completeness = proyek
+    ? evaluateProjectCompleteness(proyek, { includeCommercial: canViewCommercial })
+    : null
+  const workflowGate = completeness ? getProjectWorkflowGate(completeness) : null
 
   return (
     <>
       <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-        <SheetContent side="right" className="w-[340px] max-w-[96vw] border-l border-border bg-card p-0 shadow-xl">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Preview Proyek</SheetTitle>
-            <SheetDescription>Ringkasan cepat proyek, progress, dan aksi terkait.</SheetDescription>
+        <SheetContent side="right" className="w-[400px] max-w-[96vw] border-l border-border bg-card p-0 shadow-xl">
+          <SheetHeader className="shrink-0 px-5 py-4">
+            <div>
+              <SheetTitle>Inspect Proyek</SheetTitle>
+              <SheetDescription className="sr-only">Ringkasan cepat status proyek dan aksi kerja berikutnya.</SheetDescription>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              aria-label="Tutup inspect proyek"
+              title="Tutup inspect proyek"
+            >
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </Button>
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto px-5 py-5">
@@ -160,25 +186,6 @@ export function ProyekSlideover({
           {/* Content fades in after load */}
           {!loading && !fetchError && proyek && (
             <div className="min-h-[calc(100vh-2.5rem)] space-y-5 animate-in fade-in-0 duration-200">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-bold text-foreground">Preview Proyek</h2>
-                  <p className="mt-1.5 text-xs leading-snug text-muted-foreground">
-                    Klik row untuk menampilkan ringkasan tanpa pindah halaman.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  aria-label="Tutup preview proyek"
-                  title="Tutup preview proyek"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M18 6 6 18M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
               <div className="flex flex-wrap items-center gap-2">
                 <BadgeJenis jenis={proyek.jenis_pekerjaan as string} />
                 <BadgeTahap tahap={proyek.tahap_progress} />
@@ -186,9 +193,9 @@ export function ProyekSlideover({
               </div>
 
               <div>
-                <h3 className="text-xl font-bold leading-tight text-foreground">
+                <h2 className="text-xl font-bold leading-tight text-foreground">
                   {proyek.nama_proyek}
-                </h3>
+                </h2>
                 <p className="mt-3 text-xs text-muted-foreground">{proyek.dinas}</p>
                 <p className="mt-2 text-sm text-foreground">
                   {perusahaan?.nama_perusahaan ?? '-'}
@@ -205,12 +212,29 @@ export function ProyekSlideover({
                 </div>
               </div>
 
+              <section aria-label="Status dan aksi kerja" className="rounded-xl border border-border bg-muted/35 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="detail-label">Status kerja</p>
+                  {workflowGate && <BadgeWorkflow status={completeness?.status ?? 'incomplete'} gate={workflowGate} />}
+                </div>
+                <p className="mt-3 text-sm font-semibold text-foreground">{completeness?.nextAction}</p>
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={handleOpenDetail}
+                  className="mt-4 w-full bg-brand text-primary-foreground hover:bg-brand/90"
+                >
+                  Buka Detail Proyek
+                  <ArrowRightIcon />
+                </Button>
+              </section>
+
               <div>
-                <p className="text-xs font-bold text-muted-foreground">Nomor Kontrak</p>
-                <p className="mt-3 text-base font-bold text-foreground">{proyek.nomor_kontrak ?? '-'}</p>
+                <p className="detail-label">Informasi pendukung</p>
+                <p className="mt-2 text-base font-semibold text-foreground">{proyek.nomor_kontrak ?? 'Nomor kontrak belum diisi'}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-6">
+              <div className={`grid gap-3 ${canViewCommercial ? 'grid-cols-2' : 'grid-cols-1'}`}>
                 {canViewCommercial && (
                   <div className="rounded-xl border border-border bg-card p-4">
                     <p className="text-xs font-medium text-muted-foreground">Nilai Kontrak</p>
@@ -224,24 +248,22 @@ export function ProyekSlideover({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Link
-                  href={`/proyek/${id}`}
-                  onClick={onClose}
-                  className="inline-flex h-10 flex-1 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand/90"
-                >
-                  Buka Detail
-                </Link>
-                {canManageProjects && (
-                  <button
+              {canManageProjects && (
+                <div className="border-t border-border-subtle pt-4">
+                  <p className="detail-label">Tindakan berisiko</p>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="lg"
                     onClick={() => setDeleteOpen(true)}
                     disabled={deleting}
-                    className="inline-flex h-10 items-center justify-center rounded-lg border border-rose bg-rose/10 px-5 text-sm font-semibold text-rose transition-colors hover:bg-rose/15 disabled:opacity-50"
+                    className="mt-2 w-full justify-start"
                   >
-                    {deleting ? '...' : 'Hapus'}
-                  </button>
-                )}
-              </div>
+                    <Trash2Icon />
+                    {deleting ? 'Menghapus proyek...' : 'Hapus proyek'}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
           </div>

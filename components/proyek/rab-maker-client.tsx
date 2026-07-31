@@ -235,7 +235,14 @@ export function RabMakerClient({
         onAdd={addSelectedAhsp}
       />
 
-      <div className="rounded-xl border border-border bg-card">
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border-subtle bg-muted/35 px-4 py-3">
+          <div>
+            <p className="section-title">Item RAB</p>
+            <p className="mt-1 text-xs text-muted-foreground">Klik baris untuk membuka komponen snapshot dan perubahan harga.</p>
+          </div>
+          <p className="text-xs font-medium text-muted-foreground">Geser horizontal untuk melihat kolom perhitungan.</p>
+        </div>
         <Table className="min-w-[1320px] table-fixed">
           <TableHeader>
             <TableRow className="border-border bg-muted/40 hover:bg-transparent">

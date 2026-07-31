@@ -279,6 +279,66 @@ Improve the existing frontend workflow only. No data model, Supabase query, perm
 - Verified: `npm run lint`, `npm test -- lib/dashboard-filters.test.ts`, and `npm run build` pass.
 - Pending: authenticated browser walkthrough at the stated breakpoints and themes; no authenticated test session is available in this workspace.
 
+---
+
+# Desktop Workflow Reliability Plan
+
+## Scope
+
+Make the existing operational workflows reliable at 1024px, 1280px, and 1440px. This is frontend-only: no API, database, calculation, permission, or workflow-rule changes. Phone-first work is explicitly deferred.
+
+## Decisions
+
+- Treat `lg` (1024px) as the working desktop breakpoint for project list, dashboard, detail, and form composition.
+- Keep dense tables intact at desktop widths; use explicit horizontal-scroll affordances where a table needs more working width than the viewport provides.
+- Keep RAB editing as a wide-screen workspace. Do not compress its engineering table into a smaller layout.
+
+## Tasks
+
+### Task 1: Establish the desktop breakpoint contract
+
+**Description:** Align layout breakpoints so the operational desktop view begins at 1024px rather than waiting for 1280px.
+
+**Acceptance criteria:**
+- [ ] Primary project information uses multi-column desktop composition at 1024px.
+- [ ] Desktop controls do not depend on the mobile compact layout above 1024px.
+
+**Files likely touched:**
+- `components/proyek/dashboard-client.tsx`
+- `app/proyek/[id]/page.tsx`
+- `components/proyek/proyek-form-shell.tsx`
+
+### Task 2: Tune dashboard and detail scanning
+
+**Description:** Use available desktop width for decision panels and project details without adding decoration or changing any data.
+
+**Acceptance criteria:**
+- [ ] Dashboard distributions form a stable desktop grid at 1024px and expand further at wide desktop.
+- [ ] Detail information is readable in two columns at 1024px; workflow context stays first.
+
+**Verification:**
+- [ ] Inspect long project names, empty values, Owner/Admin and non-commercial roles.
+
+### Task 3: Strengthen desktop form and RAB working surfaces
+
+**Description:** Make desktop data entry and the wide RAB table explicit, stable working surfaces.
+
+**Acceptance criteria:**
+- [ ] Project form shows persistent navigation/support at desktop widths without constraining field width.
+- [ ] RAB clearly communicates horizontal table navigation when its full engineering columns exceed the viewport.
+
+**Files likely touched:**
+- `components/proyek/proyek-form-shell.tsx`
+- `components/proyek/form/proyek-form-panels.tsx`
+- `components/proyek/rab-maker-client.tsx`
+
+### Task 4: Desktop workflow verification
+
+**Acceptance criteria:**
+- [ ] Project list → preview/detail → RAB navigation is checked at 1024px, 1280px, and 1440px.
+- [ ] Dashboard filters, form navigation, RAB expansion, dialogs, and keyboard focus work in light and dark themes.
+- [ ] `npm run lint`, `npm test`, and `npm run build` pass, subject to unrelated pre-existing build blockers.
+
 ## Production SQL Hardening
 
 ### Objective

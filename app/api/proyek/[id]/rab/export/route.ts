@@ -4,7 +4,7 @@ import { apiError } from '@/lib/api-response'
 import { requireCurrentUserProfileApi } from '@/lib/api-auth'
 import { getProyekById } from '@/lib/actions/proyek'
 import { canAccessRabProject, getRabMakerSnapshotByProyekId } from '@/lib/actions/rab'
-import { buildRabExportFilename, createRabXlsx } from '@/lib/rab-export'
+import { buildRabExportFilename, buildRabExportPreview, createRabXlsx } from '@/lib/rab-export'
 import { rabExportRecordSchema } from '@/lib/rpc-contracts'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
@@ -35,6 +35,11 @@ export async function GET(
   if (projectError) return apiError('INTERNAL_ERROR', projectError.message, 500)
   if (!project) return apiError('NOT_FOUND', 'Proyek tidak ditemukan.', 404)
   if (snapshotError) return apiError('INTERNAL_ERROR', snapshotError.message, 500)
+
+  const preview = buildRabExportPreview(project, snapshot)
+  if (!preview.canExport) {
+    return apiError('VALIDATION_ERROR', 'Export RAB diblokir oleh validasi data.', 422, preview)
+  }
 
   const workbook = createRabXlsx(project, snapshot)
   let filename = buildRabExportFilename(project)

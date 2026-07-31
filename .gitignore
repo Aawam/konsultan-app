@@ -48,3 +48,7 @@ supabase/.temp/
 
 # Local document templates
 public/templates/
+
+# Generated local reports and exports
+audit.txt
+outputs/

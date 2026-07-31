@@ -1,9 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
+import { useCallback, useMemo, useTransition } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { PieChart, Pie, Cell, Tooltip } from 'recharts'
 import { ProyekDisplay, getNamaPerusahaan } from '@/lib/types/proyek'
 import { BadgeJenis, BadgeTahap } from '@/components/proyek/badges'
 import { formatRupiah } from '@/lib/utils'
@@ -24,113 +23,6 @@ import {
 type YearFilter = number | 'semua'
 type JenisFilter = 'Semua' | 'Perencanaan' | 'Pengawasan'
 type StatusFilter = 'Semua' | 'Work' | 'Borrowed' | 'Get Borrowed'
-
-function getCssColor(variable: string): string {
-  if (typeof window === 'undefined') return ''
-  return getComputedStyle(document.documentElement).getPropertyValue(variable).trim()
-}
-
-const JENIS_TEXT: Record<string, string> = {
-  Perencanaan: 'text-violet',
-  Pengawasan:  'text-teal',
-}
-
-function JenisPieCard({
-  filtered,
-  jenisFilter,
-  onToggle,
-}: {
-  filtered: ProyekDisplay[]
-  jenisFilter: JenisFilter
-  onToggle: (j: 'Perencanaan' | 'Pengawasan') => void
-}) {
-  const [fills, setFills] = useState({ Perencanaan: '', Pengawasan: '' })
-
-  useEffect(() => {
-    const update = () =>
-      setFills({
-        Perencanaan: getCssColor('--violet'),
-        Pengawasan:  getCssColor('--teal'),
-      })
-    update()
-    const observer = new MutationObserver(update)
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-    return () => observer.disconnect()
-  }, [])
-
-  const data = useMemo(() => {
-    return (['Perencanaan', 'Pengawasan'] as const).map((j) => {
-      const proyek  = filtered.filter((p) => p.jenis_pekerjaan === j)
-      const nilai   = proyek.reduce((s, p) => s + (p.nilai_penawaran ?? 0), 0)
-      const count   = proyek.length
-      return { name: j, nilai, count }
-    })
-  }, [filtered])
-
-  const totalNilai = data.reduce((s, d) => s + d.nilai, 0)
-  const totalCount = data.reduce((s, d) => s + d.count, 0)
-
-  return (
-    <div className="section-card">
-      <div className="section-header"><p className="section-title">Komposisi Jenis</p></div>
-      <div className="section-body flex flex-col items-center gap-4">
-        <div className="flex justify-center">
-          <PieChart width={160} height={160}>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={45}
-                outerRadius={70}
-                paddingAngle={3}
-                cornerRadius={4}
-                dataKey="nilai"
-                isAnimationActive={false}
-                onClick={(entry) => onToggle(entry.name as 'Perencanaan' | 'Pengawasan')}
-                style={{ cursor: 'pointer' }}
-              >
-                {data.map((entry) => (
-                  <Cell
-                    key={entry.name}
-                    fill={fills[entry.name as keyof typeof fills]}
-                    opacity={jenisFilter === 'Semua' || jenisFilter === entry.name ? 1 : 0.3}
-                    stroke="none"
-                  />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(value) => [formatRupiah(Number(value)), 'Nilai Kontrak']}
-                contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid var(--border)' }}
-              />
-          </PieChart>
-        </div>
-
-        <div className="w-full space-y-2">
-          {data.map((entry) => {
-            const pctNilai = totalNilai ? Math.round((entry.nilai / totalNilai) * 100) : 0
-            const pctCount = totalCount ? Math.round((entry.count / totalCount) * 100) : 0
-            const active   = jenisFilter === entry.name
-            const fill     = fills[entry.name as keyof typeof fills]
-            return (
-              <button
-                key={entry.name}
-                onClick={() => onToggle(entry.name as 'Perencanaan' | 'Pengawasan')}
-                className={`w-full text-left rounded-lg px-3 py-2 transition-colors ${active ? 'bg-muted' : 'hover:bg-muted/50'}`}
-              >
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: fill }} />
-                  <span className={`text-sm font-semibold ${JENIS_TEXT[entry.name]}`}>{entry.name}</span>
-                  <span className="ml-auto text-[11px] font-mono text-muted-foreground">{entry.count} · {pctCount}%</span>
-                </div>
-                <p className="text-xs font-mono text-muted-foreground pl-4 truncate">{formatRupiah(entry.nilai)} ({pctNilai}%)</p>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function pct(part: number, total: number) {
   if (!total) return 0
@@ -291,6 +183,29 @@ export function DashboardClient({
         )}
       />
 
+      <section className="space-y-3" aria-labelledby="dashboard-attention-title">
+        <div>
+          <h2 id="dashboard-attention-title" className="section-title">Perlu Perhatian</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Mulai dari pekerjaan yang perlu diperbarui, lalu lanjutkan pekerjaan aktif.</p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <MetricLinkCard label="Butuh Review" value={stats.perluUpdate} color="text-amber" sub="Data penting belum lengkap" href={buildProjectListHref(filters, { progress: 'perlu_update' })} />
+          <MetricLinkCard label="Sedang Berjalan" value={stats.berjalan} color="text-brand" sub="Ada progress aktif" href={buildProjectListHref(filters, { progress: 'berjalan' })} />
+          <MetricLinkCard label="Selesai" value={stats.selesai} color="text-emerald" sub={`${pct(stats.selesai, stats.total)}% dari total`} href={buildProjectListHref(filters, { progress: 'selesai' })} />
+        </div>
+        <div className={`grid gap-3 ${canViewCommercial ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+          <MetricLinkCard label="Total Proyek" value={stats.total} color="text-foreground" sub="Sesuai filter" href={buildProjectListHref(filters)} />
+          <StatCard label="Rata-rata Progress" value={`${stats.avgProgress}%`} color="text-violet" />
+          {canViewCommercial && (
+            <div className="stat-card">
+              <p className="stat-label">Total Kontrak</p>
+              <p className="stat-value truncate text-amber">{formatRupiah(stats.nilaiTotal)}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">Akumulasi nilai tercatat</p>
+            </div>
+          )}
+        </div>
+      </section>
+
       <div className="space-y-3 rounded-xl border border-border bg-card p-3">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
           <p className="filter-label shrink-0">Periode</p>
@@ -339,32 +254,8 @@ export function DashboardClient({
         </div>
       </div>
 
-      {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-        <MetricLinkCard label="Total Proyek" value={stats.total} color="text-foreground" sub="Sesuai filter" href={buildProjectListHref(filters)} />
-        <MetricLinkCard label="Sedang Berjalan" value={stats.berjalan} color="text-brand" sub="Ada progress" href={buildProjectListHref(filters, { progress: 'berjalan' })} />
-        <MetricLinkCard label="Selesai" value={stats.selesai} color="text-emerald" sub={`${pct(stats.selesai, stats.total)}% dari total`} href={buildProjectListHref(filters, { progress: 'selesai' })} />
-        <MetricLinkCard label="Belum Mulai" value={stats.belumMulai} color="text-muted-foreground" sub="Belum ada tahap" href={buildProjectListHref(filters, { progress: 'belum_mulai' })} />
-        <MetricLinkCard label="Perlu Update" value={stats.perluUpdate} color="text-amber" sub="Data penting kosong" href={buildProjectListHref(filters, { progress: 'perlu_update' })} />
-        <StatCard label="Avg Progress"    value={`${stats.avgProgress}%`} color="text-violet" />
-        {canViewCommercial && (
-          <div className="stat-card col-span-2 sm:col-span-3 xl:col-span-6">
-            <p className="stat-label">Total Kontrak</p>
-            <p className="stat-value truncate text-amber">{formatRupiah(stats.nilaiTotal)}</p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">Akumulasi nilai penawaran/kontrak yang tercatat</p>
-          </div>
-        )}
-      </div>
-
-      {/* ── Charts grid ── */}
-      <div className="grid gap-4 xl:grid-cols-3">
-
-        {/* Jenis komposisi — top-left */}
-        {canViewCommercial && (
-          <JenisPieCard filtered={filtered} jenisFilter={jenisFilter} onToggle={(jenis) => updateFilters({ jenis: jenisFilter === jenis ? 'Semua' : jenis })} />
-        )}
-
-        {/* Tahap breakdown */}
+      {/* ── Decision distributions ── */}
+      <div className="grid gap-4 lg:grid-cols-2">
         <div className="section-card">
           <div className="section-header"><p className="section-title">Distribusi Tahap</p></div>
           <div className="section-body">
@@ -378,21 +269,6 @@ export function DashboardClient({
           </div>
         </div>
 
-        {/* Top dinas */}
-        <div className="section-card">
-          <div className="section-header"><p className="section-title">Top Dinas / SKPD</p></div>
-          <div className="section-body">
-            {dinasGroups.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Tidak ada data</p>
-            ) : (
-              dinasGroups.map(([dinas, count]) => (
-                <MiniBar key={dinas} label={dinas} count={count} total={stats.total} colorClass="bg-violet" />
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Nilai per tahun */}
         {canViewCommercial && (
           <div className="section-card">
             <div className="section-header"><p className="section-title">Nilai per Tahun</p></div>
@@ -407,23 +283,6 @@ export function DashboardClient({
             </div>
           </div>
         )}
-
-        {/* Perusahaan */}
-        <div className="section-card">
-          <div className="section-header">
-            <p className="section-title">Distribusi per Perusahaan</p>
-          </div>
-          <div className="section-body space-y-1">
-            {compGroups.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Tidak ada data</p>
-            ) : (
-              compGroups.map(([name, count]) => (
-                <MiniBar key={name} label={name} count={count} total={stats.total} colorClass="bg-teal" />
-              ))
-            )}
-          </div>
-        </div>
-
       </div>
 
       {/* ── Recent projects ── */}
@@ -432,7 +291,16 @@ export function DashboardClient({
           <p className="section-title">Proyek Terbaru</p>
           <Link href="/proyek" className="text-xs text-brand hover:underline">Lihat semua →</Link>
         </div>
-        <table className="w-full text-sm border-collapse">
+        <table className="w-full border-collapse text-sm">
+          <thead className="border-b border-border bg-muted/45">
+            <tr>
+              <th scope="col" className="table-head px-5 py-3 text-left normal-case tracking-normal">Proyek</th>
+              <th scope="col" className="table-head px-4 py-3 text-left normal-case tracking-normal">Jenis</th>
+              <th scope="col" className="table-head px-4 py-3 text-left normal-case tracking-normal">Tahap</th>
+              <th scope="col" className="table-head px-4 py-3 text-left normal-case tracking-normal">Dinas</th>
+              {canViewCommercial && <th scope="col" className="table-head px-4 py-3 text-right normal-case tracking-normal">Nilai</th>}
+            </tr>
+          </thead>
           <tbody>
             {recent.map((p, i) => (
               <tr
@@ -467,6 +335,39 @@ export function DashboardClient({
           </tbody>
         </table>
       </div>
+
+      <section className="space-y-3" aria-labelledby="dashboard-supporting-title">
+        <div>
+          <h2 id="dashboard-supporting-title" className="section-title">Distribusi Pendukung</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Konteks portofolio setelah prioritas kerja dan proyek terbaru.</p>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="section-card">
+            <div className="section-header"><p className="section-title">Top Dinas / SKPD</p></div>
+            <div className="section-body">
+              {dinasGroups.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Tidak ada data</p>
+              ) : (
+                dinasGroups.map(([dinas, count]) => (
+                  <MiniBar key={dinas} label={dinas} count={count} total={stats.total} colorClass="bg-violet" />
+                ))
+              )}
+            </div>
+          </div>
+          <div className="section-card">
+            <div className="section-header"><p className="section-title">Distribusi per Perusahaan</p></div>
+            <div className="section-body space-y-1">
+              {compGroups.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Tidak ada data</p>
+              ) : (
+                compGroups.map(([name, count]) => (
+                  <MiniBar key={name} label={name} count={count} total={stats.total} colorClass="bg-teal" />
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
 
     </div>
   )

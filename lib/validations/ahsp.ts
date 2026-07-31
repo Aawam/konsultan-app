@@ -144,8 +144,8 @@ export function validateMasterHargaPayload(input: MasterHargaInput): ValidationR
     return { ok: false, message: 'Harga dasar harus berupa angka.' }
   }
 
-  if (hargaDasar < 0) {
-    return { ok: false, message: 'Harga dasar tidak boleh negatif.' }
+  if (hargaDasar <= 1) {
+    return { ok: false, message: 'Harga dasar harus lebih besar dari Rp1. Rp0 dan Rp1 tidak dapat digunakan sebagai placeholder.' }
   }
 
   return {

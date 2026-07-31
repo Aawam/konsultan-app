@@ -59,6 +59,21 @@ describe('createXlsxWorkbook', () => {
     expect(xml).toContain('<calcPr calcMode="auto" fullCalcOnLoad="1" forceFullCalc="1"/>')
   })
 
+  it('writes print title rows and manual row page breaks', () => {
+    const workbook = createXlsxWorkbook([
+      {
+        name: 'Cetak',
+        printTitleRows: { start: 1, end: 3 },
+        rowBreaks: [12, 24],
+        rows: Array.from({ length: 24 }, (_, index) => [index === 0 ? 'Judul' : `Baris ${index + 1}`]),
+      },
+    ])
+    const xml = workbook.toString('utf8')
+
+    expect(xml).toContain('<definedName name="_xlnm.Print_Titles" localSheetId="0">&apos;Cetak&apos;!$1:$3</definedName>')
+    expect(xml).toContain('<rowBreaks count="2" manualBreakCount="2"><brk id="11" min="0" max="16383" man="1"/><brk id="23" min="0" max="16383" man="1"/></rowBreaks>')
+  })
+
   it('rejects empty workbooks', () => {
     expect(() => createXlsxWorkbook([])).toThrow('Workbook must contain at least one sheet.')
   })
