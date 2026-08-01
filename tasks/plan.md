@@ -195,6 +195,35 @@ Start implementation after approval of the foundation direction: compact hierarc
 
 ---
 
+# Follow-up Plan: All-device Monitoring Optimization
+
+## Scope
+
+Optimize only the monitoring experience—project list, dashboard, project detail, preview slideover, and their shared presentation primitives. Preserve queries, calculations, permissions, filters, and project workflows.
+
+## Acceptance Criteria
+
+- Project data can be scanned without document-level horizontal overflow at phone portrait/landscape, tablet portrait/landscape, and desktop widths.
+- Mobile dashboard content does not require horizontal table scrolling for the recent-project overview.
+- Project cards use available tablet space efficiently, while the full table remains the desktop presentation.
+- Primary controls are at least 40px tall on compact viewports; secondary labels are not smaller than 12px when they carry operational meaning.
+- Loading, empty, and error states remain readable and do not expose raw technical payloads.
+- Owner/Admin commercial fields remain hidden from Tenaga Ahli.
+
+## Implementation Slices
+
+1. Normalize shared monitoring typography, tab touch targets, and error-state presentation.
+2. Improve project-list filter wrapping, tablet card density, and mobile pagination.
+3. Replace the dashboard's mobile recent-project table with responsive cards and tune tablet grids.
+4. Relax detail/slideover density at the narrowest widths.
+5. Run the viewport matrix, accessibility checks, tests, build, and five-axis code review.
+
+## Verification Matrix
+
+`320×568`, `375×667`, `390×844`, `568×320`, `667×375`, `844×390`, `768×1024`, `1024×768`, and `1440×900`.
+
+---
+
 # Follow-up Plan: Workflow UX Refinement
 
 ## Scope

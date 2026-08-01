@@ -18,6 +18,16 @@
 - [x] Verify lint, targeted filter tests, and production build.
 - [ ] Browser-check authenticated project flows at 390px, 768px, and 1440px in light and dark modes.
 
+## All-device Monitoring Optimization
+
+- [x] Audit list, dashboard, detail, slideover, loading, empty, and error states.
+- [x] Normalize compact typography and touch targets.
+- [x] Optimize project-list filters, tablet cards, and pagination.
+- [x] Replace the dashboard mobile recent-project table with responsive cards.
+- [x] Tune detail and slideover density for 320px portrait and short landscape.
+- [x] Verify lint, typecheck, the full test suite, and the production build.
+- [ ] Browser-verify the full portrait/landscape monitoring matrix after an authenticated local app session is available.
+
 ## Desktop Workflow Reliability
 
 - [x] Align the 1024px desktop breakpoint across project screens.

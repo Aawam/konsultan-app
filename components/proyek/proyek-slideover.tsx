@@ -118,7 +118,7 @@ export function ProyekSlideover({
     <>
       <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
         <SheetContent side="right" className="!w-[400px] max-w-[96vw] border-l border-border bg-card p-0 shadow-xl">
-          <SheetHeader className="shrink-0 px-5 py-4">
+          <SheetHeader className="shrink-0 px-4 py-3 sm:px-5 sm:py-4">
             <div>
               <SheetTitle>Ringkasan Proyek</SheetTitle>
               <SheetDescription className="sr-only">Ringkasan cepat status proyek dan aksi kerja berikutnya.</SheetDescription>
@@ -130,6 +130,7 @@ export function ProyekSlideover({
               onClick={onClose}
               aria-label="Tutup ringkasan proyek"
               title="Tutup ringkasan proyek"
+              className="size-10 sm:size-8"
             >
               <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 6 6 18M6 6l12 12" />
@@ -137,7 +138,7 @@ export function ProyekSlideover({
             </Button>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto px-5 py-5">
+          <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5">
 
           {/* Loading skeleton */}
           {loading && (
@@ -182,7 +183,7 @@ export function ProyekSlideover({
               </div>
 
               <div>
-                <h2 className="text-xl font-bold leading-tight text-foreground">
+                <h2 className="text-lg font-bold leading-tight text-foreground sm:text-xl">
                   {proyek.nama_proyek}
                 </h2>
                 <p className="mt-3 text-xs text-muted-foreground">{proyek.dinas}</p>
@@ -211,7 +212,7 @@ export function ProyekSlideover({
                   type="button"
                   size="lg"
                   onClick={handleOpenDetail}
-                  className="mt-4 w-full bg-brand text-primary-foreground hover:bg-brand/90"
+                  className="mt-4 h-10 w-full bg-brand text-primary-foreground hover:bg-brand/90"
                 >
                   Buka Detail Proyek
                   <ArrowRightIcon />
@@ -223,11 +224,11 @@ export function ProyekSlideover({
                 <p className="mt-2 text-base font-semibold text-foreground">{proyek.nomor_kontrak ?? 'Nomor kontrak belum diisi'}</p>
               </div>
 
-              <div className={`grid gap-3 ${canViewCommercial ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              <div className={`grid gap-3 ${canViewCommercial ? 'grid-cols-1 min-[360px]:grid-cols-2' : 'grid-cols-1'}`}>
                 {canViewCommercial && (
                   <div className="rounded-xl border border-border bg-card p-4">
                     <p className="text-xs font-medium text-muted-foreground">Nilai Kontrak</p>
-                    <p className="mt-2 text-2xl font-bold text-foreground">{formatCompactRupiah(proyek.nilai_penawaran ?? null)}</p>
+                    <p className="mt-2 break-words text-xl font-bold leading-tight text-foreground sm:text-2xl">{formatCompactRupiah(proyek.nilai_penawaran ?? null)}</p>
                   </div>
                 )}
                 <div className="rounded-xl border border-border bg-card p-4">
@@ -246,7 +247,7 @@ export function ProyekSlideover({
                     size="lg"
                     onClick={() => setDeleteOpen(true)}
                     disabled={deleting}
-                    className="mt-2 w-full justify-start"
+                    className="mt-2 h-10 w-full justify-start"
                   >
                     <Trash2Icon />
                     {deleting ? 'Menghapus proyek...' : 'Hapus proyek'}

@@ -122,6 +122,7 @@ Used by dashboard/list metrics.
 
 - Gunakan `page-eyebrow` untuk konteks halaman, `page-title` untuk satu `h1`, dan `page-summary` hanya untuk konteks operasional yang hidup.
 - Gunakan `section-title` pada header data panel dan `detail-label` untuk label field.
+- Label operasional dan metadata sekunder tidak boleh lebih kecil dari `text-xs` (12px). Gunakan `leading-5` untuk teks penjelas yang dapat membungkus.
 - Value memakai `text-sm font-medium`; jangan membuat label dan value sama-sama bold.
 - Gunakan `font-mono` hanya untuk currency, angka, persentase, tanggal, kode, dan durasi. Tambahkan `tabular-nums` jika alignment kolom penting.
 
@@ -214,6 +215,8 @@ Conventions:
 - Use `truncate` on long project/company/dinas names.
 - Use `font-mono` for numbers, dates, codes, and currency values.
 - Hover rows with `hover:bg-muted/40`.
+- Jangan memaksa tabel operasional lebar ke ponsel jika datanya dapat disajikan sebagai kartu. Dashboard memakai kartu di bawah `md` dan tabel mulai `md`.
+- Daftar proyek memakai satu kolom kartu pada ponsel, dua kolom pada tablet, lalu tabel mulai `lg`.
 
 ---
 
@@ -230,6 +233,10 @@ Prefer existing `components/ui/button.tsx` where practical.
 | Disabled nav | muted text, `cursor-not-allowed`, reduced opacity |
 
 Use icons from `lucide-react` for icon buttons when adding new controls.
+
+Pada compact viewport, control interaktif utama memakai tinggi minimum 40px (`h-10` atau `min-h-10`). Control boleh kembali ke tinggi 32–36px pada desktop yang menggunakan pointer.
+
+Pagination pada ponsel menggunakan grid dua kolom: pemilih jumlah baris memenuhi satu baris, lalu tombol Sebelumnya/Berikutnya berbagi baris berikutnya.
 
 ---
 

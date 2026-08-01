@@ -13,7 +13,7 @@ export function StatCard({
     <div className="stat-card">
       <p className="stat-label">{label}</p>
       <p className={`stat-value ${color}`}>{value}</p>
-      {sub && <p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p>}
+      {sub && <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{sub}</p>}
     </div>
   )
 }

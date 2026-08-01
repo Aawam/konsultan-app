@@ -29,7 +29,7 @@ function MetricCard({
     <div className="stat-card p-4">
       <p className="stat-label">{label}</p>
       <p className={`mt-1.5 text-xl font-semibold leading-tight ${numeric ? 'font-mono' : ''} ${accent ?? 'text-foreground'}`}>{value}</p>
-      {caption && <p className="mt-1.5 text-[11px] text-muted-foreground">{caption}</p>}
+      {caption && <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{caption}</p>}
     </div>
   )
 }
@@ -108,7 +108,7 @@ export default async function DetailProyekPage({ params }: Props) {
         )}
       />
 
-      <section className="mt-5 rounded-xl border border-border bg-card px-5 py-5 md:px-6 md:py-6">
+      <section className="mt-5 rounded-xl border border-border bg-card px-4 py-5 sm:px-5 md:px-6 md:py-6">
         <div className="flex flex-wrap items-center gap-2">
           <BadgeJenis jenis={proyek.jenis_pekerjaan} />
           <BadgeTahap tahap={proyek.tahap_progress} />
@@ -162,7 +162,7 @@ export default async function DetailProyekPage({ params }: Props) {
               {completeness.missingFields.map((field) => (
                 <span
                   key={field.key}
-                  className="rounded-full border border-amber/30 bg-amber/10 px-2 py-0.5 text-[11px] font-semibold text-amber"
+                  className="rounded-full border border-amber/30 bg-amber/10 px-2 py-0.5 text-xs font-semibold text-amber"
                 >
                   {field.label}
                 </span>
@@ -184,7 +184,7 @@ export default async function DetailProyekPage({ params }: Props) {
         )}
       </DetailCard>
 
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="mt-4 grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {canViewCommercial && (
           <>
             <MetricCard label="Pagu Dana" value={formatRupiah(proyek.pagu_dana)} caption={proyek.sumber_dana} numeric />

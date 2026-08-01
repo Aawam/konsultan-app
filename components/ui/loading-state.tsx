@@ -24,7 +24,7 @@ export function LoadingState({
         <SkeletonBlock className="h-10 w-36" />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: metrics }).map((_, index) => (
           <div key={index} className="rounded-xl border border-border bg-card p-4">
             <SkeletonBlock className="h-3 w-24" />

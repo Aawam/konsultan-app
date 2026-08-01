@@ -4,8 +4,8 @@ import { useCallback, useMemo, useTransition } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ProyekDisplay, getNamaPerusahaan } from '@/lib/types/proyek'
-import { BadgeJenis, BadgeTahap } from '@/components/proyek/badges'
 import { formatCompactRupiah, formatRupiah } from '@/lib/utils'
+import { DashboardRecentProjects } from '@/components/proyek/dashboard-recent-projects'
 import { TabGroup } from '@/components/ui/tab-group'
 import { StatCard, MiniBar } from '@/components/ui/stat-card'
 import { PageHeader } from '@/components/ui/page-header'
@@ -46,7 +46,7 @@ function MetricLinkCard({
     <Link href={href} className="stat-card transition-colors hover:border-brand/60 hover:bg-muted/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
       <p className="stat-label">{label}</p>
       <p className={`stat-value ${color}`}>{value}</p>
-      {sub && <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>}
+      {sub && <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{sub}</p>}
     </Link>
   )
 }
@@ -66,13 +66,13 @@ function ValueBar({
   return (
     <div className="mb-3 last:mb-0">
       <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="truncate text-[12px] font-medium text-foreground">{label}</span>
-        <span className="shrink-0 text-[11px] font-mono text-muted-foreground">{count} proyek</span>
+        <span className="truncate text-xs font-medium text-foreground">{label}</span>
+        <span className="shrink-0 font-mono text-xs text-muted-foreground">{count} proyek</span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full bg-amber" style={{ width: `${width}%` }} />
       </div>
-      <p className="mt-1 text-[11px] font-mono text-muted-foreground">{formatRupiah(value)}</p>
+      <p className="mt-1 font-mono text-xs text-muted-foreground">{formatRupiah(value)}</p>
     </div>
   )
 }
@@ -200,7 +200,7 @@ export function DashboardClient({
             <div className="stat-card">
               <p className="stat-label">Total Kontrak</p>
               <p className="stat-value text-amber">{formatCompactRupiah(stats.nilaiTotal)}</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">Akumulasi nilai tercatat</p>
+              <p className="mt-0.5 text-xs leading-5 text-muted-foreground">Akumulasi nilai tercatat</p>
             </div>
           )}
         </div>
@@ -210,7 +210,9 @@ export function DashboardClient({
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
           <p className="filter-label shrink-0">Periode</p>
           <TabGroup
+            ariaLabel="Filter periode dashboard"
             className="w-full lg:w-auto"
+            buttonClassName="min-h-10 px-3 py-1.5 text-sm lg:min-h-8 lg:text-xs"
             tabs={[
               { label: 'Semua', value: 'semua' as const },
               ...years.map((year) => ({ label: String(year), value: year })),
@@ -224,14 +226,16 @@ export function DashboardClient({
         <div className="flex flex-col gap-2 border-t border-border-subtle pt-3 lg:flex-row lg:items-center">
           <p className="filter-label shrink-0">Filter</p>
           <TabGroup
+            ariaLabel="Filter jenis pekerjaan dashboard"
             className="w-full lg:w-auto lg:shrink-0"
+            buttonClassName="min-h-10 px-3 py-1.5 text-sm lg:min-h-8 lg:text-xs"
             tabs={(['Semua', 'Perencanaan', 'Pengawasan'] as JenisFilter[]).map((jenis) => ({ label: jenis, value: jenis }))}
             value={jenisFilter}
             onChange={(value) => updateFilters({ jenis: value as JenisFilter })}
           />
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:ml-auto lg:flex lg:items-center">
             <Select value={perusahaanFilter} onValueChange={(value) => updateFilters({ perusahaan: value })}>
-              <SelectTrigger className="h-9 min-w-[190px] border-input bg-background text-sm">
+              <SelectTrigger className="h-10 w-full min-w-0 border-input bg-background text-sm lg:h-9 lg:min-w-[190px]">
                 <SelectValue placeholder="Semua perusahaan" />
               </SelectTrigger>
               <SelectContent className="select-content">
@@ -241,7 +245,7 @@ export function DashboardClient({
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(value) => updateFilters({ status: value as StatusFilter })}>
-              <SelectTrigger className="h-9 min-w-[160px] border-input bg-background text-sm">
+              <SelectTrigger className="h-10 w-full min-w-0 border-input bg-background text-sm lg:h-9 lg:min-w-[160px]">
                 <SelectValue placeholder="Semua status" />
               </SelectTrigger>
               <SelectContent className="select-content">
@@ -255,7 +259,7 @@ export function DashboardClient({
       </div>
 
       {/* ── Decision distributions ── */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="section-card">
           <div className="section-header"><p className="section-title">Distribusi Tahap</p></div>
           <div className="section-body">
@@ -285,68 +289,14 @@ export function DashboardClient({
         )}
       </div>
 
-      {/* ── Recent projects ── */}
-      <div className="section-card overflow-hidden">
-        <div className="section-header flex items-center justify-between">
-          <p className="section-title">Proyek Terbaru</p>
-          <Link href="/proyek" className="text-xs text-brand hover:underline">Lihat semua →</Link>
-        </div>
-        <p className="border-b border-border-subtle bg-muted/25 px-4 py-2 text-xs text-muted-foreground md:hidden">
-          Geser tabel ke samping untuk melihat seluruh kolom.
-        </p>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] border-collapse text-sm md:min-w-0">
-            <thead className="border-b border-border bg-muted/45">
-              <tr>
-                <th scope="col" className="table-head px-5 py-3 text-left normal-case tracking-normal">Proyek</th>
-                <th scope="col" className="table-head px-4 py-3 text-left normal-case tracking-normal">Jenis</th>
-                <th scope="col" className="table-head px-4 py-3 text-left normal-case tracking-normal">Tahap</th>
-                <th scope="col" className="table-head px-4 py-3 text-left normal-case tracking-normal">Dinas</th>
-                {canViewCommercial && <th scope="col" className="table-head px-4 py-3 text-right normal-case tracking-normal">Nilai</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {recent.map((p, i) => (
-                <tr
-                  key={p.id}
-                  className={`border-b border-border last:border-0 hover:bg-muted/40 transition-colors ${i % 2 === 0 ? '' : 'bg-muted/20'}`}
-                >
-                  <td className="px-5 py-3 max-w-[260px]">
-                    <Link href={`/proyek/${p.id}`} className="font-medium text-foreground hover:text-brand transition-colors block truncate">
-                      {p.nama_proyek}
-                    </Link>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                      {getNamaPerusahaan(p.perusahaan)}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap"><BadgeJenis jenis={p.jenis_pekerjaan} /></td>
-                  <td className="px-4 py-3 whitespace-nowrap"><BadgeTahap tahap={p.tahap_progress} /></td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground truncate max-w-[140px]">{p.dinas}</td>
-                  {canViewCommercial && (
-                    <td className="px-4 py-3 text-right font-mono text-xs font-semibold whitespace-nowrap">
-                      {p.nilai_penawaran ? formatRupiah(p.nilai_penawaran) : <span className="text-muted-foreground">—</span>}
-                    </td>
-                  )}
-                </tr>
-              ))}
-              {recent.length === 0 && (
-                <tr>
-                  <td colSpan={canViewCommercial ? 5 : 4} className="px-5 py-10 text-center text-sm text-muted-foreground">
-                    Tidak ada proyek
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DashboardRecentProjects projects={recent} canViewCommercial={canViewCommercial} />
 
       <section className="space-y-3" aria-labelledby="dashboard-supporting-title">
         <div>
           <h2 id="dashboard-supporting-title" className="section-title">Distribusi Pendukung</h2>
           <p className="mt-1 text-sm text-muted-foreground">Konteks portofolio setelah prioritas kerja dan proyek terbaru.</p>
         </div>
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <div className="section-card">
             <div className="section-header"><p className="section-title">Top Dinas / SKPD</p></div>
             <div className="section-body">

@@ -114,7 +114,7 @@ function StatCard({
     <>
       <p className="stat-label">{label}</p>
       <p className={`mt-1 font-mono text-xl font-bold leading-none lg:text-2xl ${colorClass}`}>{value}</p>
-      <p className="mt-1 text-[11px] text-muted-foreground">{caption}</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">{caption}</p>
     </>
   )
 
@@ -125,7 +125,7 @@ function StatCard({
 
   if (onClick) {
     return (
-      <button onClick={onClick} className={className}>
+      <button type="button" onClick={onClick} className={className}>
         {content}
       </button>
     )
@@ -155,7 +155,7 @@ function MobileProjectCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">{project.nama_proyek}</p>
+          <p className="line-clamp-2 text-[15px] font-semibold leading-snug text-foreground">{project.nama_proyek}</p>
           <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{project.dinas}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -179,7 +179,7 @@ function MobileProjectCard({
       <div className="mt-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <BadgeWorkflow status={completeness.status} gate={workflowGate} />
-          <p className="mt-1 text-[11px] text-muted-foreground">Update: {formatTanggal(project.updated_at ?? project.created_at ?? null)}</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">Update: {formatTanggal(project.updated_at ?? project.created_at ?? null)}</p>
         </div>
         <div className="shrink-0 text-right">
           <ProgressCell tahap={project.tahap_progress ?? null} persen={project.persentase_progress ?? null} />
@@ -422,6 +422,7 @@ export function ProyekTableClient({
             <>
             {canViewCommercial && (
               <button
+                type="button"
                 onClick={handleExport}
                 disabled={exporting}
                 className="h-10 rounded-lg border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
@@ -480,7 +481,7 @@ export function ProyekTableClient({
         <div className="flex flex-wrap items-center gap-2.5">
 
         {/* Search stays visible because it is the fastest way to find a project. */}
-        <div className="relative min-w-[240px] flex-1">
+        <div className="relative w-full min-w-0 flex-1 sm:min-w-[240px]">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             value={search}
@@ -513,6 +514,7 @@ export function ProyekTableClient({
             const active = !selectedYearIsInDropdown && tahunFilter === tab.value
             return (
               <button
+                type="button"
                 key={tab.value}
                 onClick={() => updateYear(tab.value)}
                 className={[
@@ -529,6 +531,7 @@ export function ProyekTableClient({
           {dropdownYears.length > 0 && (
             <div className="relative" ref={yearDropdownRef}>
               <button
+                type="button"
                 onClick={() => setYearDropdownOpen((o) => !o)}
                 className={`flex h-9 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
                   selectedYearIsInDropdown
@@ -548,6 +551,7 @@ export function ProyekTableClient({
                 <div className="absolute top-full left-0 z-20 mt-1 min-w-[90px] rounded-lg border border-border bg-popover py-1 shadow-md shadow-black/10">
                   {dropdownYears.map((y) => (
                     <button
+                      type="button"
                       key={y}
                       onClick={() => updateYear(y)}
                       className={`w-full text-left px-3 py-1.5 text-sm transition-colors hover:bg-muted ${
@@ -563,8 +567,8 @@ export function ProyekTableClient({
           )}
         </div>
 
-        <details className="group shrink-0 lg:relative">
-          <summary className="flex h-10 cursor-pointer list-none items-center rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden">
+        <details className="group w-full shrink-0 sm:w-auto lg:relative">
+          <summary className="flex h-10 w-full cursor-pointer list-none items-center justify-center rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:w-auto [&::-webkit-details-marker]:hidden">
             Filter lainnya
           </summary>
           <div className="mt-2 grid gap-2 rounded-lg border border-border bg-card p-2 sm:grid-cols-2 lg:absolute lg:right-0 lg:z-20 lg:w-[640px] lg:bg-popover lg:shadow-md lg:shadow-black/10">
@@ -630,7 +634,7 @@ export function ProyekTableClient({
           </button>
         )}
 
-        <span className="ml-auto shrink-0 text-sm text-muted-foreground">
+        <span className="w-full border-t border-border-subtle pt-2 text-xs text-muted-foreground sm:ml-auto sm:w-auto sm:border-0 sm:pt-0 sm:text-sm">
           {pagination.total} proyek{isPending ? ' · memuat...' : ''}
         </span>
         </div>
@@ -649,7 +653,7 @@ export function ProyekTableClient({
       )}
 
       {/* ── Table ── */}
-      <div className="space-y-3 lg:hidden">
+      <div className="grid gap-3 md:grid-cols-2 lg:hidden">
         {proyek.length > 0 ? (
           proyek.map((project) => (
             <MobileProjectCard
@@ -660,7 +664,7 @@ export function ProyekTableClient({
             />
           ))
         ) : (
-          <div className="rounded-xl border border-border bg-card px-4 py-12 text-center text-sm text-muted-foreground">
+          <div className="rounded-xl border border-border bg-card px-4 py-12 text-center text-sm text-muted-foreground md:col-span-2">
             <p>Tidak ada proyek yang sesuai filter</p>
             {hasActiveFilters && (
               <button
@@ -806,9 +810,9 @@ export function ProyekTableClient({
           {' · '}
           {proyek.length} ditampilkan dari {pagination.total} proyek
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
           <Select value={String(pagination.pageSize)} onValueChange={updatePageSize}>
-            <SelectTrigger className="h-9 w-[130px] rounded-lg border-border bg-card px-3 text-sm font-semibold text-foreground">
+            <SelectTrigger className="col-span-2 h-10 w-full rounded-lg border-border bg-card px-3 text-sm font-semibold text-foreground sm:col-auto sm:h-9 sm:w-[130px]">
               <SelectValue placeholder="Per halaman" />
             </SelectTrigger>
             <SelectContent className="select-content">
@@ -823,7 +827,7 @@ export function ProyekTableClient({
             type="button"
             onClick={() => updatePage(pagination.page - 1)}
             disabled={pagination.page <= 1 || isPending}
-            className="h-9 rounded-lg border border-border bg-card px-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+            className="h-10 w-full rounded-lg border border-border bg-card px-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50 sm:h-9 sm:w-auto"
           >
             Sebelumnya
           </button>
@@ -831,7 +835,7 @@ export function ProyekTableClient({
             type="button"
             onClick={() => updatePage(pagination.page + 1)}
             disabled={pagination.page >= pagination.pageCount || isPending}
-            className="h-9 rounded-lg border border-border bg-card px-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+            className="h-10 w-full rounded-lg border border-border bg-card px-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50 sm:h-9 sm:w-auto"
           >
             Berikutnya
           </button>
