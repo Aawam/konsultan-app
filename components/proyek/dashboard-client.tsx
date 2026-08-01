@@ -133,7 +133,10 @@ export function DashboardClient({
     })
   }, [proyek, yearFilter, jenisFilter, perusahaanFilter, statusFilter])
 
-  const stats = useMemo(() => getProjectStats(filtered), [filtered])
+  const stats = useMemo(
+    () => getProjectStats(filtered, { includeCommercial: canViewCommercial }),
+    [canViewCommercial, filtered]
+  )
 
   // By tahap
   const tahapGroups = useMemo(

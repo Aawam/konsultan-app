@@ -8,7 +8,7 @@ vi.mock('@/lib/supabase-server', () => ({
   createSupabaseServerClient: vi.fn(async () => ({ rpc })),
 }))
 
-import { getDaftarProyek, getDaftarProyekPage } from '@/lib/actions/proyek'
+import { getDaftarProyek, getDaftarProyekPage, getProyekListFilterOptions } from '@/lib/actions/proyek'
 
 describe('getDaftarProyekPage', () => {
   beforeEach(() => {
@@ -192,5 +192,93 @@ describe('getDaftarProyekPage', () => {
 
     expect(result.data).toBeNull()
     expect(result.error).toMatchObject({ code: 'INVALID_RPC_RESPONSE' })
+  })
+
+  it('builds technical filter options from the role-safe project projection', async () => {
+    rpc.mockResolvedValueOnce({
+      data: [
+        {
+          id: '00000000-0000-4000-8000-000000000001',
+          nama_proyek: 'Pengawasan Jalan',
+          paket_pekerjaan_induk: 'Jalan Kabupaten',
+          nomor_kontrak: null,
+          jenis_pekerjaan: 'Pengawasan',
+          kategori_pekerjaan: 'Jalan & Jembatan',
+          tahun_anggaran: 2026,
+          sumber_dana: 'APBD',
+          dinas: 'Dinas PUPR',
+          lokasi_kecamatan: 'Tanjung Redeb',
+          nama_ppk: 'Budi',
+          perusahaan_id: '00000000-0000-4000-8000-000000000002',
+          perusahaan_nama: 'Konsultan Berau',
+          perusahaan_adalah_perusahaan_sendiri: true,
+          tanggal_mulai: '2026-01-01',
+          tanggal_selesai: '2026-02-01',
+          durasi_hari: 30,
+          tahap_progress: 'Pelaksanaan Minggu 1',
+          persentase_progress: 10,
+          pernah_dioverride: false,
+          status_proyek: 'Work',
+          jalur_masuk: 'manual',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-02T00:00:00Z',
+          is_deleted: false,
+        },
+        {
+          id: '00000000-0000-4000-8000-000000000003',
+          nama_proyek: 'Perencanaan Drainase',
+          paket_pekerjaan_induk: null,
+          nomor_kontrak: null,
+          jenis_pekerjaan: 'Perencanaan',
+          kategori_pekerjaan: 'SDA',
+          tahun_anggaran: 2025,
+          sumber_dana: 'APBD',
+          dinas: 'Dinas PUPR',
+          lokasi_kecamatan: null,
+          nama_ppk: null,
+          perusahaan_id: '00000000-0000-4000-8000-000000000004',
+          perusahaan_nama: 'Mitra Teknik',
+          perusahaan_adalah_perusahaan_sendiri: false,
+          tanggal_mulai: null,
+          tanggal_selesai: null,
+          durasi_hari: null,
+          tahap_progress: null,
+          persentase_progress: 0,
+          pernah_dioverride: false,
+          status_proyek: null,
+          jalur_masuk: 'manual',
+          created_at: '2025-01-01T00:00:00Z',
+          updated_at: '2025-01-02T00:00:00Z',
+          is_deleted: false,
+        },
+      ],
+      error: null,
+    })
+
+    const result = await getProyekListFilterOptions({
+      includeSensitive: false,
+    })
+
+    expect(result).toEqual({
+      data: {
+        years: [2026, 2025],
+        perusahaanList: [
+          {
+            id: '00000000-0000-4000-8000-000000000002',
+            nama_perusahaan: 'Konsultan Berau',
+            adalah_perusahaan_sendiri: true,
+          },
+          {
+            id: '00000000-0000-4000-8000-000000000004',
+            nama_perusahaan: 'Mitra Teknik',
+            adalah_perusahaan_sendiri: false,
+          },
+        ],
+      },
+      error: null,
+    })
+    expect(rpc).toHaveBeenCalledWith('get_proyek_teknis', {
+      target_proyek_id: undefined,
+    })
   })
 })

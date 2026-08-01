@@ -341,10 +341,39 @@ export async function getDaftarProyekPage(
 export async function getProyekListFilterOptions({
   client,
   cacheScope,
-}: ReferenceQueryOptions = {}) {
+  includeSensitive = true,
+}: ReferenceQueryOptions & { includeSensitive?: boolean } = {}) {
   const supabase = client ?? await createSupabaseServerClient()
 
   return cacheSuccessfulQuery(async () => {
+    if (!includeSensitive) {
+      const { data, error } = await getProyekTeknisRows()
+      if (!data) return { data: null, error }
+
+      const perusahaanById = new Map<string, {
+        id: string
+        nama_perusahaan: string
+        adalah_perusahaan_sendiri: boolean
+      }>()
+
+      for (const row of data) {
+        if (!row.perusahaan_id || !row.perusahaan_nama) continue
+        perusahaanById.set(row.perusahaan_id, {
+          id: row.perusahaan_id,
+          nama_perusahaan: row.perusahaan_nama,
+          adalah_perusahaan_sendiri: row.perusahaan_adalah_perusahaan_sendiri ?? false,
+        })
+      }
+
+      return {
+        data: {
+          years: [...new Set(data.map((row) => row.tahun_anggaran))].sort((a, b) => b - a),
+          perusahaanList: orderPerusahaanList([...perusahaanById.values()]),
+        },
+        error: null,
+      }
+    }
+
     const [yearsQuery, perusahaanQuery] = await Promise.all([
       supabase
         .from('proyek')
@@ -365,7 +394,7 @@ export async function getProyekListFilterOptions({
     }
   }, {
     scope: cacheScope,
-    keyParts: ['proyek-list-filter-options'],
+    keyParts: ['proyek-list-filter-options', includeSensitive ? 'commercial' : 'technical'],
     tags: [CACHE_TAGS.proyek, CACHE_TAGS.perusahaan],
   })
 }

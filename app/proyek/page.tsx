@@ -54,7 +54,7 @@ export default async function DaftarProyekPage({ searchParams }: { searchParams:
   const cacheScope = getUserCacheScope(profile)
   const [{ data: proyekPage, error }, { data: filterOptions, error: filterError }] = await Promise.all([
     getDaftarProyekPage(filters, { includeSensitive: canViewCommercial }),
-    getProyekListFilterOptions({ cacheScope }),
+    getProyekListFilterOptions({ cacheScope, includeSensitive: canViewCommercial }),
   ])
 
   if (error || filterError) return <PageError error={error ?? filterError} />
