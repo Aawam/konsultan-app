@@ -1,5 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+const PRIVATE_NO_STORE_HEADERS = {
+  'Cache-Control': 'private, no-store, max-age=0',
+}
+
+function privateJson<T>(body: T, status: number) {
+  return NextResponse.json(body, {
+    status,
+    headers: PRIVATE_NO_STORE_HEADERS,
+  })
+}
+
 export type ApiErrorCode =
   | 'BAD_REQUEST'
   | 'UNAUTHORIZED'
@@ -28,17 +39,17 @@ export function apiError(
   details?: unknown
 ) {
   if (errorCode === 'INTERNAL_ERROR') {
-    return NextResponse.json({
+    return privateJson({
       error: 'Terjadi kesalahan pada server. Silakan coba lagi.',
       errorCode,
-    }, { status })
+    }, status)
   }
 
   const body: ApiErrorBody = details === undefined
     ? { error: message, errorCode }
     : { error: message, errorCode, details }
 
-  return NextResponse.json(body, { status })
+  return privateJson(body, status)
 }
 
 export function apiUnauthorized(message = 'Unauthorized') {
@@ -46,11 +57,11 @@ export function apiUnauthorized(message = 'Unauthorized') {
 }
 
 export function apiData<T>(data: T, status = 200) {
-  return NextResponse.json<ApiSuccessBody<T>>({ data }, { status })
+  return privateJson<ApiSuccessBody<T>>({ data }, status)
 }
 
 export function apiOk(status = 200) {
-  return NextResponse.json({ ok: true }, { status })
+  return privateJson({ ok: true }, status)
 }
 
 export async function readJsonBody<T>(req: NextRequest) {
