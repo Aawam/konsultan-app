@@ -40,7 +40,7 @@ describe('GET /api/proyek/[id]', () => {
         id: '00000000-0000-4000-8000-000000000002',
         email: 'teknis@example.com',
         nama: 'Tenaga Ahli',
-        role: 'Teknis',
+        role: 'tenaga_ahli',
       },
       response: null,
     })
@@ -95,5 +95,51 @@ describe('GET /api/proyek/[id]', () => {
     })
     expect(getProyekById).toHaveBeenCalledWith(projectId, { includeSensitive: false })
     expect(getOverrideLogsByProyekId).not.toHaveBeenCalled()
+  })
+
+  it('keeps commercial data and override logs available for Owner/Admin', async () => {
+    requireCurrentUserProfileApi.mockResolvedValueOnce({
+      profile: {
+        id: '00000000-0000-4000-8000-000000000003',
+        email: 'owner@example.com',
+        nama: 'Owner',
+        role: 'owner_admin',
+      },
+      response: null,
+    })
+    getProyekById.mockResolvedValueOnce({
+      data: {
+        id: projectId,
+        nama_proyek: 'Pengawasan Jalan',
+        pagu_dana: 500_000_000,
+        hps: 450_000_000,
+        nilai_penawaran: 400_000_000,
+        catatan: 'Catatan internal',
+      },
+      error: null,
+    })
+    getOverrideLogsByProyekId.mockResolvedValueOnce({
+      data: [{ id: 'override-1', field_dioverride: 'nilai_penawaran' }],
+      error: null,
+    })
+
+    const response = await GET(
+      new Request(`http://localhost/api/proyek/${projectId}`) as NextRequest,
+      { params: Promise.resolve({ id: projectId }) }
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      data: {
+        proyek: {
+          pagu_dana: 500_000_000,
+          nilai_penawaran: 400_000_000,
+          catatan: 'Catatan internal',
+        },
+        overrideLogs: [{ id: 'override-1' }],
+      },
+    })
+    expect(getProyekById).toHaveBeenCalledWith(projectId, { includeSensitive: true })
+    expect(getOverrideLogsByProyekId).toHaveBeenCalledWith(projectId)
   })
 })
