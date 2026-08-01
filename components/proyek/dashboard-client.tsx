@@ -210,7 +210,7 @@ export function DashboardClient({
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
           <p className="filter-label shrink-0">Periode</p>
           <TabGroup
-            className="max-w-full overflow-x-auto"
+            className="w-full lg:w-auto"
             tabs={[
               { label: 'Semua', value: 'semua' as const },
               ...years.map((year) => ({ label: String(year), value: year })),
@@ -224,7 +224,7 @@ export function DashboardClient({
         <div className="flex flex-col gap-2 border-t border-border-subtle pt-3 lg:flex-row lg:items-center">
           <p className="filter-label shrink-0">Filter</p>
           <TabGroup
-            className="shrink-0"
+            className="w-full lg:w-auto lg:shrink-0"
             tabs={(['Semua', 'Perencanaan', 'Pengawasan'] as JenisFilter[]).map((jenis) => ({ label: jenis, value: jenis }))}
             value={jenisFilter}
             onChange={(value) => updateFilters({ jenis: value as JenisFilter })}
@@ -291,49 +291,54 @@ export function DashboardClient({
           <p className="section-title">Proyek Terbaru</p>
           <Link href="/proyek" className="text-xs text-brand hover:underline">Lihat semua →</Link>
         </div>
-        <table className="w-full border-collapse text-sm">
-          <thead className="border-b border-border bg-muted/45">
-            <tr>
-              <th scope="col" className="table-head px-5 py-3 text-left normal-case tracking-normal">Proyek</th>
-              <th scope="col" className="table-head px-4 py-3 text-left normal-case tracking-normal">Jenis</th>
-              <th scope="col" className="table-head px-4 py-3 text-left normal-case tracking-normal">Tahap</th>
-              <th scope="col" className="table-head px-4 py-3 text-left normal-case tracking-normal">Dinas</th>
-              {canViewCommercial && <th scope="col" className="table-head px-4 py-3 text-right normal-case tracking-normal">Nilai</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {recent.map((p, i) => (
-              <tr
-                key={p.id}
-                className={`border-b border-border last:border-0 hover:bg-muted/40 transition-colors ${i % 2 === 0 ? '' : 'bg-muted/20'}`}
-              >
-                <td className="px-5 py-3 max-w-[260px]">
-                  <Link href={`/proyek/${p.id}`} className="font-medium text-foreground hover:text-brand transition-colors block truncate">
-                    {p.nama_proyek}
-                  </Link>
-                  <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                    {getNamaPerusahaan(p.perusahaan)}
-                  </p>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap"><BadgeJenis jenis={p.jenis_pekerjaan} /></td>
-                <td className="px-4 py-3 whitespace-nowrap"><BadgeTahap tahap={p.tahap_progress} /></td>
-                <td className="px-4 py-3 text-xs text-muted-foreground truncate max-w-[140px]">{p.dinas}</td>
-                {canViewCommercial && (
-                  <td className="px-4 py-3 text-right font-mono text-xs font-semibold whitespace-nowrap">
-                    {p.nilai_penawaran ? formatRupiah(p.nilai_penawaran) : <span className="text-muted-foreground">—</span>}
-                  </td>
-                )}
-              </tr>
-            ))}
-            {recent.length === 0 && (
+        <p className="border-b border-border-subtle bg-muted/25 px-4 py-2 text-xs text-muted-foreground md:hidden">
+          Geser tabel ke samping untuk melihat seluruh kolom.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] border-collapse text-sm md:min-w-0">
+            <thead className="border-b border-border bg-muted/45">
               <tr>
-                <td colSpan={canViewCommercial ? 5 : 4} className="px-5 py-10 text-center text-sm text-muted-foreground">
-                  Tidak ada proyek
-                </td>
+                <th scope="col" className="table-head px-5 py-3 text-left normal-case tracking-normal">Proyek</th>
+                <th scope="col" className="table-head px-4 py-3 text-left normal-case tracking-normal">Jenis</th>
+                <th scope="col" className="table-head px-4 py-3 text-left normal-case tracking-normal">Tahap</th>
+                <th scope="col" className="table-head px-4 py-3 text-left normal-case tracking-normal">Dinas</th>
+                {canViewCommercial && <th scope="col" className="table-head px-4 py-3 text-right normal-case tracking-normal">Nilai</th>}
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {recent.map((p, i) => (
+                <tr
+                  key={p.id}
+                  className={`border-b border-border last:border-0 hover:bg-muted/40 transition-colors ${i % 2 === 0 ? '' : 'bg-muted/20'}`}
+                >
+                  <td className="px-5 py-3 max-w-[260px]">
+                    <Link href={`/proyek/${p.id}`} className="font-medium text-foreground hover:text-brand transition-colors block truncate">
+                      {p.nama_proyek}
+                    </Link>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                      {getNamaPerusahaan(p.perusahaan)}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap"><BadgeJenis jenis={p.jenis_pekerjaan} /></td>
+                  <td className="px-4 py-3 whitespace-nowrap"><BadgeTahap tahap={p.tahap_progress} /></td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground truncate max-w-[140px]">{p.dinas}</td>
+                  {canViewCommercial && (
+                    <td className="px-4 py-3 text-right font-mono text-xs font-semibold whitespace-nowrap">
+                      {p.nilai_penawaran ? formatRupiah(p.nilai_penawaran) : <span className="text-muted-foreground">—</span>}
+                    </td>
+                  )}
+                </tr>
+              ))}
+              {recent.length === 0 && (
+                <tr>
+                  <td colSpan={canViewCommercial ? 5 : 4} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                    Tidak ada proyek
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <section className="space-y-3" aria-labelledby="dashboard-supporting-title">

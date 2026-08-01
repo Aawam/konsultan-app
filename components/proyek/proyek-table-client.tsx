@@ -501,7 +501,11 @@ export function ProyekTableClient({
         </div>
 
         {/* Year tabs: last 3 inline, older years in dropdown */}
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
+        <div
+          role="group"
+          aria-label="Filter tahun anggaran"
+          className="flex w-full min-w-0 flex-nowrap items-center gap-2 overflow-x-auto pb-1 lg:w-auto lg:flex-wrap lg:overflow-visible lg:pb-0"
+        >
           {[
             { label: 'Semua', value: 'semua' as const },
             ...inlineYears.map((t) => ({ label: String(t), value: t })),
@@ -512,7 +516,7 @@ export function ProyekTableClient({
                 key={tab.value}
                 onClick={() => updateYear(tab.value)}
                 className={[
-                  'h-9 rounded-lg border px-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
+                  'h-9 shrink-0 rounded-lg border px-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
                   active
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground',

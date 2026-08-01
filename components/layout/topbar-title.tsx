@@ -21,11 +21,11 @@ export function TopbarTitle() {
       : { crumb: 'Konsulindo', title: 'Project Suite' })
 
   return (
-    <div>
+    <div className="min-w-0">
       <p className="hidden text-[9px] font-mono uppercase tracking-[0.12em] text-muted-foreground sm:block">
         {match.crumb}
       </p>
-      <p className="text-[13px] font-semibold leading-tight text-foreground lg:text-[14px]">{match.title}</p>
+      <p className="truncate text-[13px] font-semibold leading-tight text-foreground lg:text-[14px]">{match.title}</p>
     </div>
   )
 }

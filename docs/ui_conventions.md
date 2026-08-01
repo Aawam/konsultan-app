@@ -248,11 +248,21 @@ Conventions:
 
 Sidebar nav groups currently:
 
-- Monitoring: Daftar Proyek, Dashboard.
-- Dokumen: Generator Penawaran, Generator BAP, disabled in nav.
-- Referensi: Database Perusahaan.
+- Owner/Admin: Tambah Proyek, Monitoring (Daftar Proyek, Dashboard), dan Database (Perusahaan, Tenaga Ahli).
+- Tenaga Ahli: Monitoring (Daftar Proyek, Dashboard).
 
 Active nav uses `bg-brand/10 text-brand` and a thin left brand rail. Disabled items use muted text and `cursor-not-allowed`.
+
+- Every enabled navigation item exposes its label in a tooltip on pointer hover and keyboard focus.
+- The account identity in the sidebar footer is the account-menu trigger. Its menu opens upward and contains the logout action.
+- At `1024px` and wider, the sidebar is permanently icon-only and does not expose an expand/collapse control.
+- Below `1024px`, navigation uses an overlay drawer with complete labels. Selecting a navigation item closes the drawer.
+
+Responsive foundation:
+
+- Monitoring pages must remain readable at `320px`, `768px`, `1024px`, and `1440px` without document-level horizontal overflow.
+- Dense monitoring tables may switch to compact cards or use a clearly labelled, locally scrollable table container on smaller screens.
+- Desktop-only workflow editors may provide a mobile notice instead of full mobile feature parity, but navigation and account actions must remain available.
 
 ---
 
