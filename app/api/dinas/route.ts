@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import { apiData, apiError, apiUnauthorized, readJsonBody } from '@/lib/api-response'
 import { requireOwnerAdminApi } from '@/lib/api-auth'
+import { invalidateDinasCache } from '@/lib/cache-invalidation'
 
 export async function POST(req: NextRequest) {
   const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh menambah dinas.')
@@ -25,5 +26,6 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  invalidateDinasCache()
   return apiData({ id: data.id as string, dinas: data.nama_dinas as string }, 201)
 }

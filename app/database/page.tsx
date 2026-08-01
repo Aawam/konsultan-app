@@ -4,15 +4,17 @@ import { PageError } from '@/components/ui/page-error'
 import { DatabaseClient } from '@/components/database/database-client'
 import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import { getUserCacheScope } from '@/lib/query-cache'
 
 export default async function DatabasePage() {
   const { profile } = await getCurrentUserProfile()
   if (!isOwnerAdmin(profile)) redirect('/proyek')
+  const cacheScope = getUserCacheScope(profile)
 
   const [perusahaanResult, proyekResult, dinasResult] = await Promise.all([
-    getPerusahaanDetailList(),
+    getPerusahaanDetailList(cacheScope),
     getDaftarProyek(),
-    getDinasList(),
+    getDinasList({ cacheScope }),
   ])
 
   const error = perusahaanResult.error ?? proyekResult.error ?? dinasResult.error

@@ -5,14 +5,17 @@ import { PageError } from '@/components/ui/page-error'
 import { PageHeader } from '@/components/ui/page-header'
 import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 import { notFound } from 'next/navigation'
+import { getUserCacheScope } from '@/lib/query-cache'
 
 export default async function TambahProyekPage() {
   const { profile } = await getCurrentUserProfile()
   if (!isOwnerAdmin(profile)) notFound()
 
-  const { data, error } = await getProyekFormReferences()
+  const { data, error } = await getProyekFormReferences({
+    cacheScope: getUserCacheScope(profile),
+  })
 
-  if (error) return <PageError error={error} />
+  if (error || !data) return <PageError error={error ?? new Error('Referensi proyek tidak tersedia.')} />
 
   return (
     <div className="mx-auto max-w-7xl pb-10">

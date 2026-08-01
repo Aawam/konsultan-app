@@ -3,6 +3,7 @@ import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import type { PerusahaanFormData } from '@/lib/types/perusahaan'
 import { apiData, apiError, apiUnauthorized, readJsonBody } from '@/lib/api-response'
 import { requireOwnerAdminApi } from '@/lib/api-auth'
+import { invalidatePerusahaanCache } from '@/lib/cache-invalidation'
 
 export async function POST(req: NextRequest) {
   const forbidden = await requireOwnerAdminApi('Hanya Owner/Admin yang boleh menambah perusahaan.')
@@ -42,5 +43,6 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  invalidatePerusahaanCache()
   return apiData(data, 201)
 }

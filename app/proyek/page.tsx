@@ -10,6 +10,7 @@ import { PageError } from '@/components/ui/page-error'
 import type { ProjectJenisFilter, ProjectProgressFilter, ProjectStatusFilter } from '@/lib/proyek-analytics'
 import { Suspense } from 'react'
 import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
+import { getUserCacheScope } from '@/lib/query-cache'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
@@ -50,9 +51,10 @@ export default async function DaftarProyekPage({ searchParams }: { searchParams:
   const filters = parseFilters(await searchParams)
   const { profile } = await getCurrentUserProfile()
   const canViewCommercial = isOwnerAdmin(profile)
+  const cacheScope = getUserCacheScope(profile)
   const [{ data: proyekPage, error }, { data: filterOptions, error: filterError }] = await Promise.all([
     getDaftarProyekPage(filters, { includeSensitive: canViewCommercial }),
-    getProyekListFilterOptions(),
+    getProyekListFilterOptions({ cacheScope }),
   ])
 
   if (error || filterError) return <PageError error={error ?? filterError} />

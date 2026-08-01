@@ -11,6 +11,7 @@ import { proyekSchema } from '@/lib/validations/proyek'
 import type { ProyekFormData } from '@/lib/types/proyek'
 import { parseNumberInput } from '@/lib/utils'
 import { requireOwnerAdminApi } from '@/lib/api-auth'
+import { invalidateProyekCache } from '@/lib/cache-invalidation'
 
 export async function GET(
   _req: NextRequest,
@@ -90,6 +91,7 @@ export async function PATCH(
     .single()
 
   if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  invalidateProyekCache()
   return apiData(data)
 }
 
@@ -109,5 +111,6 @@ export async function DELETE(
     .eq('id', id)
 
   if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  invalidateProyekCache()
   return apiOk()
 }

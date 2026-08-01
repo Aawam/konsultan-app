@@ -3,6 +3,7 @@ import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import type { PerusahaanFormData } from '@/lib/types/perusahaan'
 import { apiData, apiError, apiOk, apiUnauthorized, readJsonBody } from '@/lib/api-response'
 import { requireOwnerAdminApi } from '@/lib/api-auth'
+import { invalidatePerusahaanCache } from '@/lib/cache-invalidation'
 
 export async function PATCH(
   req: NextRequest,
@@ -47,6 +48,7 @@ export async function PATCH(
     .single()
 
   if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  invalidatePerusahaanCache()
   return apiData(data)
 }
 
@@ -77,5 +79,6 @@ export async function DELETE(
     .eq('id', id)
 
   if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  invalidatePerusahaanCache()
   return apiOk()
 }

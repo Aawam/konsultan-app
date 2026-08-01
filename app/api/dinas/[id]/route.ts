@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import { apiData, apiError, apiOk, apiUnauthorized, readJsonBody } from '@/lib/api-response'
 import { requireOwnerAdminApi } from '@/lib/api-auth'
+import { invalidateDinasCache } from '@/lib/cache-invalidation'
 
 export async function PATCH(
   req: NextRequest,
@@ -40,6 +41,7 @@ export async function PATCH(
     .eq('dinas', namaLama)
 
   if (proyekError) return apiError('INTERNAL_ERROR', proyekError.message, 500)
+  invalidateDinasCache()
 
   const { data, error } = await supabase
     .from('dinas_skpd')
@@ -49,6 +51,7 @@ export async function PATCH(
     .single()
 
   if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  invalidateDinasCache()
   return apiData({ id: data.id as string, dinas: data.nama_dinas as string })
 }
 
@@ -89,5 +92,6 @@ export async function DELETE(
     .eq('id', id)
 
   if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  invalidateDinasCache()
   return apiOk()
 }

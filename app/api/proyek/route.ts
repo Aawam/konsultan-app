@@ -7,6 +7,7 @@ import { proyekSchema } from '@/lib/validations/proyek'
 import type { ProyekFormData } from '@/lib/types/proyek'
 import { parseNumberInput } from '@/lib/utils'
 import { requireOwnerAdminApi } from '@/lib/api-auth'
+import { invalidateProyekCache } from '@/lib/cache-invalidation'
 
 export async function POST(req: NextRequest) {
   const { data: body, error: bodyError } = await readJsonBody<ProyekFormData>(req)
@@ -39,5 +40,6 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return apiError('INTERNAL_ERROR', error.message, 500)
+  invalidateProyekCache()
   return apiData(data, 201)
 }

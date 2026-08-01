@@ -5,6 +5,7 @@ import type { ProyekFormData } from '@/lib/types/proyek'
 import Link from 'next/link'
 import { PageError } from '@/components/ui/page-error'
 import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
+import { getUserCacheScope } from '@/lib/query-cache'
 
 export default async function EditProyekPage({
   params,
@@ -15,7 +16,7 @@ export default async function EditProyekPage({
   const { profile } = await getCurrentUserProfile()
   if (!isOwnerAdmin(profile)) notFound()
 
-  const { data, error } = await getProyekEditData(id)
+  const { data, error } = await getProyekEditData(id, getUserCacheScope(profile))
   const { proyek, perusahaanList, dinasList } = data
 
   if (!proyek) notFound()

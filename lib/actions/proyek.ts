@@ -10,11 +10,17 @@ import type { DinasOption, ProyekDetail, ProyekDisplay, ProyekFormData, ProyekPa
 import type { ProjectJenisFilter, ProjectProgressFilter, ProjectStatusFilter, ProjectYearFilter } from '@/lib/proyek-analytics'
 import { proyekSchema } from '@/lib/validations/proyek'
 import { parseNumberInput } from '@/lib/utils'
+import { CACHE_TAGS, cacheSuccessfulQuery } from '@/lib/query-cache'
 import { z } from 'zod'
 
 // ── Queries ──────────────────────────────────────────────────────────────────
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>
+
+type ReferenceQueryOptions = {
+  client?: SupabaseServerClient
+  cacheScope?: string
+}
 
 export type ProyekListFilters = {
   page: number
@@ -332,36 +338,56 @@ export async function getDaftarProyekPage(
   }
 }
 
-export async function getProyekListFilterOptions(client?: SupabaseServerClient) {
+export async function getProyekListFilterOptions({
+  client,
+  cacheScope,
+}: ReferenceQueryOptions = {}) {
   const supabase = client ?? await createSupabaseServerClient()
-  const [yearsQuery, perusahaanQuery] = await Promise.all([
-    supabase
-      .from('proyek')
-      .select('tahun_anggaran')
-      .eq('is_deleted', false)
-      .order('tahun_anggaran', { ascending: false }),
-    getPerusahaanList(supabase),
-  ])
 
-  const years = [...new Set((yearsQuery.data ?? []).map((row) => row.tahun_anggaran))]
+  return cacheSuccessfulQuery(async () => {
+    const [yearsQuery, perusahaanQuery] = await Promise.all([
+      supabase
+        .from('proyek')
+        .select('tahun_anggaran')
+        .eq('is_deleted', false)
+        .order('tahun_anggaran', { ascending: false }),
+      getPerusahaanList({ client: supabase }),
+    ])
 
-  return {
-    data: {
-      years,
-      perusahaanList: orderPerusahaanList(perusahaanQuery.data ?? []),
-    },
-    error: yearsQuery.error ?? perusahaanQuery.error,
-  }
+    const years = [...new Set((yearsQuery.data ?? []).map((row) => row.tahun_anggaran))]
+
+    return {
+      data: {
+        years,
+        perusahaanList: orderPerusahaanList(perusahaanQuery.data ?? []),
+      },
+      error: yearsQuery.error ?? perusahaanQuery.error,
+    }
+  }, {
+    scope: cacheScope,
+    keyParts: ['proyek-list-filter-options'],
+    tags: [CACHE_TAGS.proyek, CACHE_TAGS.perusahaan],
+  })
 }
 
-export async function getPerusahaanList(client?: SupabaseServerClient) {
+export async function getPerusahaanList({
+  client,
+  cacheScope,
+}: ReferenceQueryOptions = {}) {
   const supabase = client ?? await createSupabaseServerClient()
-  const { data, error } = await supabase
-    .from('perusahaan')
-    .select('id, nama_perusahaan, adalah_perusahaan_sendiri')
-    .order('nama_perusahaan')
 
-  return { data, error }
+  return cacheSuccessfulQuery(async () => {
+    const { data, error } = await supabase
+      .from('perusahaan')
+      .select('id, nama_perusahaan, adalah_perusahaan_sendiri')
+      .order('nama_perusahaan')
+
+    return { data, error }
+  }, {
+    scope: cacheScope,
+    keyParts: ['perusahaan-list'],
+    tags: [CACHE_TAGS.perusahaan],
+  })
 }
 
 export function orderPerusahaanList<T extends {
@@ -376,60 +402,73 @@ export function orderPerusahaanList<T extends {
   })
 }
 
-export async function getDinasList(client?: SupabaseServerClient) {
+export async function getDinasList({
+  client,
+  cacheScope,
+}: ReferenceQueryOptions = {}) {
   const supabase = client ?? await createSupabaseServerClient()
-  const dinasTableClient = supabase as unknown as {
-    from: (table: 'dinas_skpd') => {
-      select: (columns: string) => {
-        order: (
-          column: string,
-          options: { ascending: boolean }
-        ) => Promise<{
-          data: { id: string; nama_dinas: string | null }[] | null
-          error: { message: string } | null
-        }>
+
+  return cacheSuccessfulQuery(async () => {
+    const dinasTableClient = supabase as unknown as {
+      from: (table: 'dinas_skpd') => {
+        select: (columns: string) => {
+          order: (
+            column: string,
+            options: { ascending: boolean }
+          ) => Promise<{
+            data: { id: string; nama_dinas: string | null }[] | null
+            error: { message: string } | null
+          }>
+        }
       }
     }
-  }
-  const [dinasTableQuery, proyekQuery] = await Promise.all([
-    dinasTableClient
-      .from('dinas_skpd')
-      .select('id, nama_dinas')
-      .order('nama_dinas', { ascending: true }),
-    supabase
-      .from('proyek')
-      .select('dinas')
-      .eq('is_deleted', false)
-      .order('dinas', { ascending: true }),
-  ])
+    const [dinasTableQuery, proyekQuery] = await Promise.all([
+      dinasTableClient
+        .from('dinas_skpd')
+        .select('id, nama_dinas')
+        .order('nama_dinas', { ascending: true }),
+      supabase
+        .from('proyek')
+        .select('dinas')
+        .eq('is_deleted', false)
+        .order('dinas', { ascending: true }),
+    ])
 
-  const merged = new Map<string, DinasOption>()
+    const merged = new Map<string, DinasOption>()
 
-  if (!dinasTableQuery.error) {
-    for (const row of dinasTableQuery.data ?? []) {
-      const nama = row.nama_dinas?.trim()
-      if (!nama) continue
-      merged.set(nama, { id: row.id, dinas: nama })
+    if (!dinasTableQuery.error) {
+      for (const row of dinasTableQuery.data ?? []) {
+        const nama = row.nama_dinas?.trim()
+        if (!nama) continue
+        merged.set(nama, { id: row.id, dinas: nama })
+      }
     }
-  }
 
-  for (const row of proyekQuery.data ?? []) {
-    const nama = row.dinas?.trim()
-    if (!nama || merged.has(nama)) continue
-    merged.set(nama, { dinas: nama })
-  }
+    for (const row of proyekQuery.data ?? []) {
+      const nama = row.dinas?.trim()
+      if (!nama || merged.has(nama)) continue
+      merged.set(nama, { dinas: nama })
+    }
 
-  return {
-    data: [...merged.values()].sort((a, b) => a.dinas.localeCompare(b.dinas)),
-    error: proyekQuery.error ?? null,
-  }
+    return {
+      data: [...merged.values()].sort((a, b) => a.dinas.localeCompare(b.dinas)),
+      error: proyekQuery.error ?? null,
+    }
+  }, {
+    scope: cacheScope,
+    keyParts: ['dinas-list'],
+    tags: [CACHE_TAGS.dinas, CACHE_TAGS.proyek],
+  })
 }
 
-export async function getProyekFormReferences(client?: SupabaseServerClient) {
+export async function getProyekFormReferences({
+  client,
+  cacheScope,
+}: ReferenceQueryOptions = {}) {
   const supabase = client ?? await createSupabaseServerClient()
   const [{ data: perusahaan, error }, { data: dinasList, error: dinasError }] = await Promise.all([
-    getPerusahaanList(supabase),
-    getDinasList(supabase),
+    getPerusahaanList({ client: supabase, cacheScope }),
+    getDinasList({ client: supabase, cacheScope }),
   ])
 
   return {
@@ -480,18 +519,18 @@ export async function getProyekById(
   }
 }
 
-export async function getProyekEditData(id: string) {
+export async function getProyekEditData(id: string, cacheScope?: string) {
   const supabase = await createSupabaseServerClient()
   const [{ data: proyek, error }, { data: references, error: referenceError }] = await Promise.all([
     getProyekById(id, { client: supabase, includeSensitive: true }),
-    getProyekFormReferences(supabase),
+    getProyekFormReferences({ client: supabase, cacheScope }),
   ])
 
   return {
     data: {
       proyek,
-      perusahaanList: references.perusahaanList,
-      dinasList: references.dinasList,
+      perusahaanList: references?.perusahaanList ?? [],
+      dinasList: references?.dinasList ?? [],
     },
     error: error ?? referenceError,
   }

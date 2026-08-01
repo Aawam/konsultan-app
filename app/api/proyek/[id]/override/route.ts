@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createAuthenticatedSupabaseServerClient } from '@/lib/supabase-server'
 import { apiError, apiOk, apiUnauthorized, readJsonBody } from '@/lib/api-response'
 import { requireOwnerAdminApi } from '@/lib/api-auth'
+import { invalidateProyekCache } from '@/lib/cache-invalidation'
 
 export async function POST(
   req: NextRequest,
@@ -41,6 +42,8 @@ export async function POST(
       }))
     ),
   ])
+
+  if (!proyekError) invalidateProyekCache()
 
   const error = proyekError ?? logError
   if (error) return apiError('INTERNAL_ERROR', error.message, 500)
