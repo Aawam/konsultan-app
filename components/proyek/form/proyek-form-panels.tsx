@@ -63,7 +63,7 @@ export function ProyekFormProgressPanel({
   }
 
   return (
-    <aside className={`rounded-2xl border border-border bg-card p-5 xl:sticky xl:top-20 xl:self-start ${className}`}>
+    <aside className={`rounded-2xl border border-border bg-card p-5 lg:sticky lg:top-20 lg:self-start ${className}`}>
       <h2 className="text-base font-bold text-foreground">Progress Pengisian</h2>
       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
         Isi data berurutan. Field bertanda * wajib diisi.

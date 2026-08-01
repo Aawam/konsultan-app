@@ -18,13 +18,14 @@ import {
   type ProjectProgressFilter,
   type ProjectStatusFilter,
 } from '@/lib/proyek-analytics'
-import { formatRupiah, formatTanggal } from '@/lib/utils'
+import { formatCompactRupiah, formatTanggal } from '@/lib/utils'
 import { toast } from 'sonner'
 import { getNamaPerusahaan, type ProyekDisplay } from '@/lib/types/proyek'
 import { ProyekSlideover } from '@/components/proyek/proyek-slideover'
 import type { ProyekListFilters } from '@/lib/actions/proyek'
 import { PageHeader } from '@/components/ui/page-header'
 import { evaluateProjectCompleteness, getProjectWorkflowGate } from '@/lib/project-completeness'
+import { getProjectTableColumns, getProjectTableMinWidth } from '@/components/proyek/project-table-layout'
 
 type JenisFilter = 'Semua' | 'Perencanaan' | 'Pengawasan'
 type CsvValue = string | number | boolean | null | undefined
@@ -92,16 +93,6 @@ function downloadCsv(rows: CsvRow[], filename: string) {
   link.download = filename
   link.click()
   URL.revokeObjectURL(url)
-}
-
-function formatCompactRupiah(nilai: number) {
-  if (nilai >= 1_000_000_000) {
-    return `Rp ${(nilai / 1_000_000_000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} M`
-  }
-  if (nilai >= 1_000_000) {
-    return `Rp ${(nilai / 1_000_000).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt`
-  }
-  return formatRupiah(nilai)
 }
 
 function StatCard({
@@ -231,6 +222,8 @@ export function ProyekTableClient({
   canViewCommercial?: boolean
   canManageProjects?: boolean
 }) {
+  const tableColumns = getProjectTableColumns(canViewCommercial)
+  const tableMinWidth = getProjectTableMinWidth(canViewCommercial)
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -381,13 +374,6 @@ export function ProyekTableClient({
     setExporting(false)
   }
 
-  function toggleJenis(jenis: 'Perencanaan' | 'Pengawasan') {
-    const next = jenisFilter === jenis ? 'Semua' : jenis
-    setProgressFilter('semua')
-    setJenisFilter(next)
-    replaceQuery({ jenis: next, progress: null, page: null })
-  }
-
   function updateYear(value: number | 'semua') {
     setTahunFilter(value)
     setYearDropdownOpen(false)
@@ -457,10 +443,7 @@ export function ProyekTableClient({
       )}
 
       {/* ── Stat strip ── */}
-      <div className={canViewCommercial
-        ? 'grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-3 lg:gap-3 xl:grid-cols-[repeat(5,minmax(0,1fr))_minmax(220px,1.45fr)]'
-        : 'grid grid-cols-2 gap-2 sm:grid-cols-3 lg:gap-3 xl:grid-cols-5'
-      }>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:gap-3">
         <StatCard
           label="Sedang Berjalan"
           value={stats.berjalan}
@@ -475,6 +458,14 @@ export function ProyekTableClient({
           active={progressFilter === 'berjalan'}
         />
         <StatCard
+          label="Butuh Review"
+          value={stats.perluUpdate}
+          caption="Di halaman ini"
+          colorClass="text-amber"
+          onClick={() => updateProgress(progressFilter === 'perlu_update' ? 'semua' : 'perlu_update')}
+          active={progressFilter === 'perlu_update'}
+        />
+        <StatCard
           label="Selesai"
           value={stats.selesai}
           caption="Di halaman ini"
@@ -482,36 +473,32 @@ export function ProyekTableClient({
           onClick={() => updateProgress(progressFilter === 'selesai' ? 'semua' : 'selesai')}
           active={progressFilter === 'selesai'}
         />
-        <StatCard
-          label="Perencanaan"
-          value={stats.perencanaan}
-          caption="Di halaman ini"
-          colorClass="text-violet"
-          onClick={() => toggleJenis('Perencanaan')}
-          active={jenisFilter === 'Perencanaan'}
-        />
-        <StatCard
-          label="Pengawasan"
-          value={stats.pengawasan}
-          caption="Di halaman ini"
-          colorClass="text-teal"
-          onClick={() => toggleJenis('Pengawasan')}
-          active={jenisFilter === 'Pengawasan'}
-        />
-        <StatCard label="Total Proyek" value={pagination.total} caption="Sesuai filter" />
-        {canViewCommercial && (
-          <StatCard
-            label="Total Kontrak"
-            value={formatCompactRupiah(stats.nilaiTotal)}
-            caption="Di halaman ini"
-            colorClass="text-amber"
-          />
-        )}
       </div>
 
-      {/* ── Toolbar ── */}
+      {/* ── Find and filter ── */}
       <div className="rounded-xl border border-border bg-card p-3">
         <div className="flex flex-wrap items-center gap-2.5">
+
+        {/* Search stays visible because it is the fastest way to find a project. */}
+        <div className="relative min-w-[240px] flex-1">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari nama proyek, dinas, kecamatan…"
+            className="h-10 w-full rounded-lg border border-input bg-background pl-10 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Hapus pencarian"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base leading-none text-muted-foreground hover:text-foreground"
+            >
+              ×
+            </button>
+          )}
+        </div>
 
         {/* Year tabs: last 3 inline, older years in dropdown */}
         <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -572,77 +559,62 @@ export function ProyekTableClient({
           )}
         </div>
 
-        {/* Search */}
-        <div className="relative min-w-[240px] flex-1">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nama proyek, dinas, kecamatan…"
-            className="h-10 w-full rounded-lg border border-input bg-background pl-10 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-base leading-none"
-            >
-              ×
-            </button>
-          )}
-        </div>
+        <details className="group shrink-0 lg:relative">
+          <summary className="flex h-10 cursor-pointer list-none items-center rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden">
+            Filter lainnya
+          </summary>
+          <div className="mt-2 grid gap-2 rounded-lg border border-border bg-card p-2 sm:grid-cols-2 lg:absolute lg:right-0 lg:z-20 lg:w-[640px] lg:bg-popover lg:shadow-md lg:shadow-black/10">
+            <Select value={jenisFilter} onValueChange={(value) => updateJenis(value as JenisFilter)}>
+              <SelectTrigger className="h-10 w-full rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
+                <SelectValue placeholder="Jenis pekerjaan" />
+              </SelectTrigger>
+              <SelectContent className="select-content">
+                <SelectItem value="Semua" className="select-item">Jenis pekerjaan</SelectItem>
+                <SelectItem value="Perencanaan" className="select-item">Perencanaan</SelectItem>
+                <SelectItem value="Pengawasan" className="select-item">Pengawasan</SelectItem>
+              </SelectContent>
+            </Select>
 
-        <Select
-          value={jenisFilter}
-          onValueChange={(value) => updateJenis(value as JenisFilter)}
-        >
-          <SelectTrigger className="h-10 w-[180px] rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
-            <SelectValue placeholder="Jenis pekerjaan" />
-          </SelectTrigger>
-          <SelectContent className="select-content">
-            <SelectItem value="Semua" className="select-item">Jenis pekerjaan</SelectItem>
-            <SelectItem value="Perencanaan" className="select-item">Perencanaan</SelectItem>
-            <SelectItem value="Pengawasan" className="select-item">Pengawasan</SelectItem>
-          </SelectContent>
-        </Select>
+            <Select value={progressFilter} onValueChange={(value) => updateProgress(value as ProjectProgressFilter)}>
+              <SelectTrigger className="h-10 w-full rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
+                <SelectValue placeholder="Progress" />
+              </SelectTrigger>
+              <SelectContent className="select-content">
+                {(['semua', 'berjalan', 'selesai', 'belum_mulai', 'perlu_update'] as ProjectProgressFilter[]).map((value) => (
+                  <SelectItem key={value} value={value} className="select-item">
+                    {getProgressLabel(value)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-        <Select value={progressFilter} onValueChange={(value) => updateProgress(value as ProjectProgressFilter)}>
-          <SelectTrigger className="h-10 w-[170px] rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
-            <SelectValue placeholder="Progress" />
-          </SelectTrigger>
-          <SelectContent className="select-content">
-            {(['semua', 'berjalan', 'selesai', 'belum_mulai', 'perlu_update'] as ProjectProgressFilter[]).map((value) => (
-              <SelectItem key={value} value={value} className="select-item">
-                {getProgressLabel(value)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <Select value={statusFilter} onValueChange={(value) => updateStatus(value as ProjectStatusFilter)}>
+              <SelectTrigger className="h-10 w-full rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent className="select-content">
+                <SelectItem value="Semua" className="select-item">Semua status</SelectItem>
+                <SelectItem value="Work" className="select-item">Work</SelectItem>
+                <SelectItem value="Borrowed" className="select-item">Borrowed</SelectItem>
+                <SelectItem value="Get Borrowed" className="select-item">Get Borrowed</SelectItem>
+              </SelectContent>
+            </Select>
 
-        <Select value={statusFilter} onValueChange={(value) => updateStatus(value as ProjectStatusFilter)}>
-          <SelectTrigger className="h-10 w-[165px] rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent className="select-content">
-            <SelectItem value="Semua" className="select-item">Semua status</SelectItem>
-            <SelectItem value="Work" className="select-item">Work</SelectItem>
-            <SelectItem value="Borrowed" className="select-item">Borrowed</SelectItem>
-            <SelectItem value="Get Borrowed" className="select-item">Get Borrowed</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={perusahaanFilter} onValueChange={updatePerusahaan}>
-          <SelectTrigger className="h-10 w-[210px] rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
-            <SelectValue placeholder="Perusahaan" />
-          </SelectTrigger>
-          <SelectContent className="select-content">
-            <SelectItem value="Semua" className="select-item">Semua perusahaan</SelectItem>
-            {filterOptions.perusahaanList.map((perusahaan) => (
-              <SelectItem key={perusahaan.id} value={perusahaan.id} className="select-item">
-                {perusahaan.nama_perusahaan}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <Select value={perusahaanFilter} onValueChange={updatePerusahaan}>
+              <SelectTrigger className="h-10 w-full rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
+                <SelectValue placeholder="Perusahaan" />
+              </SelectTrigger>
+              <SelectContent className="select-content">
+                <SelectItem value="Semua" className="select-item">Semua perusahaan</SelectItem>
+                {filterOptions.perusahaanList.map((perusahaan) => (
+                  <SelectItem key={perusahaan.id} value={perusahaan.id} className="select-item">
+                    {perusahaan.nama_perusahaan}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </details>
 
         {hasActiveFilters && (
           <button
@@ -700,15 +672,14 @@ export function ProyekTableClient({
       </div>
 
       <div className="hidden overflow-hidden rounded-xl border border-border bg-card lg:block">
-        <Table className="table-fixed">
+        <p className="border-b border-border-subtle bg-muted/25 px-4 py-2 text-xs text-muted-foreground min-[1440px]:hidden">
+          Geser tabel ke samping untuk melihat seluruh kolom.
+        </p>
+        <Table className="table-fixed" style={{ minWidth: `${tableMinWidth}px` }}>
           <colgroup>
-            <col style={{ width: '34%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '10%' }} />
-            <col style={{ width: '7%' }} />
-            {canViewCommercial && <col style={{ width: '11%' }} />}
-            <col style={{ width: '13%' }} />
-            <col style={{ width: '11%' }} />
+            {tableColumns.map((column) => (
+              <col key={column.key} style={{ width: `${column.width}px` }} />
+            ))}
           </colgroup>
           <TableHeader>
             <TableRow className="border-border bg-muted/45 hover:bg-transparent">
@@ -793,7 +764,7 @@ export function ProyekTableClient({
                   {canViewCommercial && (
                     <TableCell className="px-4 py-4 text-sm font-mono text-right">
                       {p.nilai_penawaran ? (
-                        <span className="text-foreground font-semibold">{formatRupiah(p.nilai_penawaran)}</span>
+                        <span className="text-foreground font-semibold">{formatCompactRupiah(p.nilai_penawaran)}</span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

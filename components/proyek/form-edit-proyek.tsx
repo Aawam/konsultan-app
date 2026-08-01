@@ -31,6 +31,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
+import { BadgeWorkflow } from '@/components/proyek/badges'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import {
   FASE_PERENCANAAN,
@@ -39,6 +40,7 @@ import {
 } from '@/lib/constants/proyek'
 import type { DinasOption, Perusahaan, ProyekFormData } from '@/lib/types/proyek'
 import { formatNumberInput, formatRupiah, formatTanggal, parseNumberInput } from '@/lib/utils'
+import { evaluateProjectCompleteness, getProjectWorkflowGate } from '@/lib/project-completeness'
 
 type Props = {
   perusahaanList: Perusahaan[]
@@ -58,6 +60,25 @@ const SECTION_LABEL: Record<SectionKey, string> = {
   pemberi: 'Pemberi Kerja',
   pelaksanaan: 'Pelaksanaan',
 }
+
+const SECTION_BY_FIELD = {
+  nama_proyek: 'identitas',
+  jenis_pekerjaan: 'identitas',
+  kategori_pekerjaan: 'identitas',
+  tahun_anggaran: 'anggaran',
+  sumber_dana: 'anggaran',
+  pagu_dana: 'anggaran',
+  hps: 'anggaran',
+  nilai_penawaran: 'anggaran',
+  dinas: 'pemberi',
+  lokasi_kecamatan: 'pemberi',
+  nama_ppk: 'pemberi',
+  perusahaan_id: 'pelaksanaan',
+  tanggal_mulai: 'pelaksanaan',
+  tanggal_selesai: 'pelaksanaan',
+  status_proyek: 'pelaksanaan',
+  tahap_progress: 'pelaksanaan',
+} as const satisfies Record<string, SectionKey>
 
 const NEW_DINAS_VALUE = '__new__'
 
@@ -102,11 +123,13 @@ function SummaryRow({ label, value }: { label: string; value?: string | null }) 
 function SectionCard({
   title,
   active,
+  attentionCount = 0,
   onEdit,
   children,
 }: {
   title: string
   active?: boolean
+  attentionCount?: number
   onEdit: () => void
   children: React.ReactNode
 }) {
@@ -118,9 +141,16 @@ function SectionCard({
       ].join(' ')}
     >
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-xl font-bold text-foreground">{title}</h2>
-        <Button type="button" variant="outline" onClick={onEdit}>
-          Ubah
+        <div>
+          <h2 className="text-xl font-bold text-foreground">{title}</h2>
+          {attentionCount > 0 && (
+            <p className="mt-1 text-xs font-semibold text-amber">
+              {attentionCount} data wajib perlu dilengkapi
+            </p>
+          )}
+        </div>
+        <Button type="button" variant={attentionCount > 0 ? 'default' : 'outline'} onClick={onEdit}>
+          {attentionCount > 0 ? 'Lengkapi' : 'Ubah'}
         </Button>
       </div>
       <div className="mt-5 grid gap-5 md:grid-cols-2">{children}</div>
@@ -215,6 +245,63 @@ export function FormEditProyek({ perusahaanList, dinasList, initialData, metadat
 
   const namaPerusahaan =
     perusahaanList.find((perusahaan) => perusahaan.id === perusahaanId)?.nama_perusahaan ?? 'Belum dipilih'
+
+  const completeness = useMemo(
+    () => evaluateProjectCompleteness({
+      nama_proyek: namaProyek,
+      jenis_pekerjaan: jenisPekerjaan,
+      kategori_pekerjaan: kategoriPekerjaan,
+      tahun_anggaran: tahunAnggaran,
+      sumber_dana: sumberDana,
+      dinas,
+      lokasi_kecamatan: lokasiKecamatan,
+      nama_ppk: namaPpk,
+      perusahaan_id: perusahaanId,
+      tanggal_mulai: tanggalMulai,
+      tanggal_selesai: tanggalSelesai,
+      status_proyek: statusProyek,
+      tahap_progress: tahapProgress,
+      pagu_dana: parseNumberInput(paguDana),
+      hps: parseNumberInput(hps),
+      nilai_penawaran: parseNumberInput(nilaiPenawaran),
+    }, { includeCommercial: false }),
+    [
+      dinas,
+      hps,
+      jenisPekerjaan,
+      kategoriPekerjaan,
+      lokasiKecamatan,
+      namaPpk,
+      namaProyek,
+      nilaiPenawaran,
+      paguDana,
+      perusahaanId,
+      sumberDana,
+      statusProyek,
+      tahapProgress,
+      tahunAnggaran,
+      tanggalMulai,
+      tanggalSelesai,
+    ]
+  )
+  const workflowGate = getProjectWorkflowGate(completeness)
+  const sectionAttention = useMemo(() => {
+    const counts: Record<SectionKey, number> = {
+      identitas: 0,
+      anggaran: 0,
+      pemberi: 0,
+      pelaksanaan: 0,
+    }
+
+    completeness.missingFields.forEach((field) => {
+      const section = field.key in SECTION_BY_FIELD
+        ? SECTION_BY_FIELD[field.key as keyof typeof SECTION_BY_FIELD]
+        : undefined
+      if (section) counts[section] += 1
+    })
+
+    return counts
+  }, [completeness.missingFields])
 
   const validateSection = (section: SectionKey) => {
     const values = getValues()
@@ -639,10 +726,45 @@ export function FormEditProyek({ perusahaanList, dinasList, initialData, metadat
             </p>
           </div>
 
+          <section className="mt-6 rounded-xl border border-border bg-muted/35 p-4" aria-labelledby="edit-workflow-heading">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 id="edit-workflow-heading" className="text-sm font-semibold text-foreground">Kesiapan Workflow</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{completeness.nextAction}</p>
+              </div>
+              <BadgeWorkflow status={completeness.status} gate={workflowGate} />
+            </div>
+
+            {completeness.missingFields.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(['identitas', 'anggaran', 'pemberi', 'pelaksanaan'] as SectionKey[])
+                  .filter((section) => sectionAttention[section] > 0)
+                  .map((section) => (
+                    <Button
+                      key={section}
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setActiveSection(section)}
+                    >
+                      Lengkapi {SECTION_LABEL[section]}
+                    </Button>
+                  ))}
+              </div>
+            )}
+
+            {completeness.blockingReasons.length > 0 && (
+              <p className="mt-3 text-sm font-semibold text-violet">
+                {completeness.blockingReasons.join(' ')}
+              </p>
+            )}
+          </section>
+
           <div className="mt-8 space-y-4">
             <SectionCard
               title="Identitas Proyek"
               active={activeSection === 'identitas'}
+              attentionCount={sectionAttention.identitas}
               onEdit={() => setActiveSection('identitas')}
             >
               <SummaryRow label="Nama Proyek" value={namaProyek} />
@@ -654,6 +776,7 @@ export function FormEditProyek({ perusahaanList, dinasList, initialData, metadat
             <SectionCard
               title="Anggaran"
               active={activeSection === 'anggaran'}
+              attentionCount={sectionAttention.anggaran}
               onEdit={() => setActiveSection('anggaran')}
             >
               <SummaryRow label="Tahun Anggaran" value={tahunAnggaran ? String(tahunAnggaran) : undefined} />
@@ -665,37 +788,42 @@ export function FormEditProyek({ perusahaanList, dinasList, initialData, metadat
             <SectionCard
               title="Pemberi Kerja"
               active={activeSection === 'pemberi'}
+              attentionCount={sectionAttention.pemberi}
               onEdit={() => setActiveSection('pemberi')}
             >
               <SummaryRow label="Dinas / SKPD" value={dinas} />
               <SummaryRow label="Lokasi Kecamatan" value={lokasiKecamatan} />
               <SummaryRow label="Nama PPK" value={namaPpk} />
-              <SummaryRow label="Kontak" value="Belum diisi" />
             </SectionCard>
 
             <SectionCard
               title="Pelaksanaan"
               active={activeSection === 'pelaksanaan'}
+              attentionCount={sectionAttention.pelaksanaan}
               onEdit={() => setActiveSection('pelaksanaan')}
             >
               <SummaryRow label="Perusahaan" value={namaPerusahaan} />
               <SummaryRow label="Status Bendera" value={statusProyek} />
               <SummaryRow label="Tanggal" value={tanggalMulai || tanggalSelesai ? `${tanggalMulai || '-'} s/d ${tanggalSelesai || '-'}` : undefined} />
-              <SummaryRow label="Durasi / Catatan" value={durasiHari ? `${durasiHari} hari` : catatan} />
+              <SummaryRow label="Durasi" value={durasiHari ? `${durasiHari} hari` : undefined} />
+              <SummaryRow label="Catatan" value={catatan} />
             </SectionCard>
           </div>
         </section>
 
         <aside className="rounded-2xl border border-border bg-card p-5 xl:sticky xl:top-20 xl:self-start">
-          <h2 className="text-lg font-bold text-foreground">Aturan Edit</h2>
-          <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
-            <p>Halaman utama dibuat read-only agar data saat ini mudah dipindai.</p>
-            <p>Gunakan tombol Ubah untuk mengedit satu section saja.</p>
-            <p>Di desktop form muncul sebagai sheet kanan. Di mobile form berubah menjadi bottom drawer.</p>
-          </div>
-          <div className="mt-6 rounded-xl border border-primary/30 bg-primary/10 p-4">
-            <p className="text-sm font-bold text-primary">Tips</p>
-            <p className="mt-2 text-sm text-primary">Simpan perubahan per section supaya risiko salah ubah lebih kecil.</p>
+          <h2 className="text-lg font-bold text-foreground">Kesiapan Data</h2>
+          <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-foreground">Gate saat ini</p>
+              <BadgeWorkflow status={completeness.status} gate={workflowGate} />
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{completeness.nextAction}</p>
+            {completeness.missingFields.length > 0 && (
+              <p className="mt-3 text-sm font-semibold text-amber">
+                {completeness.missingFields.length} field wajib masih perlu dilengkapi.
+              </p>
+            )}
           </div>
           <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4">
             <p className="text-sm font-bold text-foreground">Meta Data</p>

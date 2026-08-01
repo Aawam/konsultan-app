@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { formatNumberInput, formatRupiah, formatTanggal, parseNumberInput } from '@/lib/utils'
+import {
+  formatCompactRupiah,
+  formatNumberInput,
+  formatRupiah,
+  formatTanggal,
+  parseNumberInput,
+} from '@/lib/utils'
 
 describe('formatRupiah', () => {
   it('formats Indonesian rupiah without fraction digits', () => {
@@ -8,6 +14,24 @@ describe('formatRupiah', () => {
 
   it('uses a dash for null values', () => {
     expect(formatRupiah(null)).toBe('-')
+  })
+})
+
+describe('formatCompactRupiah', () => {
+  it('formats billion values in a compact Indonesian form', () => {
+    expect(formatCompactRupiah(79_552_250_000)).toBe('Rp 79,55 M')
+  })
+
+  it('formats million values in a compact Indonesian form', () => {
+    expect(formatCompactRupiah(1_250_000)).toBe('Rp 1,3 jt')
+  })
+
+  it('keeps smaller values in the standard rupiah form', () => {
+    expect(formatCompactRupiah(750_000)).toBe('Rp\u00a0750.000')
+  })
+
+  it('uses a dash for null values', () => {
+    expect(formatCompactRupiah(null)).toBe('-')
   })
 })
 

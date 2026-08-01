@@ -6,6 +6,7 @@ import { formatRupiah, formatTanggal } from '@/lib/utils'
 import { TAHAP_BAR_COLOR } from '@/lib/constants/proyek'
 import { TombolAksi } from '@/components/proyek/proyek-actions'
 import { PageHeader } from '@/components/ui/page-header'
+import { Button } from '@/components/ui/button'
 import { getCurrentUserProfile, isOwnerAdmin } from '@/lib/auth'
 import { evaluateProjectCompleteness, getProjectWorkflowGate } from '@/lib/project-completeness'
 
@@ -136,7 +137,54 @@ export default async function DetailProyekPage({ params }: Props) {
         </div>
       </section>
 
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <DetailCard title="Kelengkapan Data" className="mt-4">
+        <InfoRow label="Status Data" value={workflowGate} />
+        <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
+          <p className="detail-label">Langkah Berikut</p>
+          <div className="rounded-lg border border-border bg-muted/35 px-3.5 py-3">
+            <p className="text-sm font-semibold text-foreground">{completeness.nextAction}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {canViewCommercial && completeness.missingFields.length > 0 && (
+                <Button asChild size="lg" className="bg-brand text-primary-foreground hover:bg-brand/90">
+                  <Link href={`/proyek/${id}/edit`}>Lengkapi Data Proyek</Link>
+                </Button>
+              )}
+              {!canViewCommercial && completeness.missingFields.length > 0 && (
+                <p className="text-sm text-muted-foreground">Minta Owner/Admin melengkapi data proyek.</p>
+              )}
+            </div>
+          </div>
+        </div>
+        {completeness.missingFields.length > 0 && (
+          <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
+            <p className="detail-label">Data Kurang</p>
+            <div className="flex flex-wrap gap-1.5">
+              {completeness.missingFields.map((field) => (
+                <span
+                  key={field.key}
+                  className="rounded-full border border-amber/30 bg-amber/10 px-2 py-0.5 text-[11px] font-semibold text-amber"
+                >
+                  {field.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {completeness.blockingReasons.length > 0 && (
+          <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
+            <p className="detail-label">Butuh Review</p>
+            <div className="space-y-1">
+              {completeness.blockingReasons.map((reason) => (
+                <p key={reason} className="text-sm font-semibold text-violet">
+                  {reason}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+      </DetailCard>
+
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {canViewCommercial && (
           <>
             <MetricCard label="Pagu Dana" value={formatRupiah(proyek.pagu_dana)} caption={proyek.sumber_dana} numeric />
@@ -148,39 +196,7 @@ export default async function DetailProyekPage({ params }: Props) {
         <MetricCard label="Sumber Dana" value={proyek.sumber_dana} caption="Pemerintah daerah" accent="text-violet" />
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <DetailCard title="Kesiapan Workflow" className="xl:col-span-2">
-          <InfoRow label="Gate Saat Ini" value={workflowGate} />
-          <InfoRow label="Aksi Berikutnya" value={completeness.nextAction} />
-          {completeness.missingFields.length > 0 && (
-            <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
-              <p className="detail-label">Data Kurang</p>
-              <div className="flex flex-wrap gap-1.5">
-                {completeness.missingFields.map((field) => (
-                  <span
-                    key={field.key}
-                    className="rounded-full border border-amber/30 bg-amber/10 px-2 py-0.5 text-[11px] font-semibold text-amber"
-                  >
-                    {field.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-          {completeness.blockingReasons.length > 0 && (
-            <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
-              <p className="detail-label">Butuh Review</p>
-              <div className="space-y-1">
-                {completeness.blockingReasons.map((reason) => (
-                  <p key={reason} className="text-sm font-semibold text-violet">
-                    {reason}
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
-        </DetailCard>
-
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <DetailCard title="Identitas Proyek">
           <InfoRow label="Jenis Pekerjaan" value={proyek.jenis_pekerjaan} />
           <InfoRow label="Kategori" value={proyek.kategori_pekerjaan} />
@@ -213,7 +229,7 @@ export default async function DetailProyekPage({ params }: Props) {
         )}
 
         {(overrideLogs ?? []).length > 0 && (
-          <DetailCard title="Riwayat Override" className="xl:col-span-2">
+          <DetailCard title="Riwayat Override" className="lg:col-span-2">
             {(overrideLogs ?? []).map((log) => (
               <div key={log.id} className="flex flex-col gap-2 border-l-2 border-amber/30 pl-4 md:flex-row md:items-start md:justify-between">
                 <div>

@@ -14,6 +14,17 @@ export const formatRupiah = (nilai: number | null): string => {
   }).format(nilai)
 }
 
+export const formatCompactRupiah = (nilai: number | null): string => {
+  if (nilai === null) return '-'
+  if (nilai >= 1_000_000_000) {
+    return `Rp ${(nilai / 1_000_000_000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} M`
+  }
+  if (nilai >= 1_000_000) {
+    return `Rp ${(nilai / 1_000_000).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt`
+  }
+  return formatRupiah(nilai)
+}
+
 export const formatTanggal = (tgl: string | null): string => {
   if (!tgl) return '-'
   return new Date(tgl).toLocaleDateString('id-ID', {

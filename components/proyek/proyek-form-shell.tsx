@@ -376,13 +376,13 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
       }}
       className="space-y-6"
     >
-      <div className="grid gap-5 xl:grid-cols-[260px_minmax(0,1fr)_280px]">
+      <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_280px]">
         <ProyekFormProgressPanel
           step={step}
           stepCompletion={stepCompletion}
           checklist={checklist}
           onStepChange={goToStep}
-          className="hidden xl:block"
+          className="hidden lg:block"
         />
 
         <div className="min-w-0 space-y-6">
@@ -392,7 +392,7 @@ export function ProyekFormShell({ perusahaanList, dinasList, initialData, mode }
             checklist={checklist}
             onStepChange={goToStep}
             variant="compact"
-            className="xl:hidden"
+            className="lg:hidden"
           />
 
           <div className="rounded-2xl border border-border bg-card p-5 md:p-6">
