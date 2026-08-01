@@ -148,8 +148,8 @@ function toProyekDetailFromTeknis(row: ProyekTeknisRow): ProyekDetail {
   }
 }
 
-async function getProyekTeknisRows(targetProyekId?: string) {
-  const supabase = await createSupabaseServerClient()
+async function getProyekTeknisRows(targetProyekId?: string, client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
   const { data, error } = await supabase.rpc('get_proyek_teknis', {
     target_proyek_id: targetProyekId,
   })
@@ -170,8 +170,8 @@ async function getProyekTeknisRows(targetProyekId?: string) {
   return { data: parsed.data, error: null }
 }
 
-async function getProyekTeknisPage(filters: ProyekListFilters) {
-  const supabase = await createSupabaseServerClient()
+async function getProyekTeknisPage(filters: ProyekListFilters, client?: SupabaseServerClient) {
+  const supabase = client ?? await createSupabaseServerClient()
   const { data, error } = await supabase.rpc('get_proyek_teknis_page', {
     target_page: filters.page,
     target_page_size: filters.pageSize,
@@ -202,7 +202,7 @@ async function getProyekTeknisPage(filters: ProyekListFilters) {
 export async function getDaftarProyek({ includeSensitive = true }: { includeSensitive?: boolean } = {}) {
   const supabase = await createSupabaseServerClient()
   if (!includeSensitive) {
-    const { data, error } = await getProyekTeknisRows()
+    const { data, error } = await getProyekTeknisRows(undefined, supabase)
     return {
       data: data?.map(toProyekDisplayFromTeknis) ?? null,
       error,
@@ -246,7 +246,7 @@ export async function getDaftarProyekPage(
   const to = from + pageSize - 1
 
   if (!includeSensitive) {
-    const { data, error } = await getProyekTeknisPage({ ...filters, page, pageSize })
+    const { data, error } = await getProyekTeknisPage({ ...filters, page, pageSize }, supabase)
     if (!data) return { data: null, error }
 
     return {
@@ -347,7 +347,7 @@ export async function getProyekListFilterOptions({
 
   return cacheSuccessfulQuery(async () => {
     if (!includeSensitive) {
-      const { data, error } = await getProyekTeknisRows()
+      const { data, error } = await getProyekTeknisRows(undefined, supabase)
       if (!data) return { data: null, error }
 
       const perusahaanById = new Map<string, {
@@ -520,7 +520,7 @@ export async function getProyekById(
   } = {}
 ) {
   if (!includeSensitive) {
-    const { data, error } = await getProyekTeknisRows(id)
+    const { data, error } = await getProyekTeknisRows(id, client)
     return {
       data: data?.[0] ? toProyekDetailFromTeknis(data[0]) : null,
       error,

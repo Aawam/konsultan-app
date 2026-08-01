@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { rpc } = vi.hoisted(() => ({
+const { createSupabaseServerClient, rpc } = vi.hoisted(() => ({
+  createSupabaseServerClient: vi.fn(),
   rpc: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase-server', () => ({
-  createSupabaseServerClient: vi.fn(async () => ({ rpc })),
+  createSupabaseServerClient,
 }))
 
 import { getDaftarProyek, getDaftarProyekPage, getProyekListFilterOptions } from '@/lib/actions/proyek'
@@ -13,6 +14,8 @@ import { getDaftarProyek, getDaftarProyekPage, getProyekListFilterOptions } from
 describe('getDaftarProyekPage', () => {
   beforeEach(() => {
     rpc.mockReset()
+    createSupabaseServerClient.mockReset()
+    createSupabaseServerClient.mockResolvedValue({ rpc })
   })
 
   it('uses the paginated technical RPC for non-commercial project lists', async () => {
@@ -280,5 +283,6 @@ describe('getDaftarProyekPage', () => {
     expect(rpc).toHaveBeenCalledWith('get_proyek_teknis', {
       target_proyek_id: undefined,
     })
+    expect(createSupabaseServerClient).toHaveBeenCalledTimes(1)
   })
 })
