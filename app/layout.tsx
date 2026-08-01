@@ -22,7 +22,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           } catch(e) { document.documentElement.classList.add('dark'); }
         `}</Script>
       </head>
-      <body className="min-h-screen flex flex-col bg-background text-foreground">
+      <body className="min-h-screen flex flex-col bg-background text-foreground supports-[height:100dvh]:min-h-dvh">
         {children}
         <Toaster />
       </body>

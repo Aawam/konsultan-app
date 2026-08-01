@@ -60,7 +60,7 @@ The main app shell lives in `components/layout/sidebar-layout.tsx`.
 
 ```tsx
 <aside className="fixed inset-y-0 left-0 w-48 min-[360px]:w-52 sm:w-56 lg:sticky lg:w-[4.35rem]" />
-<div className="flex min-h-screen min-w-0 flex-1 flex-col">
+<div className="flex min-h-screen min-w-0 flex-1 flex-col supports-[height:100dvh]:min-h-dvh">
   <header className="sticky top-0 h-12 px-3 lg:h-14 lg:px-5" />
   <main className="flex-1 px-3 py-4 lg:px-6 lg:py-6" />
 </div>
@@ -262,7 +262,10 @@ Active nav uses `bg-brand/10 text-brand` and a thin left brand rail. Disabled it
 
 Responsive foundation:
 
-- Monitoring pages must remain readable at `320px`, `375px`, `768px`, `1024px`, and `1440px` without document-level horizontal overflow.
+- Responsive behavior is driven by available width, not a hardcoded device orientation. Portrait and landscape therefore keep the same navigation rules at equivalent widths.
+- Full-height shells use `100vh` as a fallback and `100dvh` when supported so mobile browser chrome does not hide the sidebar footer, sheet actions, or login content.
+- Sidebar header and footer never shrink. On short landscape screens, only the navigation content scrolls and overscroll remains contained inside the drawer.
+- Monitoring pages must remain readable without document-level horizontal overflow at `320×568`, `375×667`, `390×844`, `568×320`, `667×375`, `844×390`, `768×1024`, `1024×768`, and `1440×900`.
 - Dense monitoring tables may switch to compact cards or use a clearly labelled, locally scrollable table container on smaller screens.
 - Desktop-only workflow editors may provide a mobile notice instead of full mobile feature parity, but navigation and account actions must remain available.
 

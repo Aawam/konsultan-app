@@ -174,7 +174,7 @@ export function ProyekSlideover({
 
           {/* Content fades in after load */}
           {!loading && !fetchError && proyek && (
-            <div className="min-h-[calc(100vh-2.5rem)] space-y-5 animate-in fade-in-0 duration-200">
+            <div className="min-h-[calc(100vh-2.5rem)] space-y-5 animate-in fade-in-0 duration-200 supports-[height:100dvh]:min-h-[calc(100dvh-2.5rem)]">
               <div className="flex flex-wrap items-center gap-2">
                 <BadgeJenis jenis={proyek.jenis_pekerjaan as string} />
                 <BadgeTahap tahap={proyek.tahap_progress} />

@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [state, formAction, pending] = useActionState(loginAction, { error: null })
 
   return (
-    <main className="min-h-screen grid place-items-center bg-background px-4">
+    <main className="min-h-screen grid place-items-center bg-background px-4 supports-[height:100dvh]:min-h-dvh">
       <form
         action={formAction}
         className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-sm"

@@ -53,7 +53,10 @@ function SidebarProvider({
       <div
         data-slot="sidebar-wrapper"
         data-sidebar-state={open ? 'expanded' : 'collapsed'}
-        className={cn('app-shell-background flex min-h-screen w-full text-foreground', className)}
+        className={cn(
+          'app-shell-background flex min-h-screen w-full text-foreground supports-[height:100dvh]:min-h-dvh',
+          className
+        )}
         {...props}
       >
         {open && (
@@ -90,7 +93,7 @@ function Sidebar({
       data-slot="sidebar"
       data-state={open ? 'expanded' : 'collapsed'}
       className={cn(
-        'app-sidebar-shell group/sidebar fixed inset-y-0 left-0 z-30 flex h-screen shrink-0 flex-col overflow-hidden border-r border-sidebar-border text-sidebar-foreground transition-[width] duration-200 ease-out lg:sticky lg:top-0 lg:overflow-visible',
+        'app-sidebar-shell group/sidebar fixed inset-y-0 left-0 z-30 flex h-screen shrink-0 flex-col overflow-hidden border-r border-sidebar-border text-sidebar-foreground transition-[width] duration-200 ease-out supports-[height:100dvh]:h-dvh lg:sticky lg:top-0 lg:overflow-visible',
         widthClass,
         className
       )}
@@ -113,7 +116,7 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="sidebar-header"
-      className={cn('flex min-h-14 items-center gap-2 border-b border-sidebar-border px-3', className)}
+      className={cn('flex min-h-14 shrink-0 items-center gap-2 border-b border-sidebar-border px-3', className)}
       {...props}
     />
   )
@@ -123,7 +126,10 @@ function SidebarContent({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="sidebar-content"
-      className={cn('flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-2 py-3', className)}
+      className={cn(
+        'flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-2 py-3',
+        className
+      )}
       {...props}
     />
   )
@@ -133,7 +139,7 @@ function SidebarFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="sidebar-footer"
-      className={cn('border-t border-sidebar-border p-3', className)}
+      className={cn('shrink-0 border-t border-sidebar-border p-3', className)}
       {...props}
     />
   )
