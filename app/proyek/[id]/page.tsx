@@ -67,10 +67,13 @@ export default async function DetailProyekPage({ params }: Props) {
   const { profile } = await getCurrentUserProfile()
   const canViewCommercial = isOwnerAdmin(profile)
 
-  const [{ data: proyek }, { data: overrideLogs }] = await Promise.all([
+  const [{ data: proyek }, overrideResult] = await Promise.all([
     getProyekById(id, { includeSensitive: canViewCommercial }),
-    getOverrideLogsByProyekId(id),
+    canViewCommercial
+      ? getOverrideLogsByProyekId(id)
+      : Promise.resolve({ data: [], error: null }),
   ])
+  const overrideLogs = overrideResult.data
 
   if (!proyek) notFound()
 
@@ -228,7 +231,7 @@ export default async function DetailProyekPage({ params }: Props) {
           </DetailCard>
         )}
 
-        {(overrideLogs ?? []).length > 0 && (
+        {canViewCommercial && (overrideLogs ?? []).length > 0 && (
           <DetailCard title="Riwayat Override" className="lg:col-span-2">
             {(overrideLogs ?? []).map((log) => (
               <div key={log.id} className="flex flex-col gap-2 border-l-2 border-amber/30 pl-4 md:flex-row md:items-start md:justify-between">
