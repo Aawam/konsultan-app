@@ -59,18 +59,19 @@ Use opacity modifiers for soft fills: `bg-brand/10`, `border-brand/20`, `bg-ambe
 The main app shell lives in `components/layout/sidebar-layout.tsx`.
 
 ```tsx
-<aside className="fixed left-0 top-0 z-20 h-screen w-56" />
-<div className="ml-56 flex min-h-screen flex-col">
-  <header className="sticky top-0 z-10 h-14 bg-surface/80 backdrop-blur-md" />
-  <main className="flex-1 px-6 py-6" />
+<aside className="fixed inset-y-0 left-0 w-48 min-[360px]:w-52 sm:w-56 lg:sticky lg:w-[4.35rem]" />
+<div className="flex min-h-screen min-w-0 flex-1 flex-col">
+  <header className="sticky top-0 h-12 px-3 lg:h-14 lg:px-5" />
+  <main className="flex-1 px-3 py-4 lg:px-6 lg:py-6" />
 </div>
 ```
 
 Conventions:
 
-- Sidebar width is `w-56`.
-- Header height is `h-14`.
-- Main content starts at `px-6 py-6`.
+- Drawer width is `w-48` below 360px, `w-52` from 360px, and `w-56` from 640px through 1023px.
+- Desktop sidebar is permanently icon-only at `w-[4.35rem]` from 1024px.
+- Header is `h-12 px-3` on compact viewports and `h-14 px-5` on desktop.
+- Main content uses `px-3 py-4` on compact viewports and `px-6 py-6` on desktop.
 - Prefer compact sections and tables over large marketing-style blocks.
 - Do not nest cards inside cards unless the inner card is a repeated data item.
 
@@ -256,11 +257,12 @@ Active nav uses `bg-brand/10 text-brand` and a thin left brand rail. Disabled it
 - Every enabled navigation item exposes its label in a tooltip on pointer hover and keyboard focus.
 - The account identity in the sidebar footer is the account-menu trigger. Its menu opens upward and contains the logout action.
 - At `1024px` and wider, the sidebar is permanently icon-only and does not expose an expand/collapse control.
-- Below `1024px`, navigation uses an overlay drawer with complete labels. Selecting a navigation item closes the drawer.
+- Below `1024px`, navigation uses an overlay drawer with complete labels. It is 192px on narrow phones, 208px from 360px, and 224px from 640px so it does not consume a fixed proportion of every screen. Selecting a navigation item closes the drawer.
+- Navigation rows are 40px high below 1024px with 13px labels on narrow phones and 14px labels from 640px; desktop icon rows remain 36px high.
 
 Responsive foundation:
 
-- Monitoring pages must remain readable at `320px`, `768px`, `1024px`, and `1440px` without document-level horizontal overflow.
+- Monitoring pages must remain readable at `320px`, `375px`, `768px`, `1024px`, and `1440px` without document-level horizontal overflow.
 - Dense monitoring tables may switch to compact cards or use a clearly labelled, locally scrollable table container on smaller screens.
 - Desktop-only workflow editors may provide a mobile notice instead of full mobile feature parity, but navigation and account actions must remain available.
 

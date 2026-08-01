@@ -129,7 +129,7 @@ export function SidebarLayout({
                 <span className="text-sm font-black leading-none">K</span>
               </div>
               <div className="min-w-0 group-data-[state=collapsed]/sidebar:hidden">
-                <p className="truncate text-sm font-bold leading-none tracking-tight text-sidebar-foreground">
+                <p className="truncate text-[13px] font-bold leading-none tracking-tight text-sidebar-foreground sm:text-sm">
                   Konsultan App
                 </p>
                 <p className="mt-1 truncate text-[10px] leading-none text-sidebar-foreground/55">

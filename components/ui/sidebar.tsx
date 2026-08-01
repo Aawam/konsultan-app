@@ -78,7 +78,12 @@ function Sidebar({
   collapsible?: 'icon' | 'none'
 }) {
   const { open } = useSidebar()
-  const widthClass = collapsible === 'none' ? 'w-60' : open ? 'w-60' : 'w-0 lg:w-[4.35rem]'
+  const widthClass =
+    collapsible === 'none'
+      ? 'w-60'
+      : open
+        ? 'w-48 min-[360px]:w-52 sm:w-56'
+        : 'w-0 lg:w-[4.35rem]'
 
   return (
     <aside
@@ -190,7 +195,7 @@ function SidebarMenuButton({
       data-slot="sidebar-menu-button"
       data-active={isActive}
       className={cn(
-        'group/menu-button relative flex h-9 w-full items-center gap-2 rounded-xl px-2.5 text-sm font-medium outline-none transition-colors',
+        'group/menu-button relative flex h-10 w-full items-center gap-2 rounded-xl px-2.5 text-[13px] font-medium outline-none transition-colors sm:text-sm lg:h-9',
         'text-sidebar-foreground/72 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
         'data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground data-[active=true]:shadow-sm data-[active=true]:shadow-black/10',
         'group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:px-0',
