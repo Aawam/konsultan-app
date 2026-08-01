@@ -12,7 +12,7 @@ export default async function DatabasePage() {
   const cacheScope = getUserCacheScope(profile)
 
   const [perusahaanResult, proyekResult, dinasResult] = await Promise.all([
-    getPerusahaanDetailList(cacheScope),
+    getPerusahaanDetailList(),
     getDaftarProyek(),
     getDinasList({ cacheScope }),
   ])
