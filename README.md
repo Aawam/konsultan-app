@@ -136,9 +136,12 @@ To inspect Vercel cache behavior after deployment:
 
 ```bash
 curl -I https://your-domain.com
-curl -I https://your-domain.com/proyek
-curl -I https://your-domain.com/api/proyek
+curl -I https://your-domain.com/login
 ```
+
+Protected pages and APIs require an authenticated cookie. Without it, `/proyek`
+and `/database` only measure the redirect to `/login`. Authenticated API
+responses intentionally use `Cache-Control: private, no-store, max-age=0`.
 
 Check `x-vercel-cache`:
 
@@ -156,7 +159,17 @@ To compare latency before and after deploys:
 npm run latency -- https://your-domain.com 5
 ```
 
-The script reports status code, Vercel cache header, Vercel edge region, average latency, p50, and p95 for `/`, `/login`, `/proyek`, and `/database`.
+Warm-cache measurement is the default. Use `--bypass-cache` only when measuring
+origin latency:
+
+```bash
+npm run latency -- https://your-domain.com 5 --bypass-cache
+```
+
+The script reports status code, Vercel cache history, redirect location, Vercel
+edge region, average latency, p50, and p95. It measures `/` and `/login` by
+default. Set `LATENCY_COOKIE` through your local secret mechanism to include
+`/proyek` and `/database`; never commit the cookie or paste it into reports.
 
 To verify production database indexes without changing data:
 
