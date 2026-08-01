@@ -15,7 +15,7 @@ export function DashboardRecentProjects({
     <section className="section-card" aria-labelledby="recent-projects-title">
       <div className="section-header flex items-center justify-between gap-3">
         <h2 id="recent-projects-title" className="section-title">Proyek Terbaru</h2>
-        <Link href="/proyek" className="shrink-0 text-xs font-medium text-brand hover:underline">
+        <Link href="/proyek" className="inline-flex min-h-10 shrink-0 items-center text-xs font-medium text-brand hover:underline md:min-h-8">
           Lihat semua →
         </Link>
       </div>
@@ -71,7 +71,7 @@ export function DashboardRecentProjects({
                     className={`border-b border-border transition-colors last:border-0 hover:bg-muted/40 ${index % 2 === 0 ? '' : 'bg-muted/20'}`}
                   >
                     <td className="max-w-[260px] px-5 py-3">
-                      <Link href={`/proyek/${project.id}`} className="block truncate font-medium text-foreground transition-colors hover:text-brand">
+                      <Link href={`/proyek/${project.id}`} className="inline-flex min-h-8 max-w-full items-center truncate font-medium text-foreground transition-colors hover:text-brand">
                         {project.nama_proyek}
                       </Link>
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">

@@ -58,6 +58,15 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ]
 
+export function getVisibleNavGroups(canManageProjects: boolean) {
+  return NAV_GROUPS
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.ownerOnly || canManageProjects),
+    }))
+    .filter((group) => group.items.length > 0)
+}
+
 function Clock() {
   const [now, setNow] = useState<Date | null>(null)
 
@@ -109,6 +118,7 @@ export function SidebarLayout({
 
   const canManageProjects = isOwnerAdmin(profile)
   const effectiveSidebarOpen = isCompactViewport && mobileDrawerOpen
+  const visibleNavGroups = getVisibleNavGroups(canManageProjects)
 
   return (
     <TooltipProvider>
@@ -162,14 +172,14 @@ export function SidebarLayout({
               </SidebarGroup>
             )}
 
-            {NAV_GROUPS.map((group, index) => (
+            {visibleNavGroups.map((group, index) => (
               <Fragment key={group.group}>
                 {(index > 0 || canManageProjects) && <SidebarSeparator />}
                 <SidebarGroup>
                   <SidebarGroupLabel>{group.group}</SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
-                      {group.items.filter((item) => !item.ownerOnly || canManageProjects).map((item) => {
+                      {group.items.map((item) => {
                         const Icon = item.icon
                         const active = isActive(item.href)
 

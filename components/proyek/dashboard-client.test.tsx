@@ -43,5 +43,7 @@ describe('DashboardClient', () => {
     )
 
     expect(markup).toMatch(/Butuh Review[\s\S]*?stat-value text-amber[^>]*>0</)
+    expect(markup).toContain('aria-label="Filter perusahaan dashboard"')
+    expect(markup).toContain('aria-label="Filter status dashboard"')
   })
 })

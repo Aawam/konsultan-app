@@ -273,7 +273,7 @@
 
   /* ── Table headers ── */
   .table-head {
-    @apply py-3 text-[11px] font-mono font-medium uppercase tracking-wider text-muted-foreground;
+    @apply py-3 text-xs font-mono font-medium uppercase tracking-wider text-muted-foreground;
   }
 
   /* ── Stat cards ── */
@@ -302,7 +302,7 @@
   }
 
   .page-eyebrow {
-    @apply text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-muted-foreground;
+    @apply text-xs font-mono font-medium uppercase tracking-[0.14em] text-muted-foreground;
   }
 
   .page-title {

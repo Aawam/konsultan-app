@@ -39,7 +39,7 @@ export function MiniBar({
     <div className="mb-3 last:mb-0">
       <div className="flex justify-between items-center mb-1">
         <span className="max-w-[200px] truncate text-[12px] font-medium text-foreground">{label}</span>
-        <span className="text-[11px] font-mono text-muted-foreground ml-2 shrink-0">{count}</span>
+        <span className="ml-2 shrink-0 font-mono text-xs text-muted-foreground">{count}</span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-muted">
         <div className={`h-full rounded-full ${colorClass}`} style={{ width: `${p}%` }} />

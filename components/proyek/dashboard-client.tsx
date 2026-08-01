@@ -238,7 +238,7 @@ export function DashboardClient({
           />
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:ml-auto lg:flex lg:items-center">
             <Select value={perusahaanFilter} onValueChange={(value) => updateFilters({ perusahaan: value })}>
-              <SelectTrigger className="h-10 w-full min-w-0 border-input bg-background text-sm lg:h-9 lg:min-w-[190px]">
+              <SelectTrigger aria-label="Filter perusahaan dashboard" className="h-10 w-full min-w-0 border-input bg-background text-sm lg:h-9 lg:min-w-[190px]">
                 <SelectValue placeholder="Semua perusahaan" />
               </SelectTrigger>
               <SelectContent className="select-content">
@@ -248,7 +248,7 @@ export function DashboardClient({
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(value) => updateFilters({ status: value as StatusFilter })}>
-              <SelectTrigger className="h-10 w-full min-w-0 border-input bg-background text-sm lg:h-9 lg:min-w-[160px]">
+              <SelectTrigger aria-label="Filter status dashboard" className="h-10 w-full min-w-0 border-input bg-background text-sm lg:h-9 lg:min-w-[160px]">
                 <SelectValue placeholder="Semua status" />
               </SelectTrigger>
               <SelectContent className="select-content">

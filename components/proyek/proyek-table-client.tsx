@@ -518,7 +518,7 @@ export function ProyekTableClient({
                 key={tab.value}
                 onClick={() => updateYear(tab.value)}
                 className={[
-                  'h-9 shrink-0 rounded-lg border px-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
+                  'h-10 shrink-0 rounded-lg border px-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:h-9',
                   active
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -533,7 +533,7 @@ export function ProyekTableClient({
               <button
                 type="button"
                 onClick={() => setYearDropdownOpen((o) => !o)}
-                className={`flex h-9 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+                className={`flex h-10 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:h-9 ${
                   selectedYearIsInDropdown
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -554,7 +554,7 @@ export function ProyekTableClient({
                       type="button"
                       key={y}
                       onClick={() => updateYear(y)}
-                      className={`w-full text-left px-3 py-1.5 text-sm transition-colors hover:bg-muted ${
+                      className={`min-h-10 w-full px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted lg:min-h-8 ${
                         tahunFilter === y ? 'font-semibold text-foreground' : 'text-muted-foreground'
                       }`}
                     >
@@ -573,7 +573,7 @@ export function ProyekTableClient({
           </summary>
           <div className="mt-2 grid gap-2 rounded-lg border border-border bg-card p-2 sm:grid-cols-2 lg:absolute lg:right-0 lg:z-20 lg:w-[640px] lg:bg-popover lg:shadow-md lg:shadow-black/10">
             <Select value={jenisFilter} onValueChange={(value) => updateJenis(value as JenisFilter)}>
-              <SelectTrigger className="h-10 w-full rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
+              <SelectTrigger aria-label="Filter jenis pekerjaan" className="h-10 w-full rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
                 <SelectValue placeholder="Jenis pekerjaan" />
               </SelectTrigger>
               <SelectContent className="select-content">
@@ -584,7 +584,7 @@ export function ProyekTableClient({
             </Select>
 
             <Select value={progressFilter} onValueChange={(value) => updateProgress(value as ProjectProgressFilter)}>
-              <SelectTrigger className="h-10 w-full rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
+              <SelectTrigger aria-label="Filter progress" className="h-10 w-full rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
                 <SelectValue placeholder="Progress" />
               </SelectTrigger>
               <SelectContent className="select-content">
@@ -597,7 +597,7 @@ export function ProyekTableClient({
             </Select>
 
             <Select value={statusFilter} onValueChange={(value) => updateStatus(value as ProjectStatusFilter)}>
-              <SelectTrigger className="h-10 w-full rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
+              <SelectTrigger aria-label="Filter status proyek" className="h-10 w-full rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent className="select-content">
@@ -609,7 +609,7 @@ export function ProyekTableClient({
             </Select>
 
             <Select value={perusahaanFilter} onValueChange={updatePerusahaan}>
-              <SelectTrigger className="h-10 w-full rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
+              <SelectTrigger aria-label="Filter perusahaan" className="h-10 w-full rounded-lg border-input bg-background px-3 text-sm font-medium text-foreground">
                 <SelectValue placeholder="Perusahaan" />
               </SelectTrigger>
               <SelectContent className="select-content">
@@ -736,16 +736,16 @@ export function ProyekTableClient({
                     <p className="mt-1 text-xs text-muted-foreground">{p.dinas}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       <BadgeWorkflow status={completeness.status} gate={workflowGate} />
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                         Update: {formatTanggal(p.updated_at ?? p.created_at ?? null)}
                       </span>
                       {missingFields.map((field) => (
-                        <span key={field.key} className="rounded-full border border-amber/30 bg-amber/10 px-2 py-0.5 text-[11px] font-medium text-amber">
+                        <span key={field.key} className="rounded-full border border-amber/30 bg-amber/10 px-2 py-0.5 text-xs font-medium text-amber">
                           Butuh {field.label}
                         </span>
                       ))}
                       {completeness.missingFields.length > missingFields.length && (
-                        <span className="rounded-full border border-amber/30 bg-amber/10 px-2 py-0.5 text-[11px] font-medium text-amber">
+                        <span className="rounded-full border border-amber/30 bg-amber/10 px-2 py-0.5 text-xs font-medium text-amber">
                           +{completeness.missingFields.length - missingFields.length}
                         </span>
                       )}
@@ -812,7 +812,7 @@ export function ProyekTableClient({
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
           <Select value={String(pagination.pageSize)} onValueChange={updatePageSize}>
-            <SelectTrigger className="col-span-2 h-10 w-full rounded-lg border-border bg-card px-3 text-sm font-semibold text-foreground sm:col-auto sm:h-9 sm:w-[130px]">
+            <SelectTrigger aria-label="Jumlah proyek per halaman" className="col-span-2 h-10 w-full rounded-lg border-border bg-card px-3 text-sm font-semibold text-foreground sm:col-auto sm:h-9 sm:w-[130px]">
               <SelectValue placeholder="Per halaman" />
             </SelectTrigger>
             <SelectContent className="select-content">
