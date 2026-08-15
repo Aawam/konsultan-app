@@ -140,7 +140,7 @@ Pelanggaran bisa dioverride dengan alasan, lalu disimpan di `override_log`.
 
 ## Test Coverage
 
-Checkpoint 2026-08-15: 29 test files dan 110 tests lulus bersama lint,
+Checkpoint 2026-08-15: 29 test files dan 111 tests lulus bersama lint,
 typecheck, dan production build.
 
 Test yang ada:

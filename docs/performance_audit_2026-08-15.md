@@ -18,11 +18,11 @@ Supabase environment. The active dataset contained one non-deleted project.
 Accepted as the current monitoring performance baseline. No performance code
 change is justified by the measured runtime data.
 
-There were no build, test, runtime-console, authentication, or role-boundary
-failures. The monitoring route bundles are slightly above the generic 200 KB
-gzip target, but every measured authenticated flow reached ready content in
-less than 1.7 seconds. Immediate code splitting or dashboard re-architecture
-would therefore be premature.
+There were no build, test, unhandled application, browser-console,
+authentication, or role-boundary failures. The monitoring route bundles are
+slightly above the generic 200 KB gzip target, but every measured authenticated
+flow reached ready content in less than 1.7 seconds. Immediate code splitting
+or dashboard re-architecture would therefore be premature.
 
 ## Stability gates
 
@@ -30,10 +30,25 @@ would therefore be premature.
 |---|---:|
 | ESLint | Passed |
 | TypeScript | Passed |
-| Vitest | 29 files, 110 tests passed |
+| Vitest | 29 files, 111 tests passed |
 | Production build | Passed |
 | Dependency audit | 0 known vulnerabilities at checkpoint |
 | Browser console | 0 errors and 0 warnings in tested flows |
+| Login network recovery | Passed; safe error state returned |
+
+### Transient Supabase diagnostic
+
+Two `ENOTFOUND` diagnostics appeared in the server process while Supabase DNS
+was temporarily unavailable during login. `@supabase/auth-js` logs the native
+fetch error before converting it to `AuthRetryableFetchError`. The existing
+`loginAction` catches that failure and returns the generic message `Layanan
+autentikasi tidak dapat dihubungi.` instead of exposing a stack trace or
+crashing the form.
+
+Audit commit `ab33d1a` adds a regression test for this recovery path. The raw
+dependency diagnostic remains useful server-side evidence and is not
+suppressed; it must not be confused with an uncaught application exception or
+a browser-console failure.
 
 ## Public route latency
 
