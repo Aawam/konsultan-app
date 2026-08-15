@@ -62,6 +62,22 @@ describe('loginAction', () => {
     expect(redirectMock).not.toHaveBeenCalled()
   })
 
+  it('returns a safe error when the Supabase auth request cannot connect', async () => {
+    const signInWithPassword = vi.fn().mockRejectedValue(new TypeError('fetch failed'))
+    createSupabaseServerClientMock.mockResolvedValue({
+      auth: { signInWithPassword },
+    } as never)
+
+    await expect(
+      loginAction(
+        { error: null },
+        loginForm('user@example.com', 'password')
+      )
+    ).resolves.toEqual({ error: 'Layanan autentikasi tidak dapat dihubungi.' })
+
+    expect(redirectMock).not.toHaveBeenCalled()
+  })
+
   it('redirects to the project page after a successful sign in', async () => {
     const signInWithPassword = vi.fn().mockResolvedValue({ error: null })
     createSupabaseServerClientMock.mockResolvedValue({
