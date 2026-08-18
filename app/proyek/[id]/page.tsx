@@ -90,7 +90,7 @@ export default async function DetailProyekPage({ params }: Props) {
   const namaPerusahaan = perusahaan
     ? `${perusahaan.nama_perusahaan}${perusahaan.adalah_perusahaan_sendiri ? ' ★' : ''}`
     : undefined
-  const completeness = evaluateProjectCompleteness(proyek, { includeCommercial: false })
+  const completeness = evaluateProjectCompleteness(proyek, { includeCommercial: canViewCommercial })
   const workflowGate = getProjectWorkflowGate(completeness)
 
   return (

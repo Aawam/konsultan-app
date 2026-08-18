@@ -125,4 +125,27 @@ describe('DetailProyekPage role boundaries', () => {
     expect(getOverrideLogsByProyekId).toHaveBeenCalledWith(projectId)
     expect(getProyekById).toHaveBeenCalledWith(projectId, { includeSensitive: true })
   })
+
+  it('includes missing commercial fields in Owner/Admin detail completeness', async () => {
+    getCurrentUserProfile.mockResolvedValue({
+      profile: {
+        id: '00000000-0000-4000-8000-000000000004',
+        email: 'owner@example.com',
+        nama: 'Owner',
+        role: 'owner_admin',
+      },
+    })
+    getProyekById.mockResolvedValue({
+      data: { ...project, hps: null },
+      error: null,
+    })
+
+    const markup = renderToStaticMarkup(
+      await DetailProyekPage({ params: Promise.resolve({ id: projectId }) })
+    )
+
+    expect(markup).toContain('Lengkapi Data Proyek')
+    expect(markup).toContain('Data Kurang')
+    expect(markup).toContain('>HPS</span>')
+  })
 })
